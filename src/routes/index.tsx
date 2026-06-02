@@ -1117,3 +1117,25 @@ function AddBtn({ onClick, children }: { onClick: () => void; children: React.Re
     </button>
   );
 }
+
+function MasterToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="accent-[color:var(--gold)]"
+      />
+      {label}
+    </label>
+  );
+}
