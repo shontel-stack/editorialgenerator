@@ -167,6 +167,72 @@ export const PAGE_NUMBER_FORMATS: { value: PageNumberFormat; label: string }[] =
   { value: "none",     label: "Hide page numbers" },
 ];
 
+export type IssueFonts = {
+  display: string; // CSS font-family stack for headlines / masthead
+  serif: string;   // CSS font-family stack for body / editorial copy
+  sans: string;    // CSS font-family stack for labels / folio / UI bits
+};
+
+/** Curated Google Fonts, grouped by role. `family` is the Google Fonts name
+ *  (spaces as `+`); `stack` is the CSS font-family value to apply. */
+export type FontOption = { label: string; family: string; stack: string };
+
+export const DISPLAY_FONTS: FontOption[] = [
+  { label: "Italiana",           family: "Italiana",            stack: `"Italiana", "Cormorant Garamond", serif` },
+  { label: "Cormorant Garamond", family: "Cormorant+Garamond",  stack: `"Cormorant Garamond", Georgia, serif` },
+  { label: "Playfair Display",   family: "Playfair+Display",    stack: `"Playfair Display", Georgia, serif` },
+  { label: "Cinzel",             family: "Cinzel",              stack: `"Cinzel", "Trajan Pro", serif` },
+  { label: "Bodoni Moda",        family: "Bodoni+Moda",         stack: `"Bodoni Moda", "Didot", serif` },
+  { label: "Marcellus",          family: "Marcellus",           stack: `"Marcellus", "Trajan Pro", serif` },
+  { label: "Abril Fatface",      family: "Abril+Fatface",       stack: `"Abril Fatface", Georgia, serif` },
+  { label: "DM Serif Display",   family: "DM+Serif+Display",    stack: `"DM Serif Display", Georgia, serif` },
+  { label: "Cormorant Infant",   family: "Cormorant+Infant",    stack: `"Cormorant Infant", Georgia, serif` },
+];
+
+export const SERIF_FONTS: FontOption[] = [
+  { label: "Cormorant Garamond", family: "Cormorant+Garamond",  stack: `"Cormorant Garamond", Georgia, serif` },
+  { label: "EB Garamond",        family: "EB+Garamond",         stack: `"EB Garamond", Georgia, serif` },
+  { label: "Lora",               family: "Lora",                stack: `"Lora", Georgia, serif` },
+  { label: "Crimson Pro",        family: "Crimson+Pro",         stack: `"Crimson Pro", Georgia, serif` },
+  { label: "Libre Caslon Text",  family: "Libre+Caslon+Text",   stack: `"Libre Caslon Text", Georgia, serif` },
+  { label: "Source Serif 4",     family: "Source+Serif+4",      stack: `"Source Serif 4", Georgia, serif` },
+  { label: "Spectral",           family: "Spectral",            stack: `"Spectral", Georgia, serif` },
+  { label: "Playfair Display",   family: "Playfair+Display",    stack: `"Playfair Display", Georgia, serif` },
+];
+
+export const SANS_FONTS: FontOption[] = [
+  { label: "Inter",         family: "Inter",         stack: `"Inter", system-ui, sans-serif` },
+  { label: "Work Sans",     family: "Work+Sans",     stack: `"Work Sans", system-ui, sans-serif` },
+  { label: "DM Sans",       family: "DM+Sans",       stack: `"DM Sans", system-ui, sans-serif` },
+  { label: "Jost",          family: "Jost",          stack: `"Jost", system-ui, sans-serif` },
+  { label: "Manrope",       family: "Manrope",       stack: `"Manrope", system-ui, sans-serif` },
+  { label: "Archivo",       family: "Archivo",       stack: `"Archivo", system-ui, sans-serif` },
+  { label: "IBM Plex Sans", family: "IBM+Plex+Sans", stack: `"IBM Plex Sans", system-ui, sans-serif` },
+  { label: "Outfit",        family: "Outfit",        stack: `"Outfit", system-ui, sans-serif` },
+];
+
+export const DEFAULT_FONTS: IssueFonts = {
+  display: DISPLAY_FONTS[0].stack,
+  serif:   SERIF_FONTS[0].stack,
+  sans:    SANS_FONTS[0].stack,
+};
+
+/** Build a single Google Fonts URL that loads the three chosen families with
+ *  weights covering headings, body, italics, and UI labels. */
+export function googleFontsUrl(fonts: IssueFonts): string {
+  const families = new Set<string>();
+  const all = [...DISPLAY_FONTS, ...SERIF_FONTS, ...SANS_FONTS];
+  for (const stack of [fonts.display, fonts.serif, fonts.sans]) {
+    const opt = all.find((o) => o.stack === stack);
+    if (opt) families.add(opt.family);
+  }
+  if (!families.size) return "";
+  const params = Array.from(families)
+    .map((f) => `family=${f}:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500`)
+    .join("&");
+  return `https://fonts.googleapis.com/css2?${params}&display=swap`;
+}
+
 export type IssueMaster = {
   // Folio template uses tokens: {publication} {issue} {date}
   folioTemplate: string;
@@ -175,6 +241,7 @@ export type IssueMaster = {
   showFolioOnArticles: boolean;
   showFolioOnPhotos: boolean;
   showFolioOnAds: boolean;
+  fonts: IssueFonts;
 };
 
 export const DEFAULT_MASTER: IssueMaster = {
@@ -184,6 +251,7 @@ export const DEFAULT_MASTER: IssueMaster = {
   showFolioOnArticles: true,
   showFolioOnPhotos: true,
   showFolioOnAds: false,
+  fonts: DEFAULT_FONTS,
 };
 
 export type IssueDoc = {

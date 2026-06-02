@@ -12,15 +12,20 @@ import {
   DEFAULT_BACK,
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
+  DEFAULT_FONTS,
   DEFAULT_ISSUE,
   DEFAULT_MASTER,
   DEFAULT_PHOTO,
+  DISPLAY_FONTS,
   LOGO_COLORS,
   PAGE_LABELS,
   PAGE_NUMBER_FORMATS,
   PALETTES,
+  SANS_FONTS,
+  SERIF_FONTS,
   deriveContentsEntries,
   formatPageNumber,
+  googleFontsUrl,
   makeNode,
   pageNumberFor,
   renderFolio,
@@ -30,7 +35,9 @@ import {
   type BackCoverData,
   type ContentsData,
   type CoverData,
+  type FontOption,
   type IssueDoc,
+  type IssueFonts,
   type IssueMaster,
   type IssuePageNode,
   type PageType,
@@ -173,6 +180,25 @@ function Index() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [stageW]);
+
+  /* --- live font preview: inject Google Fonts <link> and apply CSS vars --- */
+  const fonts = issue.master.fonts;
+  useEffect(() => {
+    const href = googleFontsUrl(fonts);
+    let link = document.getElementById("issue-fonts") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.id = "issue-fonts";
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+    }
+    if (link.href !== href) link.href = href;
+
+    const root = document.documentElement;
+    root.style.setProperty("--font-display", fonts.display);
+    root.style.setProperty("--font-serif", fonts.serif);
+    root.style.setProperty("--font-sans", fonts.sans);
+  }, [fonts]);
 
   /* --- mutators --- */
 
@@ -333,7 +359,11 @@ function Index() {
         // Back-compat: older files may lack master / per-article layout
         const hydrated: IssueDoc = {
           ...parsed,
-          master: { ...DEFAULT_MASTER, ...(parsed.master ?? {}) },
+          master: {
+            ...DEFAULT_MASTER,
+            ...(parsed.master ?? {}),
+            fonts: { ...DEFAULT_FONTS, ...((parsed.master as Partial<IssueMaster> | undefined)?.fonts ?? {}) },
+          },
           pages: parsed.pages.map((p) => {
             if (p.pageType !== "article") return p;
             const d = p.data as Partial<ArticleData>;
@@ -508,6 +538,37 @@ function Index() {
                 checked={issue.master.showFolioOnAds}
                 onChange={(v) => updateMaster({ showFolioOnAds: v })}
               />
+            </div>
+
+            <div className="pt-3 border-t border-border space-y-2">
+              <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+                Typography
+              </div>
+              <FontPicker
+                label="Display (headlines)"
+                options={DISPLAY_FONTS}
+                value={issue.master.fonts.display}
+                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, display: v } })}
+              />
+              <FontPicker
+                label="Serif (body copy)"
+                options={SERIF_FONTS}
+                value={issue.master.fonts.serif}
+                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, serif: v } })}
+              />
+              <FontPicker
+                label="Sans (folio &amp; labels)"
+                options={SANS_FONTS}
+                value={issue.master.fonts.sans}
+                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, sans: v } })}
+              />
+              <button
+                type="button"
+                onClick={() => updateMaster({ fonts: DEFAULT_FONTS })}
+                className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+              >
+                Reset to defaults
+              </button>
             </div>
             <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground pt-2 border-t border-border">
               <input
@@ -1243,6 +1304,43 @@ function MasterToggle({
         className="accent-[color:var(--gold)]"
       />
       {label}
+    </label>
+  );
+}
+
+function FontPicker({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: FontOption[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const current = options.find((o) => o.stack === value);
+  return (
+    <label className="block space-y-1">
+      <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+        style={{ fontFamily: value }}
+      >
+        {options.map((o) => (
+          <option key={o.label} value={o.stack} style={{ fontFamily: o.stack }}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <span
+        className="block text-base leading-tight text-foreground/80 pt-0.5"
+        style={{ fontFamily: value }}
+      >
+        {current?.label ?? "Aa"} — The Quick Brown Fox
+      </span>
     </label>
   );
 }
