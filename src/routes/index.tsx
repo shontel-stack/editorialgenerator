@@ -300,8 +300,18 @@ function Index() {
       try {
         const parsed = JSON.parse(String(r.result)) as IssueDoc;
         if (!parsed?.pages?.length || !parsed?.meta) throw new Error("Invalid issue file");
-        setIssue(parsed);
-        setSelectedId(parsed.pages[0].id);
+        // Back-compat: older files may lack master / per-article layout
+        const hydrated: IssueDoc = {
+          ...parsed,
+          master: { ...DEFAULT_MASTER, ...(parsed.master ?? {}) },
+          pages: parsed.pages.map((p) =>
+            p.pageType === "article"
+              ? ({ ...p, data: { layout: "image-top-2col", ...p.data } } as IssuePageNode)
+              : p,
+          ),
+        };
+        setIssue(hydrated);
+        setSelectedId(hydrated.pages[0].id);
       } catch (e) {
         alert(`Could not load issue: ${(e as Error).message}`);
       }
