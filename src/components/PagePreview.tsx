@@ -590,6 +590,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         {data.entries.map((e, i) => (
           <div
             key={i}
+            data-link-row
+            data-link-target={e.link ?? "none"}
             style={{
               display: "grid",
               gridTemplateColumns: "260px 1fr 140px",
