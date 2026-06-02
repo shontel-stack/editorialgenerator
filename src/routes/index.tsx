@@ -398,77 +398,59 @@ function Index() {
             <div className="px-4 py-3 border-b border-border text-[10px] tracking-[0.4em] uppercase text-muted-foreground flex items-center justify-between">
               <span>Pages · {issue.pages.length}</span>
             </div>
-            <ul className="divide-y divide-border">
-              {issue.pages.map((p, i) => {
-                const active = p.id === selectedId;
-                const locked = p.pageType === "cover" || p.pageType === "back";
-                return (
-                  <li
-                    key={p.id}
-                    className={`px-3 py-2.5 flex items-center gap-2 cursor-pointer transition ${
-                      active ? "bg-foreground text-background" : "hover:bg-secondary"
-                    }`}
-                    onClick={() => setSelectedId(p.id)}
-                  >
-                    <span
-                      className={`text-[10px] tabular-nums tracking-widest w-6 ${
-                        active ? "opacity-80" : "text-muted-foreground"
+            <div className="divide-y divide-border">
+              <SortableList
+                items={issue.pages}
+                onReorder={reorderPages}
+                isDraggable={(p) => p.pageType !== "cover" && p.pageType !== "back"}
+                renderItem={(p, handle) => {
+                  const i = issue.pages.findIndex((x) => x.id === p.id);
+                  const active = p.id === selectedId;
+                  const locked = p.pageType === "cover" || p.pageType === "back";
+                  return (
+                    <div
+                      className={`px-3 py-2.5 flex items-center gap-2 cursor-pointer transition border-b border-border last:border-b-0 ${
+                        active ? "bg-foreground text-background" : "hover:bg-secondary"
                       }`}
+                      onClick={() => setSelectedId(p.id)}
                     >
-                      {(i + 1).toString().padStart(2, "0")}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] tracking-[0.3em] uppercase opacity-80">
-                        {PAGE_LABELS[p.pageType]}
-                        {p.includeInContents && !locked && <span> · TOC</span>}
+                      {handle}
+                      <span
+                        className={`text-[10px] tabular-nums tracking-widest w-6 ${
+                          active ? "opacity-80" : "text-muted-foreground"
+                        }`}
+                      >
+                        {(i + 1).toString().padStart(2, "0")}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] tracking-[0.3em] uppercase opacity-80">
+                          {PAGE_LABELS[p.pageType]}
+                          {p.includeInContents && !locked && <span> · TOC</span>}
+                        </div>
+                        <div
+                          className="text-sm truncate"
+                          style={{ fontFamily: "var(--font-serif)" }}
+                        >
+                          {labelForNode(p)}
+                        </div>
                       </div>
-                      <div
-                        className="text-sm truncate"
-                        style={{ fontFamily: "var(--font-serif)" }}
-                      >
-                        {labelForNode(p)}
-                      </div>
+                      {!locked && p.pageType !== "contents" && (
+                        <button
+                          title="Remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
+                          }}
+                          className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
-                    <div className="flex flex-col">
-                      <button
-                        title="Move up"
-                        disabled={locked}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          movePage(p.id, -1);
-                        }}
-                        className="text-[10px] px-1 leading-none disabled:opacity-20 hover:text-[color:var(--gold)]"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        title="Move down"
-                        disabled={locked}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          movePage(p.id, 1);
-                        }}
-                        className="text-[10px] px-1 leading-none disabled:opacity-20 hover:text-[color:var(--gold)]"
-                      >
-                        ▼
-                      </button>
-                    </div>
-                    {!locked && p.pageType !== "contents" && (
-                      <button
-                        title="Remove"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
-                        }}
-                        className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                  );
+                }}
+              />
+            </div>
             <div className="p-3 border-t border-border grid grid-cols-2 gap-2">
               <AddBtn onClick={() => addPage("article")}>+ Article</AddBtn>
               <AddBtn onClick={() => addPage("photo")}>+ Photo</AddBtn>
