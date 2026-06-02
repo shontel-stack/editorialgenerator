@@ -18,6 +18,7 @@ import {
   type PageType,
   type Palette,
   type PhotoData,
+  LOGO_COLORS,
 } from "@/lib/coverDefaults";
 import {
   exportIssuePdf,
