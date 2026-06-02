@@ -8,17 +8,12 @@ import {
   DEFAULT_CONTENTS,
   DEFAULT_PHOTO,
   makeNode,
-  type AdData,
   type ArticleData,
   type ArticleLayout,
-  type BackCoverData,
-  type ContentsData,
-  type CoverData,
   type IssueDoc,
   type IssueFonts,
   type IssueMaster,
   type IssuePageNode,
-  type PhotoData,
 } from "./coverDefaults";
 
 /** Discriminated union of patches the assistant can return. */
