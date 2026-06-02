@@ -600,18 +600,8 @@ function Index() {
                 }}
               />
             </div>
-            <div className="p-3 border-t border-border grid grid-cols-2 gap-2">
-              <AddBtn onClick={() => addPage("article")}>+ Article</AddBtn>
-              <AddBtn onClick={() => addPage("photo")}>+ Photo</AddBtn>
-              <AddBtn onClick={() => addPage("ad")}>+ Ad</AddBtn>
-              <AddBtn onClick={() => addPage("contents")}>+ Contents</AddBtn>
-            </div>
-            <div className="px-3 pb-3 grid grid-cols-3 gap-2">
-              <AddBtn onClick={() => addSpread("article", "photo")}>+ Article spread</AddBtn>
-              <AddBtn onClick={() => addSpread("photo", "photo")}>+ Photo spread</AddBtn>
-              <AddBtn onClick={() => addSpread("ad", "ad")}>+ Ad spread</AddBtn>
-            </div>
           </div>
+
 
           {/* Master pages — issue-wide folio & page-number defaults */}
           <div className="border border-border bg-card p-3 space-y-3">
