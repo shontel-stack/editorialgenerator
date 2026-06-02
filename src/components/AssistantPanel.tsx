@@ -138,7 +138,10 @@ export function AssistantPanel({
   const [input, setInput] = useState("");
   const isLoading = status === "submitted" || status === "streaming";
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (
+    _message: unknown,
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault();
     const text = input.trim();
     if (!text || isLoading) return;
