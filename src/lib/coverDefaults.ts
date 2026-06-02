@@ -97,9 +97,9 @@ export const DEFAULT_COVER: CoverData = {
   imageUrl: null,
   imageFit: "cover",
   imageY: 50,
-  palette: "burgundy",
+  palette: "paper",
   layout: "classic",
-  logoColor: "#ffffff",
+  logoColor: "#6b1320",
 };
 
 export const DEFAULT_FEATURE: FeatureData = {
