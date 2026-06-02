@@ -348,6 +348,7 @@ export function makeNode<T extends AnyPageData["pageType"]>(
 
 export const DEFAULT_ISSUE: IssueDoc = {
   meta: { issue: DEFAULT_COVER.issue, date: DEFAULT_COVER.date },
+  master: DEFAULT_MASTER,
   pages: [
     makeNode("cover", DEFAULT_COVER, false),
     makeNode("contents", DEFAULT_CONTENTS, false),
