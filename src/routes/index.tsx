@@ -883,6 +883,8 @@ function Index() {
         onClose={() => setAssistantOpen(false)}
         issue={issue}
         setIssue={setIssue}
+        attachments={attachments.rows}
+        selectedPageId={selected.id}
       />
     </main>
   );
