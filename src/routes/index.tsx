@@ -759,6 +759,19 @@ function ArticleEditor({
         onY={(y) => set({ imageY: y })}
         hideFit
       />
+      <Section title="Layout">
+        <Field label="Page layout preset">
+          <select
+            value={data.layout}
+            onChange={(e) => set({ layout: e.target.value as ArticleLayout })}
+            className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+          >
+            {ARTICLE_LAYOUTS.map((l) => (
+              <option key={l.value} value={l.value}>{l.label}</option>
+            ))}
+          </select>
+        </Field>
+      </Section>
       <Section title="Style">
         <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
       </Section>
