@@ -161,9 +161,9 @@ export const PALETTES: Record<
   Palette,
   { bg: string; fg: string; rule: string; muted: string; label: string }
 > = {
-  burgundy: { bg: "#5a0f1c", fg: "#ffffff", rule: "#e8d9b8", muted: "#d9b8b8", label: "Burgundy" },
-  ink:      { bg: "#0a0a0a", fg: "#ffffff", rule: "#6b1320", muted: "#8a8a8a", label: "Black" },
   paper:    { bg: "#ffffff", fg: "#0a0a0a", rule: "#6b1320", muted: "#666666", label: "White" },
+  ink:      { bg: "#0a0a0a", fg: "#ffffff", rule: "#6b1320", muted: "#8a8a8a", label: "Black" },
+  burgundy: { bg: "#6b1320", fg: "#ffffff", rule: "#ffffff", muted: "#e8c8cc", label: "Burgundy" },
 };
 
 export const PAGE_LABELS: Record<PageType, string> = {
