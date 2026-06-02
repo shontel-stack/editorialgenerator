@@ -99,6 +99,7 @@ function Index() {
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const attachments = useIssueAttachments(issue.meta.issueId);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
