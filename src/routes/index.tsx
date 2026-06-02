@@ -306,7 +306,7 @@ function Index() {
           master: { ...DEFAULT_MASTER, ...(parsed.master ?? {}) },
           pages: parsed.pages.map((p) =>
             p.pageType === "article"
-              ? ({ ...p, data: { layout: "image-top-2col", ...p.data } } as IssuePageNode)
+              ? ({ ...p, data: { layout: "image-top-2col" as ArticleLayout, ...(p.data as ArticleData) } } as IssuePageNode)
               : p,
           ),
         };
