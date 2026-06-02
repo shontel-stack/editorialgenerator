@@ -491,10 +491,13 @@ function Index() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground hidden xl:block">
-              <span className="font-numerals text-foreground">{COVER_INCHES.w}″ × {COVER_INCHES.h}″</span> · 300 DPI
-            </div>
+          <div className="flex items-center gap-4">
+            <AttachmentControl
+              label="Layout template (whole issue)"
+              attachment={attachments.template}
+              onUpload={(file) => attachments.upload({ pageId: null, kind: "template", file })}
+              onRemove={() => attachments.template ? attachments.remove(attachments.template) : Promise.resolve()}
+            />
             <button
               onClick={() => setAssistantOpen((v) => !v)}
               className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
