@@ -411,6 +411,7 @@ function Index() {
         // Back-compat: older files may lack master / per-article layout
         const hydrated: IssueDoc = {
           ...parsed,
+          meta: { ...parsed.meta, issueId: parsed.meta.issueId ?? newIssueId() },
           master: {
             ...DEFAULT_MASTER,
             ...(parsed.master ?? {}),
