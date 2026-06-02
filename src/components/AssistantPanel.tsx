@@ -193,6 +193,10 @@ export function AssistantPanel({
         </button>
       </header>
 
+      <ReferencesStrip attachments={attachments} selectedPageId={selectedPageId} />
+
+
+
       <Conversation className="flex-1">
         <ConversationContent>
           {initial === null ? (
