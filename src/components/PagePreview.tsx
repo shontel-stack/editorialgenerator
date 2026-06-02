@@ -4,6 +4,7 @@ import {
   PALETTES,
   type AdData,
   type ArticleData,
+  type ArticleLayout,
   type BackCoverData,
   type ContentsData,
   type CoverData,
