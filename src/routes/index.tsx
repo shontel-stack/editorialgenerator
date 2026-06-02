@@ -304,11 +304,11 @@ function Index() {
         const hydrated: IssueDoc = {
           ...parsed,
           master: { ...DEFAULT_MASTER, ...(parsed.master ?? {}) },
-          pages: parsed.pages.map((p) =>
-            p.pageType === "article"
-              ? ({ ...p, data: { layout: "image-top-2col" as ArticleLayout, ...(p.data as ArticleData) } } as IssuePageNode)
-              : p,
-          ),
+          pages: parsed.pages.map((p) => {
+            if (p.pageType !== "article") return p;
+            const d = p.data as Partial<ArticleData>;
+            return { ...p, data: { ...d, layout: d.layout ?? "image-top-2col" } as ArticleData } as IssuePageNode;
+          }),
         };
         setIssue(hydrated);
         setSelectedId(hydrated.pages[0].id);
