@@ -104,24 +104,133 @@ function Folio({
   );
 }
 
-/* — ARTICLE — two-column long-form — */
+/* — ARTICLE — 10 layout presets driven by data.layout — */
 
-const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(function ArticlePreview(
-  { data },
-  ref,
-) {
-  const pal = PALETTES[data.palette];
-  const paragraphs = data.body.split(/\n\s*\n/).filter(Boolean);
-
+function ImageBox({
+  data,
+  pal,
+  style,
+}: {
+  data: ArticleData;
+  pal: typeof PALETTES[keyof typeof PALETTES];
+  style: React.CSSProperties;
+}) {
   return (
-    <Page innerRef={ref} pal={pal}>
-      <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
+    <div style={{ ...style, overflow: "hidden", background: pal.muted + "22" }}>
+      {data.imageUrl ? (
+        <img
+          src={data.imageUrl}
+          alt=""
+          crossOrigin="anonymous"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: `center ${data.imageY}%`,
+            display: "block",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: pal.muted,
+            fontFamily: "var(--font-sans)",
+            fontSize: 36,
+            letterSpacing: 6,
+            textTransform: "uppercase",
+            background: `repeating-linear-gradient(45deg, ${pal.bg} 0 30px, ${pal.muted}22 30px 60px)`,
+          }}
+        >
+          Place image
+        </div>
+      )}
+    </div>
+  );
+}
 
+function BodyColumns({
+  data,
+  pal,
+  style,
+  columns,
+  fontSize = 28,
+}: {
+  data: ArticleData;
+  pal: typeof PALETTES[keyof typeof PALETTES];
+  style: React.CSSProperties;
+  columns: number;
+  fontSize?: number;
+}) {
+  const paragraphs = data.body.split(/\n\s*\n/).filter(Boolean);
+  return (
+    <div
+      style={{
+        ...style,
+        columnCount: columns,
+        columnGap: 80,
+        columnFill: "auto",
+        fontFamily: "var(--font-serif)",
+        fontSize,
+        lineHeight: 1.5,
+        color: pal.fg,
+      }}
+    >
+      {paragraphs.map((p, i) => (
+        <p key={i} style={{ margin: 0, marginBottom: 28, textIndent: i === 0 ? 0 : 36 }}>
+          {i === 0 && data.dropCap ? (
+            <>
+              <span
+                style={{
+                  fontFamily: "var(--font-display)",
+                  float: "left",
+                  fontSize: fontSize * 4.5,
+                  lineHeight: 0.85,
+                  paddingRight: 16,
+                  paddingTop: 6,
+                  color: pal.rule,
+                }}
+              >
+                {p.charAt(0)}
+              </span>
+              {p.slice(1)}
+            </>
+          ) : (
+            p
+          )}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function ArticleHeader({
+  data,
+  pal,
+  top,
+  left,
+  right,
+  headlineSize = 200,
+}: {
+  data: ArticleData;
+  pal: typeof PALETTES[keyof typeof PALETTES];
+  top: number;
+  left: number;
+  right: number;
+  headlineSize?: number;
+}) {
+  return (
+    <>
       <div
         style={{
           position: "absolute",
-          top: 240,
-          left: 160,
+          top,
+          left,
+          right,
           fontFamily: "var(--font-sans)",
           fontSize: 24,
           letterSpacing: 8,
@@ -132,16 +241,15 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
       >
         {data.section}
       </div>
-
       <h1
         style={{
           position: "absolute",
-          top: 300,
-          left: 160,
-          right: 160,
+          top: top + 60,
+          left,
+          right,
           fontFamily: "var(--font-display)",
           fontWeight: 400,
-          fontSize: 220,
+          fontSize: headlineSize,
           lineHeight: 0.95,
           letterSpacing: -3,
           margin: 0,
@@ -150,16 +258,34 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
       >
         {data.headline}
       </h1>
+    </>
+  );
+}
 
+function ArticleByline({
+  data,
+  pal,
+  top,
+  left,
+  right,
+}: {
+  data: ArticleData;
+  pal: typeof PALETTES[keyof typeof PALETTES];
+  top: number;
+  left: number;
+  right: number;
+}) {
+  return (
+    <>
       <p
         style={{
           position: "absolute",
-          top: 620,
-          left: 160,
-          right: 700,
+          top,
+          left,
+          right,
           fontFamily: "var(--font-serif)",
           fontStyle: "italic",
-          fontSize: 48,
+          fontSize: 38,
           lineHeight: 1.3,
           margin: 0,
           color: pal.fg,
@@ -168,12 +294,12 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
       >
         {data.dek}
       </p>
-
       <div
         style={{
           position: "absolute",
-          top: 820,
-          left: 160,
+          top: top + 160,
+          left,
+          right,
           fontFamily: "var(--font-sans)",
           fontSize: 22,
           letterSpacing: 4,
@@ -183,158 +309,337 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
       >
         {data.byline}
       </div>
+    </>
+  );
+}
 
-      <div
-        style={{
-          position: "absolute",
-          top: 900,
-          left: 160,
-          right: 160,
-          height: 1200,
-          background: pal.muted + "22",
-          overflow: "hidden",
-        }}
-      >
-        {data.imageUrl ? (
-          <img
-            src={data.imageUrl}
-            alt=""
-            crossOrigin="anonymous"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: `center ${data.imageY}%`,
-              display: "block",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: pal.muted,
-              fontFamily: "var(--font-sans)",
-              fontSize: 36,
-              letterSpacing: 6,
-              textTransform: "uppercase",
-              background: `repeating-linear-gradient(45deg, ${pal.bg} 0 30px, ${pal.muted}22 30px 60px)`,
-            }}
-          >
-            Place image
-          </div>
-        )}
-      </div>
+function ArticleFooter({
+  data,
+  pal,
+}: {
+  data: ArticleData;
+  pal: typeof PALETTES[keyof typeof PALETTES];
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 100,
+        left: 160,
+        right: 160,
+        borderTop: `1px solid ${pal.rule}`,
+        paddingTop: 24,
+        display: "flex",
+        justifyContent: "space-between",
+        fontFamily: "var(--font-sans)",
+        fontSize: 20,
+        letterSpacing: 4,
+        textTransform: "uppercase",
+        color: pal.muted,
+      }}
+    >
+      <span>{data.folio}</span>
+      <span>{data.pageNumber}</span>
+    </div>
+  );
+}
 
-      <div
-        style={{
-          position: "absolute",
-          top: 2120,
-          left: 160,
-          right: 160,
-          fontFamily: "var(--font-serif)",
-          fontStyle: "italic",
-          fontSize: 22,
-          color: pal.muted,
-        }}
-      >
-        {data.imageCaption}
-      </div>
+const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(function ArticlePreview(
+  { data },
+  ref,
+) {
+  const pal = PALETTES[data.palette];
+  const L: ArticleLayout = data.layout ?? "image-top-2col";
 
-      <div
-        style={{
-          position: "absolute",
-          top: 2200,
-          left: 160,
-          right: 160,
-          bottom: 220,
-          columnCount: 2,
-          columnGap: 90,
-          columnFill: "auto",
-          fontFamily: "var(--font-serif)",
-          fontSize: 28,
-          lineHeight: 1.5,
-          color: pal.fg,
-        }}
-      >
-        {paragraphs.map((p, i) => (
-          <p
-            key={i}
-            style={{
-              margin: 0,
-              marginBottom: 28,
-              textIndent: i === 0 ? 0 : 36,
-            }}
-          >
-            {i === 0 && data.dropCap ? (
-              <>
-                <span
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    float: "left",
-                    fontSize: 130,
-                    lineHeight: 0.85,
-                    paddingRight: 16,
-                    paddingTop: 6,
-                    color: pal.rule,
-                  }}
-                >
-                  {p.charAt(0)}
-                </span>
-                {p.slice(1)}
-              </>
-            ) : (
-              p
-            )}
-          </p>
-        ))}
-      </div>
+  // Page bounds:
+  //   width 3200, height 4267
+  //   safe margin 160, header band uses top 175 for folio rule
+  const M = 160;
+  const TOP = 240;
+  const BOT = 220; // leaves room for ArticleFooter
 
-      {data.pullQuote && (
+  // Build a per-layout element set
+  const blocks: React.ReactNode[] = [];
+
+  switch (L) {
+    case "image-top-2col":
+    case "image-top-3col": {
+      const cols = L === "image-top-3col" ? 3 : 2;
+      blocks.push(<ArticleHeader key="h" data={data} pal={pal} top={TOP} left={M} right={M} />);
+      blocks.push(
+        <ArticleByline key="b" data={data} pal={pal} top={620} left={M} right={M + 700} />,
+      );
+      blocks.push(
+        <ImageBox
+          key="img"
+          data={data}
+          pal={pal}
+          style={{ position: "absolute", top: 900, left: M, right: M, height: 1200 }}
+        />,
+      );
+      blocks.push(
         <div
+          key="cap"
           style={{
             position: "absolute",
-            right: 160,
-            bottom: 280,
-            width: 1180,
-            borderTop: `2px solid ${pal.rule}`,
-            borderBottom: `1px solid ${pal.rule}`,
-            paddingTop: 28,
-            paddingBottom: 28,
-            background: pal.bg,
-            fontFamily: "var(--font-display)",
-            fontSize: 64,
-            lineHeight: 1.15,
-            color: pal.fg,
+            top: 2120,
+            left: M,
+            right: M,
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 22,
+            color: pal.muted,
           }}
         >
-          {data.pullQuote}
-        </div>
-      )}
+          {data.imageCaption}
+        </div>,
+      );
+      blocks.push(
+        <BodyColumns
+          key="body"
+          data={data}
+          pal={pal}
+          columns={cols}
+          style={{ position: "absolute", top: 2200, left: M, right: M, bottom: BOT }}
+        />,
+      );
+      break;
+    }
 
-      <div
-        style={{
-          position: "absolute",
-          bottom: 100,
-          left: 160,
-          right: 160,
-          borderTop: `1px solid ${pal.rule}`,
-          paddingTop: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          fontFamily: "var(--font-sans)",
-          fontSize: 20,
-          letterSpacing: 4,
-          textTransform: "uppercase",
-          color: pal.muted,
-        }}
-      >
-        <span>{data.folio}</span>
-        <span>{data.pageNumber}</span>
-      </div>
+    case "image-left-1col":
+    case "image-left-2col": {
+      const cols = L === "image-left-2col" ? 2 : 1;
+      blocks.push(<ArticleHeader key="h" data={data} pal={pal} top={TOP} left={M} right={M} />);
+      blocks.push(
+        <ArticleByline key="b" data={data} pal={pal} top={620} left={M} right={M} />,
+      );
+      blocks.push(
+        <ImageBox
+          key="img"
+          data={data}
+          pal={pal}
+          style={{ position: "absolute", top: 900, left: M, width: 1300, bottom: BOT }}
+        />,
+      );
+      blocks.push(
+        <BodyColumns
+          key="body"
+          data={data}
+          pal={pal}
+          columns={cols}
+          fontSize={cols === 1 ? 30 : 26}
+          style={{ position: "absolute", top: 900, left: 1520, right: M, bottom: BOT }}
+        />,
+      );
+      break;
+    }
+
+    case "image-right-1col":
+    case "image-right-2col": {
+      const cols = L === "image-right-2col" ? 2 : 1;
+      blocks.push(<ArticleHeader key="h" data={data} pal={pal} top={TOP} left={M} right={M} />);
+      blocks.push(
+        <ArticleByline key="b" data={data} pal={pal} top={620} left={M} right={M} />,
+      );
+      blocks.push(
+        <ImageBox
+          key="img"
+          data={data}
+          pal={pal}
+          style={{ position: "absolute", top: 900, right: M, width: 1300, bottom: BOT }}
+        />,
+      );
+      blocks.push(
+        <BodyColumns
+          key="body"
+          data={data}
+          pal={pal}
+          columns={cols}
+          fontSize={cols === 1 ? 30 : 26}
+          style={{ position: "absolute", top: 900, left: M, right: 1520, bottom: BOT }}
+        />,
+      );
+      break;
+    }
+
+    case "image-bottom-2col": {
+      blocks.push(<ArticleHeader key="h" data={data} pal={pal} top={TOP} left={M} right={M} />);
+      blocks.push(
+        <ArticleByline key="b" data={data} pal={pal} top={620} left={M} right={M} />,
+      );
+      blocks.push(
+        <BodyColumns
+          key="body"
+          data={data}
+          pal={pal}
+          columns={2}
+          style={{ position: "absolute", top: 900, left: M, right: M, height: 1500 }}
+        />,
+      );
+      blocks.push(
+        <ImageBox
+          key="img"
+          data={data}
+          pal={pal}
+          style={{ position: "absolute", top: 2480, left: M, right: M, bottom: BOT }}
+        />,
+      );
+      break;
+    }
+
+    case "full-image-overlay": {
+      blocks.push(
+        <ImageBox
+          key="img"
+          data={data}
+          pal={pal}
+          style={{ position: "absolute", inset: 0 }}
+        />,
+      );
+      blocks.push(
+        <div
+          key="scrim"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
+          }}
+        />,
+      );
+      blocks.push(
+        <div
+          key="section"
+          style={{
+            position: "absolute",
+            top: 240,
+            left: M,
+            right: M,
+            fontFamily: "var(--font-sans)",
+            fontSize: 26,
+            letterSpacing: 8,
+            textTransform: "uppercase",
+            color: "#ffffff",
+            fontWeight: 600,
+          }}
+        >
+          {data.section}
+        </div>,
+      );
+      blocks.push(
+        <h1
+          key="hl"
+          style={{
+            position: "absolute",
+            bottom: 700,
+            left: M,
+            right: M,
+            fontFamily: "var(--font-display)",
+            fontWeight: 400,
+            fontSize: 280,
+            lineHeight: 0.92,
+            letterSpacing: -3,
+            margin: 0,
+            color: "#ffffff",
+          }}
+        >
+          {data.headline}
+        </h1>,
+      );
+      blocks.push(
+        <p
+          key="dek"
+          style={{
+            position: "absolute",
+            bottom: 400,
+            left: M,
+            right: M,
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 44,
+            lineHeight: 1.3,
+            margin: 0,
+            color: "#ffffff",
+            maxWidth: 2000,
+          }}
+        >
+          {data.dek}
+        </p>,
+      );
+      blocks.push(
+        <div
+          key="by"
+          style={{
+            position: "absolute",
+            bottom: 320,
+            left: M,
+            right: M,
+            fontFamily: "var(--font-sans)",
+            fontSize: 22,
+            letterSpacing: 4,
+            textTransform: "uppercase",
+            color: "#ffffffcc",
+          }}
+        >
+          {data.byline}
+        </div>,
+      );
+      break;
+    }
+
+    case "text-only-2col":
+    case "text-only-3col": {
+      const cols = L === "text-only-3col" ? 3 : 2;
+      blocks.push(<ArticleHeader key="h" data={data} pal={pal} top={TOP} left={M} right={M} headlineSize={240} />);
+      blocks.push(
+        <ArticleByline key="b" data={data} pal={pal} top={780} left={M} right={M} />,
+      );
+      blocks.push(
+        <BodyColumns
+          key="body"
+          data={data}
+          pal={pal}
+          columns={cols}
+          fontSize={cols === 3 ? 24 : 28}
+          style={{ position: "absolute", top: 1100, left: M, right: M, bottom: BOT }}
+        />,
+      );
+      if (data.pullQuote) {
+        blocks.push(
+          <div
+            key="pq"
+            style={{
+              position: "absolute",
+              left: M,
+              bottom: 320,
+              width: 1400,
+              borderTop: `2px solid ${pal.rule}`,
+              borderBottom: `1px solid ${pal.rule}`,
+              paddingTop: 28,
+              paddingBottom: 28,
+              background: pal.bg,
+              fontFamily: "var(--font-display)",
+              fontSize: 64,
+              lineHeight: 1.15,
+              color: pal.fg,
+            }}
+          >
+            {data.pullQuote}
+          </div>,
+        );
+      }
+      break;
+    }
+  }
+
+  // Header folio (skip for full-image-overlay)
+  const showHeaderFolio = L !== "full-image-overlay";
+
+  return (
+    <Page innerRef={ref} pal={pal}>
+      {showHeaderFolio && <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />}
+      {blocks}
+      {L !== "full-image-overlay" && <ArticleFooter data={data} pal={pal} />}
     </Page>
   );
 });
