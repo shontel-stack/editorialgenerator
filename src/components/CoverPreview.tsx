@@ -287,6 +287,46 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
       >
         {data.credit}
       </div>
+
+      {/* QR code */}
+      {qrDataUrl && (
+        <div
+          style={{
+            position: "absolute",
+            right: 160,
+            bottom: 470,
+            width: 320,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+            padding: 20,
+            backgroundColor: pal.bg,
+            border: `2px solid ${pal.rule}`,
+          }}
+        >
+          <img
+            src={qrDataUrl}
+            alt="QR code"
+            crossOrigin="anonymous"
+            style={{ width: 260, height: 260, display: "block" }}
+          />
+          {data.qrCaption && (
+            <div
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 18,
+                letterSpacing: 3,
+                textTransform: "uppercase",
+                color: pal.fg,
+                textAlign: "center",
+              }}
+            >
+              {data.qrCaption}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 });
