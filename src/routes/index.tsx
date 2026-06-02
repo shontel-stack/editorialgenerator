@@ -4,6 +4,8 @@ import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, 
 import { PagePreview } from "@/components/PagePreview";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
+import { AttachmentControl } from "@/components/AttachmentControl";
+import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
