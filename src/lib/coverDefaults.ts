@@ -273,6 +273,7 @@ Her recent paintings â€” quiet interiors, half-lit figures, a recurring window â
   imageCaption: "Mira Solano in her studio, May 2026.",
   imageY: 50,
   palette: "paper",
+  layout: "image-top-2col",
 };
 
 // Backwards-compatible alias.
