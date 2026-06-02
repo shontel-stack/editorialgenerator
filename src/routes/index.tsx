@@ -171,7 +171,7 @@ function Index() {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [stageW]);
 
   /* --- mutators --- */
 
