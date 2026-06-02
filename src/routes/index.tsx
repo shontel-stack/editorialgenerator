@@ -1310,14 +1310,22 @@ function LogoColorField({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   return (
-    <div className="border border-border bg-card p-5">
-      <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">{title}</div>
-      <div className="space-y-4">{children}</div>
-    </div>
+    <Collapsible defaultOpen={defaultOpen} className="border border-border bg-card rounded-sm group/section">
+      <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-secondary/60 transition border-b border-transparent data-[state=open]:border-border">
+        <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground group-hover/section:text-foreground transition">
+          {title}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 data-[state=open]:rotate-180 group-data-[state=open]/section:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+        <div className="p-4 space-y-4">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
