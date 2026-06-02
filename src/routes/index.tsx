@@ -319,6 +319,32 @@ function CoverEditor({
       />
       <Section title="Style">
         <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+        <Field label="Logo color">
+          <div className="flex gap-2 flex-wrap">
+            {LOGO_COLORS.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => set({ logoColor: c.value })}
+                title={c.label}
+                className={`h-8 w-8 rounded-full border-2 transition ${
+                  data.logoColor === c.value
+                    ? "border-[color:var(--gold)] scale-110"
+                    : "border-border"
+                }`}
+                style={{ background: c.value }}
+              />
+            ))}
+            <label className="h-8 w-8 rounded-full border-2 border-border overflow-hidden relative cursor-pointer">
+              <input
+                type="color"
+                value={data.logoColor}
+                onChange={(e) => set({ logoColor: e.target.value })}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <span className="absolute inset-0 flex items-center justify-center text-[10px]">+</span>
+            </label>
+          </div>
+        </Field>
         <Field label="Layout">
           <div className="flex gap-2 flex-wrap">
             {(["classic", "edge", "framed"] as const).map((l) => (
