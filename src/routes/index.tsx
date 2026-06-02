@@ -285,6 +285,55 @@ function Index() {
     setSelectedId(node.id);
   };
 
+  // Spreads are pairs of facing pages: (2,3) (4,5) ... — i.e. pages whose
+  // 1-based index is even sit on the LEFT of a spread. Insert two pages at
+  // an even-indexed slot before the back cover so the new pair lands cleanly.
+  const addSpread = (
+    left: "article" | "photo" | "ad",
+    right: "article" | "photo" | "ad",
+  ) => {
+    const mk = (t: "article" | "photo" | "ad") =>
+      t === "article" ? makeNode("article", { ...DEFAULT_ARTICLE }, true)
+      : t === "photo" ? makeNode("photo", { ...DEFAULT_PHOTO }, true)
+      : makeNode("ad", { ...DEFAULT_AD }, false);
+    const a = mk(left);
+    const b = mk(right);
+    setIssue((d) => {
+      const backIdx = d.pages.findIndex((p) => p.pageType === "back");
+      let insertAt = backIdx < 0 ? d.pages.length : backIdx;
+      // Page numbers are 1-based; left page of a spread must be even-indexed.
+      // insertAt is the 0-based slot; the new left page will end up at
+      // 1-based position (insertAt + 1). Bump by 1 if needed.
+      if ((insertAt + 1) % 2 !== 0) insertAt += 0; // already even left — fine
+      const next = [...d.pages];
+      next.splice(insertAt, 0, a, b);
+      return { ...d, pages: next };
+    });
+    setSelectedId(a.id);
+  };
+
+  // Remove the selected page AND its spread partner (if any).
+  const removeSpread = (id: string) =>
+    setIssue((d) => {
+      const idx = d.pages.findIndex((p) => p.id === id);
+      if (idx < 0) return d;
+      const p = d.pages[idx];
+      if (p.pageType === "cover" || p.pageType === "back" || p.pageType === "contents") return d;
+      // Spread-pair partner: even 1-based position is LEFT, partner is +1; odd is RIGHT, partner is -1.
+      const partnerIdx = ((idx + 1) % 2 === 0) ? idx + 1 : idx - 1;
+      const partner = d.pages[partnerIdx];
+      const ids = new Set<string>([id]);
+      if (
+        partner &&
+        partner.pageType !== "cover" &&
+        partner.pageType !== "back" &&
+        partner.pageType !== "contents"
+      ) {
+        ids.add(partner.id);
+      }
+      return { ...d, pages: d.pages.filter((x) => !ids.has(x.id)) };
+    });
+
   const issueSlug = useMemo(
     () =>
       (issue.meta.issue || "issue")
@@ -465,16 +514,30 @@ function Index() {
                         </div>
                       </div>
                       {!locked && p.pageType !== "contents" && (
-                        <button
-                          title="Remove"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
-                          }}
-                          className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
-                        >
-                          ✕
-                        </button>
+                        <>
+                          {spreadView && (
+                            <button
+                              title="Remove spread (this page + its facing page)"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Remove this spread (both facing pages)?")) removeSpread(p.id);
+                              }}
+                              className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
+                            >
+                              ✕✕
+                            </button>
+                          )}
+                          <button
+                            title="Remove page"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
+                            }}
+                            className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
+                          >
+                            ✕
+                          </button>
+                        </>
                       )}
                     </div>
                   );
@@ -486,6 +549,11 @@ function Index() {
               <AddBtn onClick={() => addPage("photo")}>+ Photo</AddBtn>
               <AddBtn onClick={() => addPage("ad")}>+ Ad</AddBtn>
               <AddBtn onClick={() => addPage("contents")}>+ Contents</AddBtn>
+            </div>
+            <div className="px-3 pb-3 grid grid-cols-3 gap-2">
+              <AddBtn onClick={() => addSpread("article", "photo")}>+ Article spread</AddBtn>
+              <AddBtn onClick={() => addSpread("photo", "photo")}>+ Photo spread</AddBtn>
+              <AddBtn onClick={() => addSpread("ad", "ad")}>+ Ad spread</AddBtn>
             </div>
           </div>
 
