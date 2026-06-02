@@ -414,18 +414,31 @@ export function makeNode<T extends AnyPageData["pageType"]>(
   return { id: newId(), pageType, data, includeInContents } as IssuePageNode;
 }
 
-export const DEFAULT_ISSUE: IssueDoc = {
-  meta: { issue: DEFAULT_COVER.issue, date: DEFAULT_COVER.date },
-  master: DEFAULT_MASTER,
-  pages: [
-    makeNode("cover", DEFAULT_COVER, false),
-    makeNode("contents", DEFAULT_CONTENTS, false),
-    makeNode("article", DEFAULT_ARTICLE, true),
-    makeNode("ad", DEFAULT_AD, false),
-    makeNode("photo", DEFAULT_PHOTO, true),
-    makeNode("back", DEFAULT_BACK, false),
-  ],
-};
+/** Stable, randomly-generated issue id; works in browsers and edge runtimes. */
+export function newIssueId(): string {
+  const g = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (g?.randomUUID) return g.randomUUID();
+  return `iss_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Build a fresh default issue with a unique chat id. */
+export function makeDefaultIssue(): IssueDoc {
+  return {
+    meta: { issue: DEFAULT_COVER.issue, date: DEFAULT_COVER.date, issueId: newIssueId() },
+    master: DEFAULT_MASTER,
+    pages: [
+      makeNode("cover", DEFAULT_COVER, false),
+      makeNode("contents", DEFAULT_CONTENTS, false),
+      makeNode("article", DEFAULT_ARTICLE, true),
+      makeNode("ad", DEFAULT_AD, false),
+      makeNode("photo", DEFAULT_PHOTO, true),
+      makeNode("back", DEFAULT_BACK, false),
+    ],
+  };
+}
+
+/** @deprecated use makeDefaultIssue() so each session gets its own chat id. */
+export const DEFAULT_ISSUE: IssueDoc = makeDefaultIssue();
 
 /**
  * Derive a Contents page's entries from the surrounding issue. Each entry
