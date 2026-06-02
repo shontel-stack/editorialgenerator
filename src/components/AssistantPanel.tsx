@@ -125,7 +125,13 @@ export function AssistantPanel({
     if (!toSave.length) return;
     void supabase
       .from("issue_chats")
-      .insert(toSave.map((m) => ({ issue_id: issueId, role: m.role, parts: m.parts as unknown as object })))
+      .insert(
+        toSave.map((m) => ({
+          issue_id: issueId,
+          role: m.role,
+          parts: m.parts as unknown as never,
+        })),
+      )
       .then(({ error }) => { if (error) console.warn("[chat] persist failed:", error.message); });
   }, [status, messages, initial, issueId]);
 
