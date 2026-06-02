@@ -144,14 +144,28 @@ function Index() {
 
   const selectedForRender = pagesForRender.find((p) => p.id === selected.id) ?? selected;
 
+  /* --- spread pairing --- */
+  // Page 1 (cover) stands alone, then pairs 2-3, 4-5, etc.
+  const selectedIdx = pagesForRender.findIndex((p) => p.id === selected.id);
+  const spread = useMemo(() => {
+    if (!spreadView || selectedIdx <= 0) {
+      return { left: selectedForRender, right: null as IssuePageNode | null };
+    }
+    const groupStart = 1 + 2 * Math.floor((selectedIdx - 1) / 2);
+    const left = pagesForRender[groupStart] ?? selectedForRender;
+    const right = pagesForRender[groupStart + 1] ?? null;
+    return { left, right };
+  }, [spreadView, selectedIdx, pagesForRender, selectedForRender]);
+
   /* --- preview stage sizing --- */
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
+  const stageW = spreadView && spread.right ? COVER_PX.w * 2 : COVER_PX.w;
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const update = () => {
-      setScale(Math.min(el.clientWidth / COVER_PX.w, el.clientHeight / COVER_PX.h));
+      setScale(Math.min(el.clientWidth / stageW, el.clientHeight / COVER_PX.h));
     };
     update();
     const ro = new ResizeObserver(update);
