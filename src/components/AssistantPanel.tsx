@@ -26,6 +26,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { snapshotIssue } from "@/lib/issue-snapshot";
 import { applyPatch, describePatch, type IssuePatch } from "@/lib/issue-patch";
 import type { IssueDoc } from "@/lib/coverDefaults";
+import type { AttachmentWithUrl } from "@/lib/attachments";
+import { isImage, isPdf, isWordDoc } from "@/lib/attachments";
+import { Paperclip } from "lucide-react";
 
 type ToolPart = Extract<UIMessage["parts"][number], { type: `tool-${string}` }>;
 
@@ -38,11 +41,15 @@ export function AssistantPanel({
   onClose,
   issue,
   setIssue,
+  attachments,
+  selectedPageId,
 }: {
   open: boolean;
   onClose: () => void;
   issue: IssueDoc;
   setIssue: (next: IssueDoc | ((prev: IssueDoc) => IssueDoc)) => void;
+  attachments: AttachmentWithUrl[];
+  selectedPageId: string;
 }) {
   const issueId = issue.meta.issueId;
   const [initial, setInitial] = useState<UIMessage[] | null>(null);
