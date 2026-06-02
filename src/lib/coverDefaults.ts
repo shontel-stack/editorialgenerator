@@ -8,7 +8,7 @@ export const COVER_PX = {
 };
 export const COVER_RATIO = COVER_INCHES.w / COVER_INCHES.h; // 0.75
 
-export type PageType = "cover" | "feature" | "photo" | "contents";
+export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back";
 
 export type Palette = "paper" | "ink" | "burgundy";
 
@@ -36,14 +36,14 @@ export type CoverData = {
   logoColor: string;
 };
 
-export type FeatureData = {
+export type ArticleData = {
   section: string;        // e.g. "FEATURE  ·  IN CONVERSATION"
-  folio: string;          // e.g. "THE ARTS TODAY  ·  VOL. IV  NO. III"
-  pageNumber: string;     // e.g. "024"
+  folio: string;
+  pageNumber: string;
   headline: string;
   dek: string;
   byline: string;
-  body: string;           // long form, paragraphs separated by blank lines
+  body: string;           // paragraphs separated by blank lines
   pullQuote: string;
   dropCap: boolean;
   imageUrl: string | null;
@@ -52,10 +52,13 @@ export type FeatureData = {
   palette: Palette;
 };
 
+// Backwards-compatible alias — earlier code referenced FeatureData.
+export type FeatureData = ArticleData;
+
 export type PhotoData = {
   folio: string;
   pageNumber: string;
-  section: string;        // e.g. "PORTFOLIO"
+  section: string;
   title: string;
   caption: string;
   credit: string;
@@ -66,12 +69,38 @@ export type PhotoData = {
   palette: Palette;
 };
 
+export type AdData = {
+  folio: string;
+  pageNumber: string;
+  eyebrow: string;        // e.g. "ADVERTISEMENT"
+  brand: string;
+  headline: string;
+  body: string;
+  cta: string;
+  imageUrl: string | null;
+  imageY: number;
+  layout: "full-bleed" | "framed" | "split";
+  palette: Palette;
+  logoColor: string;
+};
+
+export type BackCoverData = {
+  masthead: string;
+  pageNumber: string;
+  quote: string;
+  attribution: string;
+  imageUrl: string | null;
+  imageY: number;
+  palette: Palette;
+  logoColor: string;
+};
+
 export type ContentsEntry = {
   section: string;
   title: string;
   byline: string;
   page: string;
-  link: PageType | "none"; // interactive target in bundled issue PDF
+  link: string;           // node id of target page, or "none"
 };
 
 export type ContentsData = {
@@ -80,9 +109,49 @@ export type ContentsData = {
   issue: string;
   date: string;
   intro: string;
-  entries: ContentsEntry[];
+  entries: ContentsEntry[]; // derived at render time from the issue
   palette: Palette;
 };
+
+/* --- Issue document — dynamic list of pages --- */
+
+export type AnyPageData =
+  | { pageType: "cover"; data: CoverData }
+  | { pageType: "contents"; data: ContentsData }
+  | { pageType: "article"; data: ArticleData }
+  | { pageType: "photo"; data: PhotoData }
+  | { pageType: "ad"; data: AdData }
+  | { pageType: "back"; data: BackCoverData };
+
+export type IssuePageNode = AnyPageData & {
+  id: string;
+  includeInContents: boolean;
+};
+
+export type IssueDoc = {
+  meta: { issue: string; date: string };
+  pages: IssuePageNode[];
+};
+
+export const PAGE_LABELS: Record<PageType, string> = {
+  cover: "Cover",
+  contents: "Contents",
+  article: "Article",
+  photo: "Photo Essay",
+  ad: "Advertisement",
+  back: "Back Cover",
+};
+
+export const PALETTES: Record<
+  Palette,
+  { bg: string; fg: string; rule: string; muted: string; label: string }
+> = {
+  paper:    { bg: "#ffffff", fg: "#0a0a0a", rule: "#6b1320", muted: "#666666", label: "White" },
+  ink:      { bg: "#0a0a0a", fg: "#ffffff", rule: "#6b1320", muted: "#8a8a8a", label: "Black" },
+  burgundy: { bg: "#6b1320", fg: "#ffffff", rule: "#ffffff", muted: "#e8c8cc", label: "Burgundy" },
+};
+
+/* --- Defaults --- */
 
 export const DEFAULT_COVER: CoverData = {
   masthead: "The Arts Today",
@@ -102,7 +171,7 @@ export const DEFAULT_COVER: CoverData = {
   logoColor: "#6b1320",
 };
 
-export const DEFAULT_FEATURE: FeatureData = {
+export const DEFAULT_ARTICLE: ArticleData = {
   section: "FEATURE  ·  IN CONVERSATION",
   folio: "THE ARTS TODAY  ·  VOL. IV  NO. III",
   pageNumber: "024",
@@ -124,6 +193,9 @@ Her recent paintings — quiet interiors, half-lit figures, a recurring window �
   palette: "paper",
 };
 
+// Backwards-compatible alias.
+export const DEFAULT_FEATURE = DEFAULT_ARTICLE;
+
 export const DEFAULT_PHOTO: PhotoData = {
   folio: "THE ARTS TODAY  ·  VOL. IV  NO. III",
   pageNumber: "048",
@@ -138,37 +210,119 @@ export const DEFAULT_PHOTO: PhotoData = {
   palette: "ink",
 };
 
+export const DEFAULT_AD: AdData = {
+  folio: "THE ARTS TODAY",
+  pageNumber: "036",
+  eyebrow: "ADVERTISEMENT",
+  brand: "Maison Léa",
+  headline: "Quiet objects for quiet rooms.",
+  body: "A small atelier in the south making lamps, vessels, and linen by hand. Limited editions, available through select galleries.",
+  cta: "maisonlea.com",
+  imageUrl: null,
+  imageY: 50,
+  layout: "split",
+  palette: "ink",
+  logoColor: "#6b1320",
+};
+
+export const DEFAULT_BACK: BackCoverData = {
+  masthead: "The Arts Today",
+  pageNumber: "088",
+  quote: "To look slowly is the only honest way to look.",
+  attribution: "— Mira Solano, in this issue",
+  imageUrl: null,
+  imageY: 50,
+  palette: "ink",
+  logoColor: "#6b1320",
+};
+
 export const DEFAULT_CONTENTS: ContentsData = {
   folio: "THE ARTS TODAY",
   pageNumber: "003",
   issue: "VOL. IV  ·  NO. III",
   date: "JUNE MMXXVI",
   intro: "An issue about stillness — what survives the quiet hours of the studio, and what does not.",
-  entries: [
-    { section: "EDITOR'S NOTE", title: "On the discipline of looking", byline: "Elena Marchetti", page: "008", link: "none" },
-    { section: "ATELIER NOTES", title: "Three studios, before noon", byline: "Various", page: "012", link: "none" },
-    { section: "IN CONVERSATION", title: "The patient hand — Mira Solano", byline: "Elena Marchetti", page: "024", link: "feature" },
-    { section: "ESSAY", title: "After figuration, again", byline: "Idris Okafor", page: "038", link: "none" },
-    { section: "PORTFOLIO", title: "Rooms of their own", byline: "Yusuf Adel", page: "048", link: "photo" },
-    { section: "DISPATCH", title: "Letters from Lisbon and Mexico City", byline: "Various", page: "066", link: "none" },
-    { section: "REVIEWS", title: "Six exhibitions, briefly", byline: "The Editors", page: "078", link: "none" },
-    { section: "BACK PAGE", title: "A list of things worth slowing down for", byline: "—", page: "088", link: "none" },
-  ],
+  entries: [],
   palette: "paper",
 };
 
-export const PALETTES: Record<
-  Palette,
-  { bg: string; fg: string; rule: string; muted: string; label: string }
-> = {
-  paper:    { bg: "#ffffff", fg: "#0a0a0a", rule: "#6b1320", muted: "#666666", label: "White" },
-  ink:      { bg: "#0a0a0a", fg: "#ffffff", rule: "#6b1320", muted: "#8a8a8a", label: "Black" },
-  burgundy: { bg: "#6b1320", fg: "#ffffff", rule: "#ffffff", muted: "#e8c8cc", label: "Burgundy" },
+/* --- Helpers --- */
+
+let _seq = 0;
+export function newId(): string {
+  // crypto.randomUUID isn't in every runtime; this is plenty unique per session.
+  _seq += 1;
+  return `p_${Date.now().toString(36)}_${_seq.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function makeNode<T extends AnyPageData["pageType"]>(
+  pageType: T,
+  data: Extract<AnyPageData, { pageType: T }>["data"],
+  includeInContents = true,
+): IssuePageNode {
+  return { id: newId(), pageType, data, includeInContents } as IssuePageNode;
+}
+
+export const DEFAULT_ISSUE: IssueDoc = {
+  meta: { issue: DEFAULT_COVER.issue, date: DEFAULT_COVER.date },
+  pages: [
+    makeNode("cover", DEFAULT_COVER, false),
+    makeNode("contents", DEFAULT_CONTENTS, false),
+    makeNode("article", DEFAULT_ARTICLE, true),
+    makeNode("ad", DEFAULT_AD, false),
+    makeNode("photo", DEFAULT_PHOTO, true),
+    makeNode("back", DEFAULT_BACK, false),
+  ],
 };
 
-export const PAGE_LABELS: Record<PageType, string> = {
-  cover: "Cover",
-  feature: "Feature Article",
-  photo: "Photo Essay",
-  contents: "Contents",
-};
+/**
+ * Derive a Contents page's entries from the surrounding issue. Each entry
+ * carries the *node id* of its target so the interactive PDF exporter can
+ * wire up cross-page links by id rather than by page type.
+ */
+export function deriveContentsEntries(issue: IssueDoc): ContentsEntry[] {
+  return issue.pages
+    .filter((p) => p.includeInContents)
+    .map((p) => {
+      const pageNum = pageNumberFor(issue, p.id);
+      switch (p.pageType) {
+        case "article":
+          return {
+            section: p.data.section,
+            title: p.data.headline,
+            byline: p.data.byline,
+            page: pageNum,
+            link: p.id,
+          };
+        case "photo":
+          return {
+            section: p.data.section,
+            title: p.data.title,
+            byline: p.data.credit,
+            page: pageNum,
+            link: p.id,
+          };
+        case "ad":
+          return {
+            section: p.data.eyebrow,
+            title: p.data.brand,
+            byline: p.data.headline,
+            page: pageNum,
+            link: p.id,
+          };
+        case "cover":
+          return { section: "COVER", title: p.data.headline, byline: "—", page: pageNum, link: p.id };
+        case "back":
+          return { section: "BACK", title: p.data.quote, byline: "—", page: pageNum, link: p.id };
+        case "contents":
+          return { section: "CONTENTS", title: "Inside this issue", byline: "—", page: pageNum, link: p.id };
+      }
+    });
+}
+
+/** 1-indexed printable page number for a node, padded to 3 digits. */
+export function pageNumberFor(issue: IssueDoc, nodeId: string): string {
+  const idx = issue.pages.findIndex((p) => p.id === nodeId);
+  const n = idx < 0 ? 0 : idx + 1;
+  return n.toString().padStart(3, "0");
+}
