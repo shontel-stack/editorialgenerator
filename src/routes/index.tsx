@@ -626,20 +626,36 @@ function Index() {
         <section
           ref={stageRef}
           className="relative bg-secondary/60 border border-border overflow-hidden"
-          style={{ minHeight: "85vh", aspectRatio: `${COVER_RATIO}` }}
+          style={{ minHeight: "85vh", aspectRatio: `${stageW / COVER_PX.h}` }}
         >
           <div
-            className="absolute left-1/2 top-1/2 origin-center shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
+            className="absolute left-1/2 top-1/2 origin-center"
             style={{
               transform: `translate(-50%, -50%) scale(${scale})`,
-              width: COVER_PX.w,
+              width: stageW,
               height: COVER_PX.h,
+              display: "flex",
+              gap: 0,
             }}
           >
-            <PagePreview pageType={selectedForRender.pageType} data={selectedForRender.data} />
+            <div
+              className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
+              style={{ width: COVER_PX.w, height: COVER_PX.h }}
+            >
+              <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+            </div>
+            {spreadView && spread.right && (
+              <div
+                className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
+                style={{ width: COVER_PX.w, height: COVER_PX.h }}
+              >
+                <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+              </div>
+            )}
           </div>
         </section>
       </div>
+
 
       {/* Off-screen capture stage — one ref per page in the issue. */}
       <div
