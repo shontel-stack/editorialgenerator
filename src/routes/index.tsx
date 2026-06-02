@@ -797,7 +797,22 @@ function Index() {
               </Section>
             )}
 
-          <Section title="Export · this page">
+          {selected.pageType !== "cover" && selected.pageType !== "back" && (
+            <Section title="Reference for this page" defaultOpen>
+              <AttachmentControl
+                label="Layout / image / Word reference"
+                attachment={attachments.referencesByPage.get(selected.id) ?? null}
+                onUpload={(file) => attachments.upload({ pageId: selected.id, kind: "reference", file })}
+                onRemove={() => {
+                  const r = attachments.referencesByPage.get(selected.id);
+                  return r ? attachments.remove(r) : Promise.resolve();
+                }}
+              />
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                The editor sees PDFs and images directly. Word docs are converted to text.
+              </p>
+            </Section>
+          )}
             <div className="grid grid-cols-3 gap-2">
               <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
               <ExportBtn onClick={() => doExport("png")} busy={busy === "PNG"}>PNG</ExportBtn>
