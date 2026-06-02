@@ -163,6 +163,9 @@ function Index() {
   const updateMeta = (patch: Partial<IssueDoc["meta"]>) =>
     setIssue((d) => ({ ...d, meta: { ...d.meta, ...patch } }));
 
+  const updateMaster = (patch: Partial<IssueMaster>) =>
+    setIssue((d) => ({ ...d, master: { ...d.master, ...patch } }));
+
   const updateNode = (id: string, patch: Partial<IssuePageNode>) =>
     setIssue((d) => ({
       ...d,
