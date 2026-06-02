@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      issue_attachments: {
+        Row: {
+          created_at: string
+          extracted_text: string | null
+          file_name: string
+          file_path: string
+          id: string
+          issue_id: string
+          kind: string
+          mime_type: string
+          page_id: string | null
+          size_bytes: number
+        }
+        Insert: {
+          created_at?: string
+          extracted_text?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          issue_id: string
+          kind: string
+          mime_type: string
+          page_id?: string | null
+          size_bytes: number
+        }
+        Update: {
+          created_at?: string
+          extracted_text?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          issue_id?: string
+          kind?: string
+          mime_type?: string
+          page_id?: string | null
+          size_bytes?: number
+        }
+        Relationships: []
+      }
       issue_chats: {
         Row: {
           created_at: string
