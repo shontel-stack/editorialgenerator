@@ -135,6 +135,7 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
             lineHeight: 0.95,
             margin: 0,
             letterSpacing: -4,
+            color: data.logoColor,
           }}
         >
           {data.masthead}

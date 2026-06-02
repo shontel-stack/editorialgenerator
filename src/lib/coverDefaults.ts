@@ -10,7 +10,15 @@ export const COVER_RATIO = COVER_INCHES.w / COVER_INCHES.h; // 0.75
 
 export type PageType = "cover" | "feature" | "photo" | "contents";
 
-export type Palette = "ivory" | "ink" | "bone" | "olive";
+export type Palette = "burgundy" | "ink" | "paper";
+
+export const LOGO_COLORS: { value: string; label: string }[] = [
+  { value: "#ffffff", label: "White" },
+  { value: "#0a0a0a", label: "Black" },
+  { value: "#6b1320", label: "Burgundy" },
+  { value: "#c9a24a", label: "Gold" },
+  { value: "#e8d9b8", label: "Cream" },
+];
 
 export type CoverData = {
   masthead: string;
@@ -27,6 +35,7 @@ export type CoverData = {
   imageY: number;
   palette: Palette;
   layout: "classic" | "edge" | "framed";
+  logoColor: string;
 };
 
 export type FeatureData = {
@@ -90,8 +99,9 @@ export const DEFAULT_COVER: CoverData = {
   imageUrl: null,
   imageFit: "cover",
   imageY: 50,
-  palette: "ivory",
+  palette: "burgundy",
   layout: "classic",
+  logoColor: "#ffffff",
 };
 
 export const DEFAULT_FEATURE: FeatureData = {
@@ -113,7 +123,7 @@ Her recent paintings — quiet interiors, half-lit figures, a recurring window �
   imageUrl: null,
   imageCaption: "Mira Solano in her studio, May 2026.",
   imageY: 50,
-  palette: "ivory",
+  palette: "paper",
 };
 
 export const DEFAULT_PHOTO: PhotoData = {
@@ -146,17 +156,16 @@ export const DEFAULT_CONTENTS: ContentsData = {
     { section: "REVIEWS", title: "Six exhibitions, briefly", byline: "The Editors", page: "078", link: "none" },
     { section: "BACK PAGE", title: "A list of things worth slowing down for", byline: "—", page: "088", link: "none" },
   ],
-  palette: "bone",
+  palette: "paper",
 };
 
 export const PALETTES: Record<
   Palette,
   { bg: string; fg: string; rule: string; muted: string; label: string }
 > = {
-  ivory: { bg: "#f6f1e7", fg: "#1a1814", rule: "#b48a3c", muted: "#7a6f5c", label: "Ivory" },
-  ink:   { bg: "#15130f", fg: "#f1ead8", rule: "#caa25a", muted: "#9b937f", label: "Ink" },
-  bone:  { bg: "#ece6d8", fg: "#2a241b", rule: "#8a6a2e", muted: "#6b6151", label: "Bone" },
-  olive: { bg: "#373a2c", fg: "#efe8d2", rule: "#cba65a", muted: "#a59f86", label: "Olive" },
+  burgundy: { bg: "#5a0f1c", fg: "#ffffff", rule: "#e8d9b8", muted: "#d9b8b8", label: "Burgundy" },
+  ink:      { bg: "#0a0a0a", fg: "#ffffff", rule: "#6b1320", muted: "#8a8a8a", label: "Black" },
+  paper:    { bg: "#ffffff", fg: "#0a0a0a", rule: "#6b1320", muted: "#666666", label: "White" },
 };
 
 export const PAGE_LABELS: Record<PageType, string> = {
