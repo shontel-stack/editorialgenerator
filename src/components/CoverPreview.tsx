@@ -1,4 +1,5 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { COVER_PX, PALETTES, type CoverData } from "@/lib/coverDefaults";
 
 type Props = { data: CoverData };
@@ -11,6 +12,25 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
   ref,
 ) {
   const pal = PALETTES[data.palette];
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!data.qrUrl?.trim()) {
+      setQrDataUrl("");
+      return;
+    }
+    // High error-correction, large module size for clean 300 DPI print
+    QRCode.toDataURL(data.qrUrl.trim(), {
+      errorCorrectionLevel: "H",
+      margin: 1,
+      width: 600,
+      color: { dark: pal.fg, light: "#00000000" },
+    })
+      .then((url) => { if (!cancelled) setQrDataUrl(url); })
+      .catch(() => { if (!cancelled) setQrDataUrl(""); });
+    return () => { cancelled = true; };
+  }, [data.qrUrl, pal.fg]);
 
   return (
     <div
@@ -267,6 +287,46 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
       >
         {data.credit}
       </div>
+
+      {/* QR code */}
+      {qrDataUrl && (
+        <div
+          style={{
+            position: "absolute",
+            right: 160,
+            bottom: 470,
+            width: 320,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+            padding: 20,
+            backgroundColor: pal.bg,
+            border: `2px solid ${pal.rule}`,
+          }}
+        >
+          <img
+            src={qrDataUrl}
+            alt="QR code"
+            crossOrigin="anonymous"
+            style={{ width: 260, height: 260, display: "block" }}
+          />
+          {data.qrCaption && (
+            <div
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 18,
+                letterSpacing: 3,
+                textTransform: "uppercase",
+                color: pal.fg,
+                textAlign: "center",
+              }}
+            >
+              {data.qrCaption}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 });

@@ -581,6 +581,10 @@ function CoverEditor({
         <Field label="Feature line"><Input value={data.feature} onChange={(v) => set({ feature: v })} /></Field>
         <Field label="Image credit"><Input value={data.credit} onChange={(v) => set({ credit: v })} /></Field>
       </Section>
+      <Section title="QR Code">
+        <Field label="URL (leave empty to hide)"><Input value={data.qrUrl} onChange={(v) => set({ qrUrl: v })} /></Field>
+        <Field label="Caption"><Input value={data.qrCaption} onChange={(v) => set({ qrCaption: v })} /></Field>
+      </Section>
       <ImageBlock
         url={data.imageUrl}
         onUrl={(u) => set({ imageUrl: u })}

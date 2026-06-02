@@ -34,6 +34,8 @@ export type CoverData = {
   palette: Palette;
   layout: "classic" | "edge" | "framed";
   logoColor: string;
+  qrUrl: string;       // URL the QR encodes (empty = hide QR)
+  qrCaption: string;   // small caption below the QR
 };
 
 export type ArticleData = {
@@ -169,6 +171,8 @@ export const DEFAULT_COVER: CoverData = {
   palette: "paper",
   layout: "classic",
   logoColor: "#6b1320",
+  qrUrl: "https://theartstoday.com/issues/vol-iv-no-iii",
+  qrCaption: "SCAN · READ ONLINE",
 };
 
 export const DEFAULT_ARTICLE: ArticleData = {
