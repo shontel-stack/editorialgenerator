@@ -181,6 +181,25 @@ function Index() {
     return () => ro.disconnect();
   }, [stageW]);
 
+  /* --- live font preview: inject Google Fonts <link> and apply CSS vars --- */
+  const fonts = issue.master.fonts;
+  useEffect(() => {
+    const href = googleFontsUrl(fonts);
+    let link = document.getElementById("issue-fonts") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.id = "issue-fonts";
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+    }
+    if (link.href !== href) link.href = href;
+
+    const root = document.documentElement;
+    root.style.setProperty("--font-display", fonts.display);
+    root.style.setProperty("--font-serif", fonts.serif);
+    root.style.setProperty("--font-sans", fonts.sans);
+  }, [fonts]);
+
   /* --- mutators --- */
 
   const updateMeta = (patch: Partial<IssueDoc["meta"]>) =>
