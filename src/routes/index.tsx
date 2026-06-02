@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PagePreview } from "@/components/PagePreview";
+import { SortableList } from "@/components/SortableItem";
 import {
   ARTICLE_LAYOUTS,
   COVER_INCHES,
@@ -212,6 +213,20 @@ function Index() {
       return { ...d, pages: next };
     });
 
+  // Accept a candidate reorder of the middle section (everything that isn't
+  // cover or back). Cover stays first, back stays last regardless.
+  const reorderPages = (next: IssuePageNode[]) =>
+    setIssue((d) => {
+      const cover = d.pages.find((p) => p.pageType === "cover");
+      const back = d.pages.find((p) => p.pageType === "back");
+      const middle = next.filter((p) => p.pageType !== "cover" && p.pageType !== "back");
+      const rebuilt: IssuePageNode[] = [];
+      if (cover) rebuilt.push(cover);
+      rebuilt.push(...middle);
+      if (back) rebuilt.push(back);
+      return { ...d, pages: rebuilt };
+    });
+
   const removePage = (id: string) =>
     setIssue((d) => {
       const p = d.pages.find((x) => x.id === id);
@@ -383,77 +398,59 @@ function Index() {
             <div className="px-4 py-3 border-b border-border text-[10px] tracking-[0.4em] uppercase text-muted-foreground flex items-center justify-between">
               <span>Pages · {issue.pages.length}</span>
             </div>
-            <ul className="divide-y divide-border">
-              {issue.pages.map((p, i) => {
-                const active = p.id === selectedId;
-                const locked = p.pageType === "cover" || p.pageType === "back";
-                return (
-                  <li
-                    key={p.id}
-                    className={`px-3 py-2.5 flex items-center gap-2 cursor-pointer transition ${
-                      active ? "bg-foreground text-background" : "hover:bg-secondary"
-                    }`}
-                    onClick={() => setSelectedId(p.id)}
-                  >
-                    <span
-                      className={`text-[10px] tabular-nums tracking-widest w-6 ${
-                        active ? "opacity-80" : "text-muted-foreground"
+            <div className="divide-y divide-border">
+              <SortableList
+                items={issue.pages}
+                onReorder={reorderPages}
+                isDraggable={(p) => p.pageType !== "cover" && p.pageType !== "back"}
+                renderItem={(p, handle) => {
+                  const i = issue.pages.findIndex((x) => x.id === p.id);
+                  const active = p.id === selectedId;
+                  const locked = p.pageType === "cover" || p.pageType === "back";
+                  return (
+                    <div
+                      className={`px-3 py-2.5 flex items-center gap-2 cursor-pointer transition border-b border-border last:border-b-0 ${
+                        active ? "bg-foreground text-background" : "hover:bg-secondary"
                       }`}
+                      onClick={() => setSelectedId(p.id)}
                     >
-                      {(i + 1).toString().padStart(2, "0")}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] tracking-[0.3em] uppercase opacity-80">
-                        {PAGE_LABELS[p.pageType]}
-                        {p.includeInContents && !locked && <span> · TOC</span>}
+                      {handle}
+                      <span
+                        className={`text-[10px] tabular-nums tracking-widest w-6 ${
+                          active ? "opacity-80" : "text-muted-foreground"
+                        }`}
+                      >
+                        {(i + 1).toString().padStart(2, "0")}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] tracking-[0.3em] uppercase opacity-80">
+                          {PAGE_LABELS[p.pageType]}
+                          {p.includeInContents && !locked && <span> · TOC</span>}
+                        </div>
+                        <div
+                          className="text-sm truncate"
+                          style={{ fontFamily: "var(--font-serif)" }}
+                        >
+                          {labelForNode(p)}
+                        </div>
                       </div>
-                      <div
-                        className="text-sm truncate"
-                        style={{ fontFamily: "var(--font-serif)" }}
-                      >
-                        {labelForNode(p)}
-                      </div>
+                      {!locked && p.pageType !== "contents" && (
+                        <button
+                          title="Remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
+                          }}
+                          className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
-                    <div className="flex flex-col">
-                      <button
-                        title="Move up"
-                        disabled={locked}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          movePage(p.id, -1);
-                        }}
-                        className="text-[10px] px-1 leading-none disabled:opacity-20 hover:text-[color:var(--gold)]"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        title="Move down"
-                        disabled={locked}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          movePage(p.id, 1);
-                        }}
-                        className="text-[10px] px-1 leading-none disabled:opacity-20 hover:text-[color:var(--gold)]"
-                      >
-                        ▼
-                      </button>
-                    </div>
-                    {!locked && p.pageType !== "contents" && (
-                      <button
-                        title="Remove"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
-                        }}
-                        className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                  );
+                }}
+              />
+            </div>
             <div className="p-3 border-t border-border grid grid-cols-2 gap-2">
               <AddBtn onClick={() => addPage("article")}>+ Article</AddBtn>
               <AddBtn onClick={() => addPage("photo")}>+ Photo</AddBtn>
@@ -956,20 +953,49 @@ function ImageBlock({
   onY: (y: number) => void;
   hideFit?: boolean;
 }) {
+  const [dragOver, setDragOver] = useState(false);
+  const focalRef = useRef<HTMLDivElement>(null);
   const handle = (file: File | undefined) => {
-    if (!file) return;
+    if (!file || !file.type.startsWith("image/")) return;
     const r = new FileReader();
     r.onload = () => onUrl(String(r.result));
     r.readAsDataURL(file);
   };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    handle(e.dataTransfer.files?.[0]);
+  };
+  const updateFocalFromEvent = (clientY: number) => {
+    const el = focalRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(100, Math.round(((clientY - rect.top) / rect.height) * 100)));
+    onY(pct);
+  };
   return (
     <Section title="Image">
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => handle(e.target.files?.[0])}
-        className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
-      />
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        className={`border-2 border-dashed p-3 transition ${
+          dragOver ? "border-[color:var(--gold)] bg-secondary" : "border-border"
+        }`}
+      >
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => handle(e.target.files?.[0])}
+          className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
+        />
+        <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mt-2">
+          {dragOver ? "Drop to upload" : "Or drag an image file here"}
+        </p>
+      </div>
       {url && (
         <button
           onClick={() => onUrl(null)}
@@ -989,14 +1015,52 @@ function ImageBlock({
           </div>
         </Field>
       )}
-      <Field label={`Focal · ${y}%`}>
+      <Field label={`Focal · ${y}% · drag the line`}>
+        {url ? (
+          <div
+            ref={focalRef}
+            onPointerDown={(e) => {
+              (e.target as HTMLElement).setPointerCapture(e.pointerId);
+              updateFocalFromEvent(e.clientY);
+            }}
+            onPointerMove={(e) => {
+              if (e.buttons === 1) updateFocalFromEvent(e.clientY);
+            }}
+            className="relative w-full overflow-hidden border border-border cursor-ns-resize select-none"
+            style={{ aspectRatio: "4 / 3", background: "#000" }}
+          >
+            <img
+              src={url}
+              alt=""
+              draggable={false}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: fit,
+                objectPosition: `center ${y}%`,
+                pointerEvents: "none",
+                display: "block",
+              }}
+            />
+            <div
+              className="absolute left-0 right-0 pointer-events-none"
+              style={{
+                top: `${y}%`,
+                height: 2,
+                background: "var(--gold)",
+                boxShadow: "0 0 0 1px rgba(0,0,0,0.5)",
+                transform: "translateY(-1px)",
+              }}
+            />
+          </div>
+        ) : null}
         <input
           type="range"
           min={0}
           max={100}
           value={y}
           onChange={(e) => onY(Number(e.target.value))}
-          className="w-full accent-[color:var(--gold)]"
+          className="w-full accent-[color:var(--gold)] mt-2"
         />
       </Field>
     </Section>
