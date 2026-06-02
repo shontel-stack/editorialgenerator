@@ -12,13 +12,20 @@ import {
   PAGE_LABELS,
   PALETTES,
   type ContentsData,
+  type ContentsEntry,
   type CoverData,
   type FeatureData,
   type PageType,
   type Palette,
   type PhotoData,
 } from "@/lib/coverDefaults";
-import { exportJpeg, exportPdf, exportPng } from "@/lib/exportCover";
+import {
+  exportIssuePdf,
+  exportJpeg,
+  exportPdf,
+  exportPng,
+  type IssuePage,
+} from "@/lib/exportCover";
 
 export const Route = createFileRoute("/")({
   head: () => ({
