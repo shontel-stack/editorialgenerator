@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PagePreview } from "@/components/PagePreview";
 import { SortableList } from "@/components/SortableItem";
+import { AssistantPanel } from "@/components/AssistantPanel";
 import {
   ARTICLE_LAYOUTS,
   COVER_INCHES,
@@ -13,7 +14,8 @@ import {
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
   DEFAULT_FONTS,
-  DEFAULT_ISSUE,
+  makeDefaultIssue,
+  newIssueId,
   DEFAULT_MASTER,
   DEFAULT_PHOTO,
   DISPLAY_FONTS,
@@ -73,10 +75,11 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [issue, setIssue] = useState<IssueDoc>(DEFAULT_ISSUE);
-  const [selectedId, setSelectedId] = useState<string>(DEFAULT_ISSUE.pages[0].id);
+  const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
+  const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -408,6 +411,7 @@ function Index() {
         // Back-compat: older files may lack master / per-article layout
         const hydrated: IssueDoc = {
           ...parsed,
+          meta: { ...parsed.meta, issueId: parsed.meta.issueId ?? newIssueId() },
           master: {
             ...DEFAULT_MASTER,
             ...(parsed.master ?? {}),
@@ -466,6 +470,13 @@ function Index() {
             <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
               {COVER_INCHES.w}″ × {COVER_INCHES.h}″ · 300 DPI · {COVER_PX.w}×{COVER_PX.h}
             </div>
+            <button
+              onClick={() => setAssistantOpen((v) => !v)}
+              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase hover:opacity-90 transition"
+              title="Editorial assistant"
+            >
+              ✦ Ask the editor
+            </button>
           </div>
         </div>
       </header>
@@ -799,6 +810,13 @@ function Index() {
           <span>Pageluxe Spec · 10.6667 × 14.2222 in</span>
         </div>
       </footer>
+
+      <AssistantPanel
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        issue={issue}
+        setIssue={setIssue}
+      />
     </main>
   );
 }
