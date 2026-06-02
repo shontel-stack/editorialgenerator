@@ -1,6 +1,6 @@
 import { toJpeg, toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
-import { PDFDocument, PDFName, PDFNumber, PDFString, PDFHexString, type PDFRef } from "pdf-lib";
+import { PDFArray, PDFDocument, PDFName, PDFNumber, PDFString, PDFHexString, type PDFRef, type PDFDict } from "pdf-lib";
 import { COVER_INCHES, COVER_PX, type PageType } from "./coverDefaults";
 
 /* -------- single-page exports (per-page) -------- */
