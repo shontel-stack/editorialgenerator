@@ -125,13 +125,11 @@ function Index() {
     try {
       // Order in the bundled PDF — also the bookmark order.
       const order: PageType[] = ["cover", "contents", "feature", "photo"];
-      const pages: IssuePage[] = order
-        .map((t) => {
-          const node = refs[t].current;
-          if (!node) return null;
-          return { pageType: t, node, label: PAGE_LABELS[t] };
-        })
-        .filter((p): p is IssuePage => p !== null);
+      const pages: IssuePage[] = [];
+      for (const t of order) {
+        const node = refs[t].current;
+        if (node) pages.push({ pageType: t, node, label: PAGE_LABELS[t] });
+      }
 
       await exportIssuePdf(
         pages,
