@@ -1307,3 +1307,40 @@ function MasterToggle({
     </label>
   );
 }
+
+function FontPicker({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: FontOption[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const current = options.find((o) => o.stack === value);
+  return (
+    <label className="block space-y-1">
+      <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+        style={{ fontFamily: value }}
+      >
+        {options.map((o) => (
+          <option key={o.label} value={o.stack} style={{ fontFamily: o.stack }}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <span
+        className="block text-base leading-tight text-foreground/80 pt-0.5"
+        style={{ fontFamily: value }}
+      >
+        {current?.label ?? "Aa"} — The Quick Brown Fox
+      </span>
+    </label>
+  );
+}
