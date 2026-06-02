@@ -186,18 +186,14 @@ function addInternalLink(
     Dest: [targetPageRef, "Fit"],
   });
   const annotRef = doc.context.register(annot);
-  const hostPage = doc.context.lookup(hostPageRef);
-  // hostPage is a PDFPageLeaf dict; append to Annots array
-  const existing = (hostPage as { get: (k: PDFName) => unknown }).get(PDFName.of("Annots"));
-  const annotsArr = doc.context.obj(
-    Array.isArray((existing as { array?: unknown[] })?.array)
-      ? [...(existing as { array: unknown[] }).array, annotRef]
-      : [annotRef],
-  );
-  (hostPage as { set: (k: PDFName, v: unknown) => void }).set(
-    PDFName.of("Annots"),
-    annotsArr,
-  );
+  const hostPage = doc.context.lookup(hostPageRef) as PDFDict;
+  const existing = hostPage.get(PDFName.of("Annots"));
+  const annotsArr = PDFArray.withContext(doc.context);
+  if (existing instanceof PDFArray) {
+    existing.asArray().forEach((e) => annotsArr.push(e));
+  }
+  annotsArr.push(annotRef);
+  hostPage.set(PDFName.of("Annots"), annotsArr);
 }
 
 function buildOutline(
@@ -206,19 +202,19 @@ function buildOutline(
 ) {
   if (items.length === 0) return;
 
-  // Pre-allocate refs for the outlines dict and each item so we can link them.
   const outlinesRef = doc.context.nextRef();
   const itemRefs = items.map(() => doc.context.nextRef());
 
   items.forEach((it, i) => {
-    const itemDict: Record<string, unknown> = {
+    const fields: Record<string, unknown> = {
       Title: PDFHexString.fromText(it.title),
       Parent: outlinesRef,
       Dest: [it.ref, "Fit"],
     };
-    if (i > 0) itemDict.Prev = itemRefs[i - 1];
-    if (i < items.length - 1) itemDict.Next = itemRefs[i + 1];
-    const obj = doc.context.obj(itemDict);
+    if (i > 0) fields.Prev = itemRefs[i - 1];
+    if (i < items.length - 1) fields.Next = itemRefs[i + 1];
+    // pdf-lib's obj() typing is overly strict for nested refs; cast through unknown.
+    const obj = doc.context.obj(fields as unknown as Parameters<typeof doc.context.obj>[0]);
     doc.context.assign(itemRefs[i], obj);
   });
 
@@ -227,7 +223,7 @@ function buildOutline(
     First: itemRefs[0],
     Last: itemRefs[itemRefs.length - 1],
     Count: PDFNumber.of(items.length),
-  });
+  } as unknown as Parameters<typeof doc.context.obj>[0]);
   doc.context.assign(outlinesRef, outlinesDict);
   doc.catalog.set(PDFName.of("Outlines"), outlinesRef);
 }
