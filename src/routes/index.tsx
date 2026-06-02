@@ -5,20 +5,29 @@ import {
   COVER_INCHES,
   COVER_PX,
   COVER_RATIO,
+  DEFAULT_AD,
+  DEFAULT_ARTICLE,
+  DEFAULT_BACK,
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
-  DEFAULT_FEATURE,
+  DEFAULT_ISSUE,
   DEFAULT_PHOTO,
+  LOGO_COLORS,
   PAGE_LABELS,
   PALETTES,
+  deriveContentsEntries,
+  makeNode,
+  pageNumberFor,
+  type AdData,
+  type ArticleData,
+  type BackCoverData,
   type ContentsData,
-  type ContentsEntry,
   type CoverData,
-  type FeatureData,
+  type IssueDoc,
+  type IssuePageNode,
   type PageType,
   type Palette,
   type PhotoData,
-  LOGO_COLORS,
 } from "@/lib/coverDefaults";
 import {
   exportIssuePdf,
@@ -31,60 +40,86 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "The Arts Today — Page Generator" },
+      { title: "The Arts Today — Issue Builder" },
       {
         name: "description",
         content:
-          "Editorial cover & interior page generator for The Arts Today on Pageluxe. Exports print-ready files at 10.6667 × 14.2222 in for Adobe InDesign, Canva, and Adobe Fresco.",
+          "Build the whole monthly issue of The Arts Today: cover, contents, articles, ads, photo essays. Export print-ready PDFs at 10.6667 × 14.2222 in for InDesign, Canva, and Fresco.",
       },
-      { property: "og:title", content: "The Arts Today — Page Generator" },
+      { property: "og:title", content: "The Arts Today — Issue Builder" },
       {
         property: "og:description",
         content:
-          "Cover, feature article, photo essay, and contents pages — export PDF / PNG / JPG at exact Pageluxe dimensions.",
+          "Assemble articles, ads, photo essays and cover into a single interactive publication PDF — round-trips with Canva and InDesign.",
       },
     ],
   }),
   component: Index,
 });
 
-type AllData = {
-  cover: CoverData;
-  feature: FeatureData;
-  photo: PhotoData;
-  contents: ContentsData;
-};
-
 function Index() {
-  const [pageType, setPageType] = useState<PageType>("cover");
-  const [all, setAll] = useState<AllData>({
-    cover: DEFAULT_COVER,
-    feature: DEFAULT_FEATURE,
-    photo: DEFAULT_PHOTO,
-    contents: DEFAULT_CONTENTS,
-  });
+  const [issue, setIssue] = useState<IssueDoc>(DEFAULT_ISSUE);
+  const [selectedId, setSelectedId] = useState<string>(DEFAULT_ISSUE.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
 
-  // One off-screen ref per page type — these are what the exporter captures.
-  // Always-mounted hidden stage keeps every page render-ready so the Issue PDF
-  // can capture them all without flipping tabs.
-  const refs = {
-    cover: useRef<HTMLDivElement>(null),
-    feature: useRef<HTMLDivElement>(null),
-    photo: useRef<HTMLDivElement>(null),
-    contents: useRef<HTMLDivElement>(null),
-  } as const;
+  // Hidden off-screen render stage holds a div ref for every page node.
+  const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const setRef = (id: string) => (el: HTMLDivElement | null) => {
+    refs.current.set(id, el);
+  };
 
+  // Force-select something valid if the user deletes the selected page.
+  useEffect(() => {
+    if (!issue.pages.some((p) => p.id === selectedId)) {
+      setSelectedId(issue.pages[0]?.id ?? "");
+    }
+  }, [issue, selectedId]);
+
+  const selected = issue.pages.find((p) => p.id === selectedId) ?? issue.pages[0];
+
+  // Auto-compute folio + page number on each node before rendering, and inject
+  // the derived contents entries into the contents page so it stays in sync
+  // with the issue list automatically.
+  const pagesForRender = useMemo(() => {
+    const contentsEntries = deriveContentsEntries(issue);
+    const folio = `THE ARTS TODAY  ·  ${issue.meta.issue}`;
+    return issue.pages.map((p) => {
+      const num = pageNumberFor(issue, p.id);
+      switch (p.pageType) {
+        case "cover":
+          return { ...p, data: { ...p.data, issue: issue.meta.issue, date: issue.meta.date } };
+        case "contents":
+          return {
+            ...p,
+            data: {
+              ...p.data,
+              folio,
+              pageNumber: num,
+              issue: issue.meta.issue,
+              date: issue.meta.date,
+              entries: contentsEntries,
+            },
+          };
+        case "article":
+        case "photo":
+        case "ad":
+          return { ...p, data: { ...p.data, folio, pageNumber: num } };
+        case "back":
+          return { ...p, data: { ...p.data, pageNumber: num } };
+      }
+    }) as IssuePageNode[];
+  }, [issue]);
+
+  const selectedForRender = pagesForRender.find((p) => p.id === selected.id) ?? selected;
+
+  /* --- preview stage sizing --- */
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
-
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const update = () => {
-      const w = el.clientWidth;
-      const h = el.clientHeight;
-      setScale(Math.min(w / COVER_PX.w, h / COVER_PX.h));
+      setScale(Math.min(el.clientWidth / COVER_PX.w, el.clientHeight / COVER_PX.h));
     };
     update();
     const ro = new ResizeObserver(update);
@@ -92,27 +127,91 @@ function Index() {
     return () => ro.disconnect();
   }, []);
 
-  const data = all[pageType] as AllData[PageType];
+  /* --- mutators --- */
 
-  function update<T extends PageType>(t: T, patch: Partial<AllData[T]>) {
-    setAll((a) => ({ ...a, [t]: { ...a[t], ...patch } }));
-  }
+  const updateMeta = (patch: Partial<IssueDoc["meta"]>) =>
+    setIssue((d) => ({ ...d, meta: { ...d.meta, ...patch } }));
+
+  const updateNode = (id: string, patch: Partial<IssuePageNode>) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => (p.id === id ? ({ ...p, ...patch } as IssuePageNode) : p)),
+    }));
+
+  const updateData = <T extends IssuePageNode>(id: string, dataPatch: Partial<T["data"]>) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id ? ({ ...p, data: { ...p.data, ...dataPatch } } as IssuePageNode) : p,
+      ),
+    }));
+
+  const movePage = (id: string, dir: -1 | 1) =>
+    setIssue((d) => {
+      const idx = d.pages.findIndex((p) => p.id === id);
+      if (idx < 0) return d;
+      const j = idx + dir;
+      // Lock cover at first position, back cover at last position.
+      const target = d.pages[j];
+      if (!target) return d;
+      const moving = d.pages[idx];
+      if (moving.pageType === "cover" || moving.pageType === "back") return d;
+      if (target.pageType === "cover" || target.pageType === "back") return d;
+      const next = [...d.pages];
+      next[idx] = target;
+      next[j] = moving;
+      return { ...d, pages: next };
+    });
+
+  const removePage = (id: string) =>
+    setIssue((d) => {
+      const p = d.pages.find((x) => x.id === id);
+      if (!p) return d;
+      if (p.pageType === "cover" || p.pageType === "back" || p.pageType === "contents") return d;
+      return { ...d, pages: d.pages.filter((x) => x.id !== id) };
+    });
+
+  const addPage = (pageType: "article" | "photo" | "ad" | "contents") => {
+    const node = (() => {
+      switch (pageType) {
+        case "article":
+          return makeNode("article", { ...DEFAULT_ARTICLE }, true);
+        case "photo":
+          return makeNode("photo", { ...DEFAULT_PHOTO }, true);
+        case "ad":
+          return makeNode("ad", { ...DEFAULT_AD }, false);
+        case "contents":
+          return makeNode("contents", { ...DEFAULT_CONTENTS, entries: [] }, false);
+      }
+    })();
+    setIssue((d) => {
+      // Insert before the back cover (which is locked last).
+      const backIdx = d.pages.findIndex((p) => p.pageType === "back");
+      const insertAt = backIdx < 0 ? d.pages.length : backIdx;
+      const next = [...d.pages];
+      next.splice(insertAt, 0, node);
+      return { ...d, pages: next };
+    });
+    setSelectedId(node.id);
+  };
 
   const issueSlug = useMemo(
     () =>
-      (all.cover.issue || "issue")
+      (issue.meta.issue || "issue")
         .replace(/[^a-z0-9]+/gi, "-")
         .toLowerCase()
         .replace(/^-|-$/g, ""),
-    [all.cover.issue],
+    [issue.meta.issue],
   );
 
+  /* --- exports --- */
+
   const doExport = async (kind: "pdf" | "png" | "jpg") => {
-    const node = refs[pageType].current;
+    const node = refs.current.get(selected.id);
     if (!node) return;
     setBusy(kind.toUpperCase());
     try {
-      const name = `arts-today-${issueSlug}-${pageType}`;
+      const name = `arts-today-${issueSlug}-${selected.pageType}-${pageNumberFor(issue, selected.id)}`;
       if (kind === "pdf") await exportPdf(node, `${name}.pdf`);
       else if (kind === "png") await exportPng(node, `${name}.png`);
       else await exportJpeg(node, `${name}.jpg`);
@@ -121,118 +220,288 @@ function Index() {
     }
   };
 
-  const doExportIssue = async () => {
-    setBusy("ISSUE");
+  const doExportPublication = async () => {
+    setBusy("PUBLICATION");
     try {
-      // Order in the bundled PDF — also the bookmark order.
-      const order: PageType[] = ["cover", "contents", "feature", "photo"];
       const pages: IssuePage[] = [];
-      for (const t of order) {
-        const node = refs[t].current;
-        if (node) pages.push({ pageType: t, node, label: PAGE_LABELS[t] });
+      for (const p of issue.pages) {
+        const node = refs.current.get(p.id);
+        if (!node) continue;
+        const label = labelForNode(p);
+        pages.push({ id: p.id, pageType: p.pageType, node, label });
       }
-
       await exportIssuePdf(
         pages,
         {
-          title: `The Arts Today — ${all.cover.issue}`,
+          title: `The Arts Today — ${issue.meta.issue}`,
           author: "The Arts Today",
-          subject: all.cover.headline,
+          subject: issue.meta.date,
         },
-        `arts-today-${issueSlug}-issue.pdf`,
+        `arts-today-${issueSlug}-publication.pdf`,
       );
     } finally {
       setBusy(null);
     }
   };
 
+  /* --- save / load JSON --- */
+
+  const saveIssue = () => {
+    const json = JSON.stringify(issue, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `arts-today-${issueSlug}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const loadIssue = (file: File | undefined) => {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const parsed = JSON.parse(String(r.result)) as IssueDoc;
+        if (!parsed?.pages?.length || !parsed?.meta) throw new Error("Invalid issue file");
+        setIssue(parsed);
+        setSelectedId(parsed.pages[0].id);
+      } catch (e) {
+        alert(`Could not load issue: ${(e as Error).message}`);
+      }
+    };
+    r.readAsText(file);
+  };
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
-        <div className="mx-auto max-w-[1700px] px-8 py-6 flex items-end justify-between gap-8 flex-wrap">
+        <div className="mx-auto max-w-[1800px] px-8 py-6 flex items-end justify-between gap-8 flex-wrap">
           <div>
             <div className="text-[11px] tracking-[0.4em] uppercase text-muted-foreground">
               Pageluxe · The Arts Today
             </div>
-            <h1
-              className="text-4xl mt-1"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Monthly Page Generator
+            <h1 className="text-4xl mt-1" style={{ fontFamily: "var(--font-display)" }}>
+              Issue Builder
             </h1>
           </div>
-          <div className="text-[11px] tracking-[0.25em] uppercase text-muted-foreground">
-            Output · {COVER_INCHES.w}″ × {COVER_INCHES.h}″ · 300 DPI ·{" "}
-            {COVER_PX.w}×{COVER_PX.h}px
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex flex-col">
+              <label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                Issue
+              </label>
+              <input
+                value={issue.meta.issue}
+                onChange={(e) => updateMeta({ issue: e.target.value })}
+                className="border border-input bg-background px-3 py-1.5 text-sm w-[200px]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                Date
+              </label>
+              <input
+                value={issue.meta.date}
+                onChange={(e) => updateMeta({ date: e.target.value })}
+                className="border border-input bg-background px-3 py-1.5 text-sm w-[180px]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              />
+            </div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+              {COVER_INCHES.w}″ × {COVER_INCHES.h}″ · 300 DPI · {COVER_PX.w}×{COVER_PX.h}
+            </div>
           </div>
-        </div>
-
-        {/* Page type tabs */}
-        <div className="mx-auto max-w-[1700px] px-8 pb-0 flex gap-0 border-t border-border">
-          {(Object.keys(PAGE_LABELS) as PageType[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setPageType(t)}
-              className={`px-5 py-4 text-[11px] tracking-[0.3em] uppercase border-r border-border transition ${
-                pageType === t
-                  ? "bg-foreground text-background"
-                  : "hover:bg-secondary text-foreground"
-              }`}
-            >
-              {PAGE_LABELS[t]}
-            </button>
-          ))}
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1700px] px-8 py-8 grid gap-8 lg:grid-cols-[400px_1fr]">
+      <div className="mx-auto max-w-[1800px] px-8 py-8 grid gap-6 lg:grid-cols-[260px_380px_1fr]">
+        {/* Page list */}
+        <aside className="space-y-3">
+          <div className="border border-border bg-card">
+            <div className="px-4 py-3 border-b border-border text-[10px] tracking-[0.4em] uppercase text-muted-foreground flex items-center justify-between">
+              <span>Pages · {issue.pages.length}</span>
+            </div>
+            <ul className="divide-y divide-border">
+              {issue.pages.map((p, i) => {
+                const active = p.id === selectedId;
+                const locked = p.pageType === "cover" || p.pageType === "back";
+                return (
+                  <li
+                    key={p.id}
+                    className={`px-3 py-2.5 flex items-center gap-2 cursor-pointer transition ${
+                      active ? "bg-foreground text-background" : "hover:bg-secondary"
+                    }`}
+                    onClick={() => setSelectedId(p.id)}
+                  >
+                    <span
+                      className={`text-[10px] tabular-nums tracking-widest w-6 ${
+                        active ? "opacity-80" : "text-muted-foreground"
+                      }`}
+                    >
+                      {(i + 1).toString().padStart(2, "0")}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] tracking-[0.3em] uppercase opacity-80">
+                        {PAGE_LABELS[p.pageType]}
+                        {p.includeInContents && !locked && <span> · TOC</span>}
+                      </div>
+                      <div
+                        className="text-sm truncate"
+                        style={{ fontFamily: "var(--font-serif)" }}
+                      >
+                        {labelForNode(p)}
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <button
+                        title="Move up"
+                        disabled={locked}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          movePage(p.id, -1);
+                        }}
+                        className="text-[10px] px-1 leading-none disabled:opacity-20 hover:text-[color:var(--gold)]"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        title="Move down"
+                        disabled={locked}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          movePage(p.id, 1);
+                        }}
+                        className="text-[10px] px-1 leading-none disabled:opacity-20 hover:text-[color:var(--gold)]"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                    {!locked && p.pageType !== "contents" && (
+                      <button
+                        title="Remove"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
+                        }}
+                        className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="p-3 border-t border-border grid grid-cols-2 gap-2">
+              <AddBtn onClick={() => addPage("article")}>+ Article</AddBtn>
+              <AddBtn onClick={() => addPage("photo")}>+ Photo</AddBtn>
+              <AddBtn onClick={() => addPage("ad")}>+ Ad</AddBtn>
+              <AddBtn onClick={() => addPage("contents")}>+ Contents</AddBtn>
+            </div>
+          </div>
+
+          <div className="border border-border bg-card p-3 space-y-2">
+            <button
+              onClick={doExportPublication}
+              disabled={busy === "PUBLICATION"}
+              className="w-full bg-[color:var(--gold)] text-background px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:opacity-90 transition disabled:opacity-60"
+            >
+              {busy === "PUBLICATION" ? "Assembling…" : "⤓ Export Publication PDF"}
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={saveIssue}
+                className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary"
+              >
+                Save issue
+              </button>
+              <label className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary cursor-pointer text-center">
+                Load issue
+                <input
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  onChange={(e) => loadIssue(e.target.files?.[0])}
+                />
+              </label>
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Save JSON = your monthly source of truth. Reload it next issue, edit, re-export.
+            </p>
+          </div>
+        </aside>
+
+        {/* Editor for selected page */}
         <aside className="space-y-6">
-          {pageType === "cover" && (
-            <CoverEditor data={all.cover} set={(p) => update("cover", p)} />
+          {selected.pageType === "cover" && (
+            <CoverEditor
+              data={selected.data as CoverData}
+              set={(p) => updateData<typeof selected>(selected.id, p)}
+            />
           )}
-          {pageType === "feature" && (
-            <FeatureEditor data={all.feature} set={(p) => update("feature", p)} />
+          {selected.pageType === "article" && (
+            <ArticleEditor
+              data={selected.data as ArticleData}
+              set={(p) => updateData<typeof selected>(selected.id, p)}
+            />
           )}
-          {pageType === "photo" && (
-            <PhotoEditor data={all.photo} set={(p) => update("photo", p)} />
+          {selected.pageType === "photo" && (
+            <PhotoEditor
+              data={selected.data as PhotoData}
+              set={(p) => updateData<typeof selected>(selected.id, p)}
+            />
           )}
-          {pageType === "contents" && (
-            <ContentsEditor data={all.contents} set={(p) => update("contents", p)} />
+          {selected.pageType === "contents" && (
+            <ContentsEditor
+              data={selected.data as ContentsData}
+              set={(p) => updateData<typeof selected>(selected.id, p)}
+            />
           )}
+          {selected.pageType === "ad" && (
+            <AdEditor
+              data={selected.data as AdData}
+              set={(p) => updateData<typeof selected>(selected.id, p)}
+            />
+          )}
+          {selected.pageType === "back" && (
+            <BackCoverEditor
+              data={selected.data as BackCoverData}
+              set={(p) => updateData<typeof selected>(selected.id, p)}
+            />
+          )}
+
+          {selected.pageType !== "cover" &&
+            selected.pageType !== "back" &&
+            selected.pageType !== "contents" && (
+              <Section title="Contents listing">
+                <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={selected.includeInContents}
+                    onChange={(e) => updateNode(selected.id, { includeInContents: e.target.checked })}
+                    className="accent-[color:var(--gold)]"
+                  />
+                  Show this page in the Contents index
+                </label>
+              </Section>
+            )}
 
           <Section title="Export · this page">
             <div className="grid grid-cols-3 gap-2">
-              <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>
-                PDF
-              </ExportBtn>
-              <ExportBtn onClick={() => doExport("png")} busy={busy === "PNG"}>
-                PNG
-              </ExportBtn>
-              <ExportBtn onClick={() => doExport("jpg")} busy={busy === "JPG"}>
-                JPG
-              </ExportBtn>
+              <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
+              <ExportBtn onClick={() => doExport("png")} busy={busy === "PNG"}>PNG</ExportBtn>
+              <ExportBtn onClick={() => doExport("jpg")} busy={busy === "JPG"}>JPG</ExportBtn>
             </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
-              Single-page export at exact {COVER_INCHES.w}″ × {COVER_INCHES.h}″ for InDesign,
-              Canva, and Fresco.
-            </p>
-          </Section>
-
-          <Section title="Export · interactive issue">
-            <button
-              onClick={doExportIssue}
-              disabled={busy === "ISSUE"}
-              className="w-full border border-[color:var(--gold)] bg-[color:var(--gold)] text-background px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:bg-background hover:text-[color:var(--gold)] transition disabled:opacity-60"
-            >
-              {busy === "ISSUE" ? "Assembling…" : "Download Issue PDF"}
-            </button>
-            <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
-              Bundles all four pages into one PDF with bookmarks and a clickable contents
-              page that jumps to each section. Set per-entry targets in the Contents editor.
+              Single-page export at {COVER_INCHES.w}″ × {COVER_INCHES.h}″ for InDesign, Canva, and Fresco.
             </p>
           </Section>
         </aside>
 
+        {/* Preview */}
         <section
           ref={stageRef}
           className="relative bg-secondary/60 border border-border overflow-hidden"
@@ -246,35 +515,23 @@ function Index() {
               height: COVER_PX.h,
             }}
           >
-            {/* Visible preview — re-renders identical content to the hidden
-                ref'd copy below; exporter always captures the hidden node so
-                the active tab's state can't get out of sync. */}
-            <PagePreview pageType={pageType} data={data} />
+            <PagePreview pageType={selectedForRender.pageType} data={selectedForRender.data} />
           </div>
         </section>
       </div>
 
-      {/* Off-screen capture stage — every page mounted with its own ref so the
-          Issue PDF assembler can render them in order without flipping tabs. */}
+      {/* Off-screen capture stage — one ref per page in the issue. */}
       <div
         aria-hidden
-        style={{
-          position: "fixed",
-          left: -100000,
-          top: 0,
-          pointerEvents: "none",
-          opacity: 0,
-        }}
+        style={{ position: "fixed", left: -100000, top: 0, pointerEvents: "none", opacity: 0 }}
       >
-        <PagePreview ref={refs.cover} pageType="cover" data={all.cover} />
-        <PagePreview ref={refs.contents} pageType="contents" data={all.contents} />
-        <PagePreview ref={refs.feature} pageType="feature" data={all.feature} />
-        <PagePreview ref={refs.photo} pageType="photo" data={all.photo} />
+        {pagesForRender.map((p) => (
+          <PagePreview key={p.id} ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
+        ))}
       </div>
 
-
       <footer className="border-t border-border mt-8">
-        <div className="mx-auto max-w-[1700px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
+        <div className="mx-auto max-w-[1800px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
           <span>The Arts Today · Editorial Page System</span>
           <span>Pageluxe Spec · 10.6667 × 14.2222 in</span>
         </div>
@@ -283,7 +540,24 @@ function Index() {
   );
 }
 
-/* — EDITORS — */
+function labelForNode(p: IssuePageNode): string {
+  switch (p.pageType) {
+    case "cover":
+      return p.data.headline || "Cover";
+    case "contents":
+      return "Inside this issue";
+    case "article":
+      return p.data.headline || "Untitled article";
+    case "photo":
+      return p.data.title || "Photo essay";
+    case "ad":
+      return p.data.brand || "Advertisement";
+    case "back":
+      return "Back cover";
+  }
+}
+
+/* ============ EDITORS ============ */
 
 function CoverEditor({
   data,
@@ -294,9 +568,7 @@ function CoverEditor({
 }) {
   return (
     <>
-      <Section title="Issue">
-        <Field label="Issue line"><Input value={data.issue} onChange={(v) => set({ issue: v })} /></Field>
-        <Field label="Date"><Input value={data.date} onChange={(v) => set({ date: v })} /></Field>
+      <Section title="Cover badge">
         <Field label="Issue badge"><Input value={data.price} onChange={(v) => set({ price: v })} /></Field>
       </Section>
       <Section title="Masthead">
@@ -319,32 +591,7 @@ function CoverEditor({
       />
       <Section title="Style">
         <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
-        <Field label="Logo color">
-          <div className="flex gap-2 flex-wrap">
-            {LOGO_COLORS.map((c) => (
-              <button
-                key={c.value}
-                onClick={() => set({ logoColor: c.value })}
-                title={c.label}
-                className={`h-8 w-8 rounded-full border-2 transition ${
-                  data.logoColor === c.value
-                    ? "border-[color:var(--gold)] scale-110"
-                    : "border-border"
-                }`}
-                style={{ background: c.value }}
-              />
-            ))}
-            <label className="h-8 w-8 rounded-full border-2 border-border overflow-hidden relative cursor-pointer">
-              <input
-                type="color"
-                value={data.logoColor}
-                onChange={(e) => set({ logoColor: e.target.value })}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <span className="absolute inset-0 flex items-center justify-center text-[10px]">+</span>
-            </label>
-          </div>
-        </Field>
+        <LogoColorField value={data.logoColor} onChange={(v) => set({ logoColor: v })} />
         <Field label="Layout">
           <div className="flex gap-2 flex-wrap">
             {(["classic", "edge", "framed"] as const).map((l) => (
@@ -359,28 +606,24 @@ function CoverEditor({
   );
 }
 
-function FeatureEditor({
+function ArticleEditor({
   data,
   set,
 }: {
-  data: FeatureData;
-  set: (p: Partial<FeatureData>) => void;
+  data: ArticleData;
+  set: (p: Partial<ArticleData>) => void;
 }) {
   return (
     <>
-      <Section title="Folio">
-        <Field label="Folio (top header)"><Input value={data.folio} onChange={(v) => set({ folio: v })} /></Field>
+      <Section title="Article">
         <Field label="Section eyebrow"><Input value={data.section} onChange={(v) => set({ section: v })} /></Field>
-        <Field label="Page number"><Input value={data.pageNumber} onChange={(v) => set({ pageNumber: v })} /></Field>
-      </Section>
-      <Section title="Headline">
         <Field label="Headline"><Textarea value={data.headline} onChange={(v) => set({ headline: v })} rows={2} /></Field>
         <Field label="Dek"><Textarea value={data.dek} onChange={(v) => set({ dek: v })} rows={3} /></Field>
         <Field label="Byline"><Input value={data.byline} onChange={(v) => set({ byline: v })} /></Field>
       </Section>
       <Section title="Body">
-        <Field label="Body copy (blank line = paragraph)">
-          <Textarea value={data.body} onChange={(v) => set({ body: v })} rows={12} />
+        <Field label="Body copy (blank line = new paragraph)">
+          <Textarea value={data.body} onChange={(v) => set({ body: v })} rows={14} />
         </Field>
         <Field label="Pull quote"><Textarea value={data.pullQuote} onChange={(v) => set({ pullQuote: v })} rows={3} /></Field>
         <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
@@ -421,12 +664,8 @@ function PhotoEditor({
 }) {
   return (
     <>
-      <Section title="Folio">
-        <Field label="Folio"><Input value={data.folio} onChange={(v) => set({ folio: v })} /></Field>
+      <Section title="Photo essay">
         <Field label="Section"><Input value={data.section} onChange={(v) => set({ section: v })} /></Field>
-        <Field label="Page number"><Input value={data.pageNumber} onChange={(v) => set({ pageNumber: v })} /></Field>
-      </Section>
-      <Section title="Content">
         <Field label="Title"><Input value={data.title} onChange={(v) => set({ title: v })} /></Field>
         <Field label="Caption"><Textarea value={data.caption} onChange={(v) => set({ caption: v })} rows={4} /></Field>
         <Field label="Credit"><Input value={data.credit} onChange={(v) => set({ credit: v })} /></Field>
@@ -455,6 +694,73 @@ function PhotoEditor({
   );
 }
 
+function AdEditor({ data, set }: { data: AdData; set: (p: Partial<AdData>) => void }) {
+  return (
+    <>
+      <Section title="Advertisement">
+        <Field label="Eyebrow"><Input value={data.eyebrow} onChange={(v) => set({ eyebrow: v })} /></Field>
+        <Field label="Brand"><Input value={data.brand} onChange={(v) => set({ brand: v })} /></Field>
+        <Field label="Headline"><Textarea value={data.headline} onChange={(v) => set({ headline: v })} rows={2} /></Field>
+        <Field label="Body"><Textarea value={data.body} onChange={(v) => set({ body: v })} rows={4} /></Field>
+        <Field label="Call-to-action"><Input value={data.cta} onChange={(v) => set({ cta: v })} /></Field>
+      </Section>
+      <ImageBlock
+        url={data.imageUrl}
+        onUrl={(u) => set({ imageUrl: u })}
+        fit="cover"
+        onFit={() => {}}
+        y={data.imageY}
+        onY={(y) => set({ imageY: y })}
+        hideFit
+      />
+      <Section title="Style">
+        <Field label="Layout">
+          <div className="flex gap-2 flex-wrap">
+            {(["full-bleed", "framed", "split"] as const).map((l) => (
+              <Chip key={l} active={data.layout === l} onClick={() => set({ layout: l })}>
+                {l}
+              </Chip>
+            ))}
+          </div>
+        </Field>
+        <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+        <LogoColorField value={data.logoColor} onChange={(v) => set({ logoColor: v })} />
+      </Section>
+    </>
+  );
+}
+
+function BackCoverEditor({
+  data,
+  set,
+}: {
+  data: BackCoverData;
+  set: (p: Partial<BackCoverData>) => void;
+}) {
+  return (
+    <>
+      <Section title="Back cover">
+        <Field label="Masthead"><Input value={data.masthead} onChange={(v) => set({ masthead: v })} /></Field>
+        <Field label="Closing quote"><Textarea value={data.quote} onChange={(v) => set({ quote: v })} rows={3} /></Field>
+        <Field label="Attribution"><Input value={data.attribution} onChange={(v) => set({ attribution: v })} /></Field>
+      </Section>
+      <ImageBlock
+        url={data.imageUrl}
+        onUrl={(u) => set({ imageUrl: u })}
+        fit="cover"
+        onFit={() => {}}
+        y={data.imageY}
+        onY={(y) => set({ imageY: y })}
+        hideFit
+      />
+      <Section title="Style">
+        <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+        <LogoColorField value={data.logoColor} onChange={(v) => set({ logoColor: v })} />
+      </Section>
+    </>
+  );
+}
+
 function ContentsEditor({
   data,
   set,
@@ -462,77 +768,13 @@ function ContentsEditor({
   data: ContentsData;
   set: (p: Partial<ContentsData>) => void;
 }) {
-  const updateEntry = (i: number, patch: Partial<ContentsData["entries"][number]>) => {
-    const next = data.entries.map((e, idx) => (idx === i ? { ...e, ...patch } : e));
-    set({ entries: next });
-  };
-  const removeEntry = (i: number) =>
-    set({ entries: data.entries.filter((_, idx) => idx !== i) });
-  const addEntry = () =>
-    set({
-      entries: [
-        ...data.entries,
-        { section: "SECTION", title: "Untitled", byline: "—", page: "000", link: "none" },
-      ],
-    });
-
   return (
     <>
-      <Section title="Header">
-        <Field label="Folio"><Input value={data.folio} onChange={(v) => set({ folio: v })} /></Field>
-        <Field label="Issue"><Input value={data.issue} onChange={(v) => set({ issue: v })} /></Field>
-        <Field label="Date"><Input value={data.date} onChange={(v) => set({ date: v })} /></Field>
-        <Field label="Page number"><Input value={data.pageNumber} onChange={(v) => set({ pageNumber: v })} /></Field>
-        <Field label="Intro"><Textarea value={data.intro} onChange={(v) => set({ intro: v })} rows={3} /></Field>
-      </Section>
-      <Section title="Entries">
-        <div className="space-y-3">
-          {data.entries.map((e, i) => (
-            <div key={i} className="border border-border p-3 space-y-2 bg-background">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
-                  #{i + 1}
-                </span>
-                <button
-                  onClick={() => removeEntry(i)}
-                  className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-destructive"
-                >
-                  Remove
-                </button>
-              </div>
-              <Input value={e.section} onChange={(v) => updateEntry(i, { section: v })} />
-              <Input value={e.title} onChange={(v) => updateEntry(i, { title: v })} />
-              <div className="grid grid-cols-[1fr_90px] gap-2">
-                <Input value={e.byline} onChange={(v) => updateEntry(i, { byline: v })} />
-                <Input value={e.page} onChange={(v) => updateEntry(i, { page: v })} />
-              </div>
-              <label className="block">
-                <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
-                  Link → (interactive PDF)
-                </div>
-                <select
-                  value={e.link}
-                  onChange={(ev) =>
-                    updateEntry(i, { link: ev.target.value as ContentsEntry["link"] })
-                  }
-                  className="w-full border border-input bg-background px-2 py-1.5 text-xs uppercase tracking-widest focus:outline-none focus:border-foreground"
-                >
-                  <option value="none">No link</option>
-                  <option value="cover">Cover</option>
-                  <option value="contents">Contents</option>
-                  <option value="feature">Feature Article</option>
-                  <option value="photo">Photo Essay</option>
-                </select>
-              </label>
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={addEntry}
-          className="mt-3 w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary"
-        >
-          + Add entry
-        </button>
+      <Section title="Contents page">
+        <Field label="Intro"><Textarea value={data.intro} onChange={(v) => set({ intro: v })} rows={4} /></Field>
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Entries auto-fill from pages flagged “Show in Contents.” Reorder pages in the list at left to update page numbers and order automatically. Each entry is a clickable link in the exported Publication PDF.
+        </p>
       </Section>
       <Section title="Style">
         <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
@@ -541,7 +783,7 @@ function ContentsEditor({
   );
 }
 
-/* — primitives — */
+/* ============ PRIMITIVES ============ */
 
 function ImageBlock({
   url,
@@ -616,7 +858,7 @@ function PaletteField({
 }) {
   return (
     <Field label="Palette">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {(Object.keys(PALETTES) as Palette[]).map((p) => {
           const pal = PALETTES[p];
           const active = value === p;
@@ -624,12 +866,12 @@ function PaletteField({
             <button
               key={p}
               onClick={() => onChange(p)}
-              className={`flex items-center gap-3 border px-3 py-2 text-xs uppercase tracking-widest transition ${
+              className={`flex items-center gap-2 border px-2 py-2 text-[10px] uppercase tracking-widest transition ${
                 active ? "border-foreground" : "border-border hover:border-foreground/50"
               }`}
             >
-              <span className="h-5 w-5 border border-border" style={{ background: pal.bg }} />
-              <span className="h-5 w-5 -ml-2 border border-border" style={{ background: pal.rule }} />
+              <span className="h-4 w-4 border border-border" style={{ background: pal.bg }} />
+              <span className="h-4 w-4 -ml-1 border border-border" style={{ background: pal.rule }} />
               {pal.label}
             </button>
           );
@@ -639,12 +881,39 @@ function PaletteField({
   );
 }
 
+function LogoColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <Field label="Logo color">
+      <div className="flex gap-2 flex-wrap items-center">
+        {LOGO_COLORS.map((c) => (
+          <button
+            key={c.value}
+            onClick={() => onChange(c.value)}
+            title={c.label}
+            className={`h-7 w-7 rounded-full border-2 transition ${
+              value === c.value ? "border-[color:var(--gold)] scale-110" : "border-border"
+            }`}
+            style={{ background: c.value }}
+          />
+        ))}
+        <label className="h-7 w-7 rounded-full border-2 border-border overflow-hidden relative cursor-pointer">
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+          <span className="absolute inset-0 flex items-center justify-center text-[10px]">+</span>
+        </label>
+      </div>
+    </Field>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border border-border bg-card p-5">
-      <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">
-        {title}
-      </div>
+      <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">{title}</div>
       <div className="space-y-4">{children}</div>
     </div>
   );
@@ -652,9 +921,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1.5">
-        {label}
-      </div>
+      <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1.5">{label}</div>
       {children}
     </label>
   );
@@ -703,7 +970,7 @@ function Chip({
       className={`px-3 py-1.5 border text-[10px] uppercase tracking-[0.3em] transition ${
         active
           ? "border-foreground bg-foreground text-background"
-          : "border-border hover:border-foreground/50"
+          : "border-border hover:border-foreground/60"
       }`}
     >
       {children}
@@ -723,9 +990,19 @@ function ExportBtn({
     <button
       onClick={onClick}
       disabled={busy}
-      className="border border-foreground bg-foreground text-background px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:bg-background hover:text-foreground transition disabled:opacity-60"
+      className="border border-foreground px-3 py-2.5 text-[11px] uppercase tracking-[0.3em] hover:bg-foreground hover:text-background transition disabled:opacity-60"
     >
       {busy ? "…" : children}
+    </button>
+  );
+}
+function AddBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="border border-border px-2 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary"
+    >
+      {children}
     </button>
   );
 }

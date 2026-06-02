@@ -2,15 +2,17 @@ import { forwardRef } from "react";
 import {
   COVER_PX,
   PALETTES,
+  type AdData,
+  type ArticleData,
+  type BackCoverData,
   type ContentsData,
   type CoverData,
-  type FeatureData,
   type PageType,
   type PhotoData,
 } from "@/lib/coverDefaults";
 import { CoverPreview } from "./CoverPreview";
 
-type AnyData = CoverData | FeatureData | PhotoData | ContentsData;
+type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData;
 
 type Props = {
   pageType: PageType;
@@ -21,13 +23,23 @@ export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePrevie
   { pageType, data },
   ref,
 ) {
-  if (pageType === "cover") return <CoverPreview ref={ref} data={data as CoverData} />;
-  if (pageType === "feature") return <FeaturePreview ref={ref} data={data as FeatureData} />;
-  if (pageType === "photo") return <PhotoPreview ref={ref} data={data as PhotoData} />;
-  return <ContentsPreview ref={ref} data={data as ContentsData} />;
+  switch (pageType) {
+    case "cover":
+      return <CoverPreview ref={ref} data={data as CoverData} />;
+    case "article":
+      return <ArticlePreview ref={ref} data={data as ArticleData} />;
+    case "photo":
+      return <PhotoPreview ref={ref} data={data as PhotoData} />;
+    case "contents":
+      return <ContentsPreview ref={ref} data={data as ContentsData} />;
+    case "ad":
+      return <AdPreview ref={ref} data={data as AdData} />;
+    case "back":
+      return <BackCoverPreview ref={ref} data={data as BackCoverData} />;
+  }
 });
 
-/* — shared shell wrapper — */
+/* — shared shell — */
 
 function Page({
   innerRef,
@@ -91,9 +103,9 @@ function Folio({
   );
 }
 
-/* — FEATURE ARTICLE — two-column long-form — */
+/* — ARTICLE — two-column long-form — */
 
-const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(function FeaturePreview(
+const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(function ArticlePreview(
   { data },
   ref,
 ) {
@@ -104,7 +116,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
     <Page innerRef={ref} pal={pal}>
       <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
 
-      {/* Section eyebrow */}
       <div
         style={{
           position: "absolute",
@@ -121,7 +132,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         {data.section}
       </div>
 
-      {/* Headline */}
       <h1
         style={{
           position: "absolute",
@@ -140,7 +150,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         {data.headline}
       </h1>
 
-      {/* Dek */}
       <p
         style={{
           position: "absolute",
@@ -159,7 +168,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         {data.dek}
       </p>
 
-      {/* Byline */}
       <div
         style={{
           position: "absolute",
@@ -175,7 +183,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         {data.byline}
       </div>
 
-      {/* Hero image */}
       <div
         style={{
           position: "absolute",
@@ -221,7 +228,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         )}
       </div>
 
-      {/* Caption */}
       <div
         style={{
           position: "absolute",
@@ -237,7 +243,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         {data.imageCaption}
       </div>
 
-      {/* Two-column body */}
       <div
         style={{
           position: "absolute",
@@ -287,7 +292,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         ))}
       </div>
 
-      {/* Pull quote — overlaid right column */}
       {data.pullQuote && (
         <div
           style={{
@@ -310,7 +314,6 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
         </div>
       )}
 
-      {/* Bottom folio */}
       <div
         style={{
           position: "absolute",
@@ -335,7 +338,7 @@ const FeaturePreview = forwardRef<HTMLDivElement, { data: FeatureData }>(functio
   );
 });
 
-/* — PHOTO ESSAY — full-bleed with caption block — */
+/* — PHOTO ESSAY — */
 
 const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function PhotoPreview(
   { data },
@@ -347,7 +350,6 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
 
   return (
     <Page innerRef={ref} pal={pal}>
-      {/* Image */}
       <div
         style={{
           position: "absolute",
@@ -402,7 +404,6 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
         )}
       </div>
 
-      {/* Top folio (overlaid on image when full-bleed) */}
       <div
         style={{
           position: "absolute",
@@ -423,7 +424,6 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
         <span>{data.section}</span>
       </div>
 
-      {/* Caption block */}
       <div
         style={{
           position: "absolute",
@@ -488,7 +488,6 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
         </div>
       </div>
 
-      {/* Page number bottom-right */}
       <div
         style={{
           position: "absolute",
@@ -508,7 +507,7 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
   );
 });
 
-/* — CONTENTS — issue index — */
+/* — CONTENTS — */
 
 const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(function ContentsPreview(
   { data },
@@ -520,7 +519,6 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
     <Page innerRef={ref} pal={pal}>
       <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
 
-      {/* Eyebrow */}
       <div
         style={{
           position: "absolute",
@@ -537,7 +535,6 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         Contents  ·  {data.issue}  ·  {data.date}
       </div>
 
-      {/* Title */}
       <h1
         style={{
           position: "absolute",
@@ -556,7 +553,6 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         Inside
       </h1>
 
-      {/* Intro */}
       <p
         style={{
           position: "absolute",
@@ -575,7 +571,6 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         {data.intro}
       </p>
 
-      {/* Entries */}
       <div
         style={{
           position: "absolute",
@@ -591,7 +586,7 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
           <div
             key={i}
             data-link-row
-            data-link-target={e.link ?? "none"}
+            data-link-target={e.link || "none"}
             style={{
               display: "grid",
               gridTemplateColumns: "260px 1fr 140px",
@@ -650,9 +645,23 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
             </div>
           </div>
         ))}
+        {data.entries.length === 0 && (
+          <div
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 22,
+              letterSpacing: 4,
+              textTransform: "uppercase",
+              color: pal.muted,
+              padding: 40,
+              border: `1px dashed ${pal.muted}`,
+            }}
+          >
+            Mark pages as “List in contents” to populate this index.
+          </div>
+        )}
       </div>
 
-      {/* Bottom folio */}
       <div
         style={{
           position: "absolute",
@@ -669,6 +678,285 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         }}
       >
         <span>{data.folio}</span>
+        <span>{data.pageNumber}</span>
+      </div>
+    </Page>
+  );
+});
+
+/* — AD — full-page brand placement — */
+
+const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPreview(
+  { data },
+  ref,
+) {
+  const pal = PALETTES[data.palette];
+  const isSplit = data.layout === "split";
+  const isFramed = data.layout === "framed";
+
+  return (
+    <Page innerRef={ref} pal={pal}>
+      {/* Image */}
+      <div
+        style={{
+          position: "absolute",
+          top: isFramed ? 320 : 0,
+          left: isFramed ? 240 : 0,
+          right: isFramed ? 240 : isSplit ? "50%" : 0,
+          bottom: isFramed ? 1500 : isSplit ? 0 : 1600,
+          overflow: "hidden",
+          background: pal.muted + "22",
+        }}
+      >
+        {data.imageUrl ? (
+          <img
+            src={data.imageUrl}
+            alt=""
+            crossOrigin="anonymous"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: `center ${data.imageY}%`,
+              display: "block",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: pal.muted,
+              fontFamily: "var(--font-sans)",
+              fontSize: 36,
+              letterSpacing: 6,
+              textTransform: "uppercase",
+              background: `repeating-linear-gradient(45deg, ${pal.bg} 0 40px, ${pal.muted}22 40px 80px)`,
+            }}
+          >
+            Place ad image
+          </div>
+        )}
+      </div>
+
+      {/* Eyebrow */}
+      <div
+        style={{
+          position: "absolute",
+          top: 120,
+          left: isSplit ? "calc(50% + 120px)" : 160,
+          right: 160,
+          fontFamily: "var(--font-sans)",
+          fontSize: 20,
+          letterSpacing: 8,
+          textTransform: "uppercase",
+          color: pal.rule,
+          fontWeight: 600,
+        }}
+      >
+        {data.eyebrow}
+      </div>
+
+      {/* Copy block */}
+      <div
+        style={{
+          position: "absolute",
+          left: isSplit ? "calc(50% + 120px)" : 160,
+          right: 160,
+          top: isSplit ? 480 : "auto",
+          bottom: isSplit ? "auto" : 320,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 220,
+            lineHeight: 0.9,
+            color: data.logoColor,
+            letterSpacing: -3,
+            marginBottom: 60,
+          }}
+        >
+          {data.brand}
+        </div>
+        <h2
+          style={{
+            fontFamily: "var(--font-display)",
+            fontStyle: "italic",
+            fontWeight: 400,
+            fontSize: 96,
+            lineHeight: 1.05,
+            margin: 0,
+            color: pal.fg,
+          }}
+        >
+          {data.headline}
+        </h2>
+        <div
+          style={{
+            marginTop: 48,
+            borderTop: `1px solid ${pal.rule}`,
+            paddingTop: 32,
+            fontFamily: "var(--font-serif)",
+            fontSize: 32,
+            lineHeight: 1.5,
+            color: pal.fg,
+            maxWidth: 1400,
+          }}
+        >
+          {data.body}
+        </div>
+        <div
+          style={{
+            marginTop: 56,
+            fontFamily: "var(--font-sans)",
+            fontSize: 26,
+            letterSpacing: 6,
+            textTransform: "uppercase",
+            color: pal.rule,
+            fontWeight: 600,
+          }}
+        >
+          {data.cta}
+        </div>
+      </div>
+
+      {/* Bottom folio */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 100,
+          left: 160,
+          right: 160,
+          borderTop: `1px solid ${pal.rule}`,
+          paddingTop: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          fontFamily: "var(--font-sans)",
+          fontSize: 20,
+          letterSpacing: 4,
+          textTransform: "uppercase",
+          color: pal.muted,
+        }}
+      >
+        <span>{data.folio}</span>
+        <span>{data.pageNumber}</span>
+      </div>
+    </Page>
+  );
+});
+
+/* — BACK COVER — closing page — */
+
+const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(function BackCoverPreview(
+  { data },
+  ref,
+) {
+  const pal = PALETTES[data.palette];
+
+  return (
+    <Page innerRef={ref} pal={pal}>
+      {/* Optional background image */}
+      {data.imageUrl && (
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+          <img
+            src={data.imageUrl}
+            alt=""
+            crossOrigin="anonymous"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: `center ${data.imageY}%`,
+              opacity: 0.85,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(180deg, ${pal.bg}99 0%, ${pal.bg}55 50%, ${pal.bg}cc 100%)`,
+            }}
+          />
+        </div>
+      )}
+
+      {/* Logo / masthead */}
+      <div
+        style={{
+          position: "absolute",
+          top: 280,
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          fontFamily: "var(--font-display)",
+          fontSize: 200,
+          lineHeight: 1,
+          letterSpacing: -2,
+          color: data.logoColor,
+        }}
+      >
+        {data.masthead}
+      </div>
+
+      {/* Center quote */}
+      <div
+        style={{
+          position: "absolute",
+          left: 280,
+          right: 280,
+          top: "42%",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--font-display)",
+            fontStyle: "italic",
+            fontSize: 140,
+            lineHeight: 1.1,
+            color: pal.fg,
+          }}
+        >
+          {data.quote}
+        </div>
+        <div
+          style={{
+            marginTop: 60,
+            fontFamily: "var(--font-sans)",
+            fontSize: 24,
+            letterSpacing: 6,
+            textTransform: "uppercase",
+            color: pal.rule,
+            fontWeight: 600,
+          }}
+        >
+          {data.attribution}
+        </div>
+      </div>
+
+      {/* Bottom rule */}
+      <div
+        style={{
+          position: "absolute",
+          left: 160,
+          right: 160,
+          bottom: 160,
+          borderTop: `1px solid ${pal.rule}`,
+          paddingTop: 28,
+          display: "flex",
+          justifyContent: "space-between",
+          fontFamily: "var(--font-sans)",
+          fontSize: 22,
+          letterSpacing: 6,
+          textTransform: "uppercase",
+          color: pal.muted,
+        }}
+      >
+        <span>The Arts Today · Pageluxe</span>
         <span>{data.pageNumber}</span>
       </div>
     </Page>
