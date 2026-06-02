@@ -10,7 +10,15 @@ export const COVER_RATIO = COVER_INCHES.w / COVER_INCHES.h; // 0.75
 
 export type PageType = "cover" | "feature" | "photo" | "contents";
 
-export type Palette = "ivory" | "ink" | "bone" | "olive";
+export type Palette = "burgundy" | "ink" | "paper";
+
+export const LOGO_COLORS: { value: string; label: string }[] = [
+  { value: "#ffffff", label: "White" },
+  { value: "#0a0a0a", label: "Black" },
+  { value: "#6b1320", label: "Burgundy" },
+  { value: "#c9a24a", label: "Gold" },
+  { value: "#e8d9b8", label: "Cream" },
+];
 
 export type CoverData = {
   masthead: string;
