@@ -398,6 +398,24 @@ function ContentsEditor({
                 <Input value={e.byline} onChange={(v) => updateEntry(i, { byline: v })} />
                 <Input value={e.page} onChange={(v) => updateEntry(i, { page: v })} />
               </div>
+              <label className="block">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                  Link → (interactive PDF)
+                </div>
+                <select
+                  value={e.link}
+                  onChange={(ev) =>
+                    updateEntry(i, { link: ev.target.value as ContentsEntry["link"] })
+                  }
+                  className="w-full border border-input bg-background px-2 py-1.5 text-xs uppercase tracking-widest focus:outline-none focus:border-foreground"
+                >
+                  <option value="none">No link</option>
+                  <option value="cover">Cover</option>
+                  <option value="contents">Contents</option>
+                  <option value="feature">Feature Article</option>
+                  <option value="photo">Photo Essay</option>
+                </select>
+              </label>
             </div>
           ))}
         </div>
