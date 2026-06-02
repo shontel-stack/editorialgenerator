@@ -255,7 +255,7 @@ export const DEFAULT_MASTER: IssueMaster = {
 };
 
 export type IssueDoc = {
-  meta: { issue: string; date: string };
+  meta: { issue: string; date: string; issueId: string };
   master: IssueMaster;
   pages: IssuePageNode[];
 };
