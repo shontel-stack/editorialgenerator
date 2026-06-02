@@ -291,3 +291,38 @@ export function AssistantPanel({
     </aside>
   );
 }
+
+function ReferencesStrip({
+  attachments,
+  selectedPageId,
+}: {
+  attachments: AttachmentWithUrl[];
+  selectedPageId: string;
+}) {
+  const template = attachments.find((a) => a.kind === "template");
+  const selectedRef = attachments.find(
+    (a) => a.kind === "reference" && a.page_id === selectedPageId,
+  );
+  if (!template && !selectedRef) return null;
+
+  const Chip = ({ a, label }: { a: AttachmentWithUrl; label: string }) => {
+    const kind = isPdf(a.mime_type) ? "PDF" : isImage(a.mime_type) ? "Image" : isWordDoc(a.mime_type) ? "Word" : "File";
+    return (
+      <div className="flex items-center gap-1.5 border border-[color:var(--ruby)]/40 bg-[color:var(--ruby)]/5 px-2 py-1 rounded-sm max-w-full">
+        <Paperclip className="h-3 w-3 text-[color:var(--ruby)] shrink-0" />
+        <div className="min-w-0">
+          <div className="text-[8px] tracking-[0.3em] uppercase text-muted-foreground">{label} · {kind}</div>
+          <div className="text-[11px] truncate" title={a.file_name}>{a.file_name}</div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="px-4 py-2 border-b border-border bg-secondary/40 flex flex-wrap gap-2">
+      {template && <Chip a={template} label="Issue template" />}
+      {selectedRef && <Chip a={selectedRef} label="This page" />}
+    </div>
+  );
+}
+
