@@ -35,6 +35,7 @@ export type CoverData = {
   imageY: number;
   palette: Palette;
   layout: "classic" | "edge" | "framed";
+  logoColor: string;
 };
 
 export type FeatureData = {
