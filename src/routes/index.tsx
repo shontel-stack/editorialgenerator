@@ -89,9 +89,10 @@ function Index() {
   // with the issue list automatically.
   const pagesForRender = useMemo(() => {
     const contentsEntries = deriveContentsEntries(issue);
-    const folio = `THE ARTS TODAY  ·  ${issue.meta.issue}`;
-    return issue.pages.map((p) => {
-      const num = pageNumberFor(issue, p.id);
+    const folio = renderFolio(issue.master, issue.meta);
+    const total = issue.pages.length;
+    return issue.pages.map((p, i) => {
+      const num = formatPageNumber(issue.master, i + 1, total);
       switch (p.pageType) {
         case "cover":
           return { ...p, data: { ...p.data, issue: issue.meta.issue, date: issue.meta.date } };
@@ -108,9 +109,32 @@ function Index() {
             },
           };
         case "article":
+          return {
+            ...p,
+            data: {
+              ...p.data,
+              folio: issue.master.showFolioOnArticles ? folio : "",
+              pageNumber: num,
+            },
+          };
         case "photo":
+          return {
+            ...p,
+            data: {
+              ...p.data,
+              folio: issue.master.showFolioOnPhotos ? folio : "",
+              pageNumber: num,
+            },
+          };
         case "ad":
-          return { ...p, data: { ...p.data, folio, pageNumber: num } };
+          return {
+            ...p,
+            data: {
+              ...p.data,
+              folio: issue.master.showFolioOnAds ? folio : "",
+              pageNumber: num,
+            },
+          };
         case "back":
           return { ...p, data: { ...p.data, pageNumber: num } };
       }
