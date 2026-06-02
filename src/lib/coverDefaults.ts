@@ -59,13 +59,21 @@ export type PhotoData = {
   palette: Palette;
 };
 
+export type ContentsEntry = {
+  section: string;
+  title: string;
+  byline: string;
+  page: string;
+  link: PageType | "none"; // interactive target in bundled issue PDF
+};
+
 export type ContentsData = {
   folio: string;
   pageNumber: string;
   issue: string;
   date: string;
   intro: string;
-  entries: Array<{ section: string; title: string; byline: string; page: string }>;
+  entries: ContentsEntry[];
   palette: Palette;
 };
 
