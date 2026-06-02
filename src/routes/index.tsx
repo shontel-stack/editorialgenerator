@@ -448,6 +448,68 @@ function Index() {
             </div>
           </div>
 
+          {/* Master pages — issue-wide folio & page-number defaults */}
+          <div className="border border-border bg-card p-3 space-y-3">
+            <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+              Master pages
+            </div>
+            <Field label="Publication name">
+              <Input
+                value={issue.master.publication}
+                onChange={(v) => updateMaster({ publication: v })}
+              />
+            </Field>
+            <Field label="Folio template">
+              <Input
+                value={issue.master.folioTemplate}
+                onChange={(v) => updateMaster({ folioTemplate: v })}
+              />
+            </Field>
+            <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2">
+              Tokens: <code>{"{publication}"}</code> <code>{"{issue}"}</code> <code>{"{date}"}</code>
+            </p>
+            <Field label="Page number style">
+              <select
+                value={issue.master.pageNumberFormat}
+                onChange={(e) =>
+                  updateMaster({ pageNumberFormat: e.target.value as IssueMaster["pageNumberFormat"] })
+                }
+                className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+              >
+                {PAGE_NUMBER_FORMATS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="space-y-1.5">
+              <MasterToggle
+                label="Folio on articles"
+                checked={issue.master.showFolioOnArticles}
+                onChange={(v) => updateMaster({ showFolioOnArticles: v })}
+              />
+              <MasterToggle
+                label="Folio on photo essays"
+                checked={issue.master.showFolioOnPhotos}
+                onChange={(v) => updateMaster({ showFolioOnPhotos: v })}
+              />
+              <MasterToggle
+                label="Folio on advertisements"
+                checked={issue.master.showFolioOnAds}
+                onChange={(v) => updateMaster({ showFolioOnAds: v })}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground pt-2 border-t border-border">
+              <input
+                type="checkbox"
+                checked={spreadView}
+                onChange={(e) => setSpreadView(e.target.checked)}
+                className="accent-[color:var(--gold)]"
+              />
+              Spread view (preview pages as 2-up)
+            </label>
+          </div>
+
+
           <div className="border border-border bg-card p-3 space-y-2">
             <button
               onClick={doExportPublication}
