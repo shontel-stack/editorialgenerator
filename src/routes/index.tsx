@@ -213,6 +213,20 @@ function Index() {
       return { ...d, pages: next };
     });
 
+  // Accept a candidate reorder of the middle section (everything that isn't
+  // cover or back). Cover stays first, back stays last regardless.
+  const reorderPages = (next: IssuePageNode[]) =>
+    setIssue((d) => {
+      const cover = d.pages.find((p) => p.pageType === "cover");
+      const back = d.pages.find((p) => p.pageType === "back");
+      const middle = next.filter((p) => p.pageType !== "cover" && p.pageType !== "back");
+      const rebuilt: IssuePageNode[] = [];
+      if (cover) rebuilt.push(cover);
+      rebuilt.push(...middle);
+      if (back) rebuilt.push(back);
+      return { ...d, pages: rebuilt };
+    });
+
   const removePage = (id: string) =>
     setIssue((d) => {
       const p = d.pages.find((x) => x.id === id);
