@@ -73,10 +73,11 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [issue, setIssue] = useState<IssueDoc>(DEFAULT_ISSUE);
-  const [selectedId, setSelectedId] = useState<string>(DEFAULT_ISSUE.pages[0].id);
+  const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
+  const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
