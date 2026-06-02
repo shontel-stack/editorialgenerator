@@ -12,13 +12,20 @@ import {
   PAGE_LABELS,
   PALETTES,
   type ContentsData,
+  type ContentsEntry,
   type CoverData,
   type FeatureData,
   type PageType,
   type Palette,
   type PhotoData,
 } from "@/lib/coverDefaults";
-import { exportJpeg, exportPdf, exportPng } from "@/lib/exportCover";
+import {
+  exportIssuePdf,
+  exportJpeg,
+  exportPdf,
+  exportPng,
+  type IssuePage,
+} from "@/lib/exportCover";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -56,7 +63,17 @@ function Index() {
     contents: DEFAULT_CONTENTS,
   });
   const [busy, setBusy] = useState<string | null>(null);
-  const coverRef = useRef<HTMLDivElement>(null);
+
+  // One off-screen ref per page type — these are what the exporter captures.
+  // Always-mounted hidden stage keeps every page render-ready so the Issue PDF
+  // can capture them all without flipping tabs.
+  const refs = {
+    cover: useRef<HTMLDivElement>(null),
+    feature: useRef<HTMLDivElement>(null),
+    photo: useRef<HTMLDivElement>(null),
+    contents: useRef<HTMLDivElement>(null),
+  } as const;
+
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
 
@@ -80,21 +97,49 @@ function Index() {
     setAll((a) => ({ ...a, [t]: { ...a[t], ...patch } }));
   }
 
-  const filenameBase = useMemo(() => {
-    const issueSlug = (all.cover.issue || "issue")
-      .replace(/[^a-z0-9]+/gi, "-")
-      .toLowerCase()
-      .replace(/^-|-$/g, "");
-    return `arts-today-${issueSlug}-${pageType}`;
-  }, [all.cover.issue, pageType]);
+  const issueSlug = useMemo(
+    () =>
+      (all.cover.issue || "issue")
+        .replace(/[^a-z0-9]+/gi, "-")
+        .toLowerCase()
+        .replace(/^-|-$/g, ""),
+    [all.cover.issue],
+  );
 
   const doExport = async (kind: "pdf" | "png" | "jpg") => {
-    if (!coverRef.current) return;
+    const node = refs[pageType].current;
+    if (!node) return;
     setBusy(kind.toUpperCase());
     try {
-      if (kind === "pdf") await exportPdf(coverRef.current, `${filenameBase}.pdf`);
-      else if (kind === "png") await exportPng(coverRef.current, `${filenameBase}.png`);
-      else await exportJpeg(coverRef.current, `${filenameBase}.jpg`);
+      const name = `arts-today-${issueSlug}-${pageType}`;
+      if (kind === "pdf") await exportPdf(node, `${name}.pdf`);
+      else if (kind === "png") await exportPng(node, `${name}.png`);
+      else await exportJpeg(node, `${name}.jpg`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const doExportIssue = async () => {
+    setBusy("ISSUE");
+    try {
+      // Order in the bundled PDF — also the bookmark order.
+      const order: PageType[] = ["cover", "contents", "feature", "photo"];
+      const pages: IssuePage[] = [];
+      for (const t of order) {
+        const node = refs[t].current;
+        if (node) pages.push({ pageType: t, node, label: PAGE_LABELS[t] });
+      }
+
+      await exportIssuePdf(
+        pages,
+        {
+          title: `The Arts Today — ${all.cover.issue}`,
+          author: "The Arts Today",
+          subject: all.cover.headline,
+        },
+        `arts-today-${issueSlug}-issue.pdf`,
+      );
     } finally {
       setBusy(null);
     }
@@ -154,7 +199,7 @@ function Index() {
             <ContentsEditor data={all.contents} set={(p) => update("contents", p)} />
           )}
 
-          <Section title="Export">
+          <Section title="Export · this page">
             <div className="grid grid-cols-3 gap-2">
               <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>
                 PDF
@@ -167,8 +212,22 @@ function Index() {
               </ExportBtn>
             </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
-              Files export at exact {COVER_INCHES.w}″ × {COVER_INCHES.h}″ — drop directly into
-              Adobe InDesign, Canva, or Adobe Fresco.
+              Single-page export at exact {COVER_INCHES.w}″ × {COVER_INCHES.h}″ for InDesign,
+              Canva, and Fresco.
+            </p>
+          </Section>
+
+          <Section title="Export · interactive issue">
+            <button
+              onClick={doExportIssue}
+              disabled={busy === "ISSUE"}
+              className="w-full border border-[color:var(--gold)] bg-[color:var(--gold)] text-background px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:bg-background hover:text-[color:var(--gold)] transition disabled:opacity-60"
+            >
+              {busy === "ISSUE" ? "Assembling…" : "Download Issue PDF"}
+            </button>
+            <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
+              Bundles all four pages into one PDF with bookmarks and a clickable contents
+              page that jumps to each section. Set per-entry targets in the Contents editor.
             </p>
           </Section>
         </aside>
@@ -186,10 +245,32 @@ function Index() {
               height: COVER_PX.h,
             }}
           >
-            <PagePreview ref={coverRef} pageType={pageType} data={data} />
+            {/* Visible preview — re-renders identical content to the hidden
+                ref'd copy below; exporter always captures the hidden node so
+                the active tab's state can't get out of sync. */}
+            <PagePreview pageType={pageType} data={data} />
           </div>
         </section>
       </div>
+
+      {/* Off-screen capture stage — every page mounted with its own ref so the
+          Issue PDF assembler can render them in order without flipping tabs. */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          left: -100000,
+          top: 0,
+          pointerEvents: "none",
+          opacity: 0,
+        }}
+      >
+        <PagePreview ref={refs.cover} pageType="cover" data={all.cover} />
+        <PagePreview ref={refs.contents} pageType="contents" data={all.contents} />
+        <PagePreview ref={refs.feature} pageType="feature" data={all.feature} />
+        <PagePreview ref={refs.photo} pageType="photo" data={all.photo} />
+      </div>
+
 
       <footer className="border-t border-border mt-8">
         <div className="mx-auto max-w-[1700px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
@@ -364,7 +445,7 @@ function ContentsEditor({
     set({
       entries: [
         ...data.entries,
-        { section: "SECTION", title: "Untitled", byline: "—", page: "000" },
+        { section: "SECTION", title: "Untitled", byline: "—", page: "000", link: "none" },
       ],
     });
 
@@ -398,6 +479,24 @@ function ContentsEditor({
                 <Input value={e.byline} onChange={(v) => updateEntry(i, { byline: v })} />
                 <Input value={e.page} onChange={(v) => updateEntry(i, { page: v })} />
               </div>
+              <label className="block">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                  Link → (interactive PDF)
+                </div>
+                <select
+                  value={e.link}
+                  onChange={(ev) =>
+                    updateEntry(i, { link: ev.target.value as ContentsEntry["link"] })
+                  }
+                  className="w-full border border-input bg-background px-2 py-1.5 text-xs uppercase tracking-widest focus:outline-none focus:border-foreground"
+                >
+                  <option value="none">No link</option>
+                  <option value="cover">Cover</option>
+                  <option value="contents">Contents</option>
+                  <option value="feature">Feature Article</option>
+                  <option value="photo">Photo Essay</option>
+                </select>
+              </label>
             </div>
           ))}
         </div>

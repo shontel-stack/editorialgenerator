@@ -59,13 +59,21 @@ export type PhotoData = {
   palette: Palette;
 };
 
+export type ContentsEntry = {
+  section: string;
+  title: string;
+  byline: string;
+  page: string;
+  link: PageType | "none"; // interactive target in bundled issue PDF
+};
+
 export type ContentsData = {
   folio: string;
   pageNumber: string;
   issue: string;
   date: string;
   intro: string;
-  entries: Array<{ section: string; title: string; byline: string; page: string }>;
+  entries: ContentsEntry[];
   palette: Palette;
 };
 
@@ -129,14 +137,14 @@ export const DEFAULT_CONTENTS: ContentsData = {
   date: "JUNE MMXXVI",
   intro: "An issue about stillness — what survives the quiet hours of the studio, and what does not.",
   entries: [
-    { section: "EDITOR'S NOTE", title: "On the discipline of looking", byline: "Elena Marchetti", page: "008" },
-    { section: "ATELIER NOTES", title: "Three studios, before noon", byline: "Various", page: "012" },
-    { section: "IN CONVERSATION", title: "The patient hand — Mira Solano", byline: "Elena Marchetti", page: "024" },
-    { section: "ESSAY", title: "After figuration, again", byline: "Idris Okafor", page: "038" },
-    { section: "PORTFOLIO", title: "Rooms of their own", byline: "Yusuf Adel", page: "048" },
-    { section: "DISPATCH", title: "Letters from Lisbon and Mexico City", byline: "Various", page: "066" },
-    { section: "REVIEWS", title: "Six exhibitions, briefly", byline: "The Editors", page: "078" },
-    { section: "BACK PAGE", title: "A list of things worth slowing down for", byline: "—", page: "088" },
+    { section: "EDITOR'S NOTE", title: "On the discipline of looking", byline: "Elena Marchetti", page: "008", link: "none" },
+    { section: "ATELIER NOTES", title: "Three studios, before noon", byline: "Various", page: "012", link: "none" },
+    { section: "IN CONVERSATION", title: "The patient hand — Mira Solano", byline: "Elena Marchetti", page: "024", link: "feature" },
+    { section: "ESSAY", title: "After figuration, again", byline: "Idris Okafor", page: "038", link: "none" },
+    { section: "PORTFOLIO", title: "Rooms of their own", byline: "Yusuf Adel", page: "048", link: "photo" },
+    { section: "DISPATCH", title: "Letters from Lisbon and Mexico City", byline: "Various", page: "066", link: "none" },
+    { section: "REVIEWS", title: "Six exhibitions, briefly", byline: "The Editors", page: "078", link: "none" },
+    { section: "BACK PAGE", title: "A list of things worth slowing down for", byline: "—", page: "088", link: "none" },
   ],
   palette: "bone",
 };
