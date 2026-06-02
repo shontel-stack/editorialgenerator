@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PagePreview } from "@/components/PagePreview";
 import { SortableList } from "@/components/SortableItem";
+import { AssistantPanel } from "@/components/AssistantPanel";
 import {
   ARTICLE_LAYOUTS,
   COVER_INCHES,
