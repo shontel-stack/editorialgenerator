@@ -13,12 +13,27 @@ import {
 } from "@/lib/chat-tools";
 import type { IssueSnapshot } from "@/lib/issue-snapshot";
 
+type ChatAttachment = {
+  kind: "template" | "reference";
+  page_id: string | null;
+  file_name: string;
+  mime_type: string;
+  signed_url: string | null;
+  extracted_text: string | null;
+};
+
 type ChatBody = {
   messages?: UIMessage[];
   issueSnapshot?: IssueSnapshot;
+  selectedPageId?: string;
+  attachments?: ChatAttachment[];
 };
 
-function buildSystem(snapshot: IssueSnapshot | undefined): string {
+function buildSystem(
+  snapshot: IssueSnapshot | undefined,
+  attachments: ChatAttachment[],
+  selectedPageId: string | undefined,
+): string {
   const base = `You are the in-app editorial assistant for "The Arts Today" — a luxe, slow, contemporary art & culture magazine built in a custom layout tool.
 
 Your job:
@@ -27,15 +42,71 @@ Your job:
 - Reference pages by their id from the snapshot below. Do not invent ids.
 - Keep edits surgical. Make one tool call per logical change; you can chain calls.
 - Write copy in the magazine's voice: precise, quiet, sensory, no exclamation marks, no marketing fluff.
-- After tool calls, briefly tell the user what changed and why.`;
+- After tool calls, briefly tell the user what changed and why.
 
-  if (!snapshot) return base;
-  return `${base}
+When the user has uploaded reference files:
+- The issue-level "template" file shows the OVERALL look the user is matching. Use it to inform layout choices (page sequence, article layout presets, fonts, palette).
+- A per-page "reference" file is attached to a specific page. When the user asks you to work on that page, treat the reference as the visual or textual source of truth.
+- PDFs and images are attached directly so you can see them. Word documents are converted to text and included below.`;
 
-Current issue snapshot (JSON):
-\`\`\`json
-${JSON.stringify(snapshot, null, 2)}
-\`\`\``;
+  const refLines: string[] = [];
+  for (const a of attachments) {
+    const tag = a.kind === "template"
+      ? "[ISSUE TEMPLATE]"
+      : `[PAGE REFERENCE · page_id=${a.page_id ?? "?"}]`;
+    refLines.push(`${tag} ${a.file_name} (${a.mime_type})`);
+    if (a.extracted_text) {
+      const snippet = a.extracted_text.slice(0, 4000);
+      refLines.push(`Text content:\n${snippet}${a.extracted_text.length > 4000 ? "\n…(truncated)" : ""}`);
+    }
+  }
+
+  const parts = [base];
+  if (selectedPageId) {
+    parts.push(`Currently selected page in the editor: ${selectedPageId}`);
+  }
+  if (refLines.length) {
+    parts.push(`References:\n${refLines.join("\n\n")}`);
+  }
+  if (snapshot) {
+    parts.push(`Current issue snapshot (JSON):\n\`\`\`json\n${JSON.stringify(snapshot, null, 2)}\n\`\`\``);
+  }
+  return parts.join("\n\n");
+}
+
+/** Attach visual references (PDF/image) as file parts on the latest user message. */
+function attachVisualRefsToLastUserMessage(
+  messages: UIMessage[],
+  attachments: ChatAttachment[],
+  selectedPageId: string | undefined,
+): UIMessage[] {
+  if (!messages.length) return messages;
+  const lastIdx = messages.length - 1;
+  const last = messages[lastIdx];
+  if (last.role !== "user") return messages;
+
+  const visual = attachments.filter(
+    (a) =>
+      a.signed_url &&
+      (a.mime_type === "application/pdf" || a.mime_type.startsWith("image/")) &&
+      (a.kind === "template" || a.page_id === selectedPageId),
+  );
+  if (!visual.length) return messages;
+
+  const fileParts = visual.map((a) => ({
+    type: "file" as const,
+    mediaType: a.mime_type,
+    url: a.signed_url!,
+    filename: a.file_name,
+  }));
+
+  const next: UIMessage = {
+    ...last,
+    parts: [...last.parts, ...(fileParts as UIMessage["parts"])],
+  };
+  const out = messages.slice();
+  out[lastIdx] = next;
+  return out;
 }
 
 export const Route = createFileRoute("/api/chat")({
@@ -57,7 +128,15 @@ export const Route = createFileRoute("/api/chat")({
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
         const gateway = createLovableAiGatewayProvider(key);
-        const model = gateway("google/gemini-3-flash-preview");
+        // gemini-2.5-flash supports vision (PDFs and images).
+        const model = gateway("google/gemini-2.5-flash");
+
+        const attachments = body.attachments ?? [];
+        const messagesWithRefs = attachVisualRefsToLastUserMessage(
+          body.messages,
+          attachments,
+          body.selectedPageId,
+        );
 
         const tools = {
           update_page_field: tool({
@@ -107,8 +186,8 @@ export const Route = createFileRoute("/api/chat")({
 
         const result = streamText({
           model,
-          system: buildSystem(body.issueSnapshot),
-          messages: await convertToModelMessages(body.messages),
+          system: buildSystem(body.issueSnapshot, attachments, body.selectedPageId),
+          messages: await convertToModelMessages(messagesWithRefs),
           tools,
           stopWhen: stepCountIs(50),
           onError: (err) => console.error("[chat]", err),
