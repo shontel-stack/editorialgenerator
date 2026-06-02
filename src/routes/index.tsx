@@ -359,7 +359,11 @@ function Index() {
         // Back-compat: older files may lack master / per-article layout
         const hydrated: IssueDoc = {
           ...parsed,
-          master: { ...DEFAULT_MASTER, ...(parsed.master ?? {}) },
+          master: {
+            ...DEFAULT_MASTER,
+            ...(parsed.master ?? {}),
+            fonts: { ...DEFAULT_FONTS, ...((parsed.master as Partial<IssueMaster> | undefined)?.fonts ?? {}) },
+          },
           pages: parsed.pages.map((p) => {
             if (p.pageType !== "article") return p;
             const d = p.data as Partial<ArticleData>;
