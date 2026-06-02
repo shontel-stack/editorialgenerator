@@ -171,6 +171,8 @@ export const DEFAULT_COVER: CoverData = {
   palette: "paper",
   layout: "classic",
   logoColor: "#6b1320",
+  qrUrl: "https://theartstoday.com/issues/vol-iv-no-iii",
+  qrCaption: "SCAN · READ ONLINE",
 };
 
 export const DEFAULT_ARTICLE: ArticleData = {
