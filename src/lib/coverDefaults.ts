@@ -34,6 +34,8 @@ export type CoverData = {
   palette: Palette;
   layout: "classic" | "edge" | "framed";
   logoColor: string;
+  qrUrl: string;       // URL the QR encodes (empty = hide QR)
+  qrCaption: string;   // small caption below the QR
 };
 
 export type ArticleData = {
