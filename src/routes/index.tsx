@@ -813,6 +813,8 @@ function Index() {
               </p>
             </Section>
           )}
+
+          <Section title="Export · this page">
             <div className="grid grid-cols-3 gap-2">
               <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
               <ExportBtn onClick={() => doExport("png")} busy={busy === "PNG"}>PNG</ExportBtn>
