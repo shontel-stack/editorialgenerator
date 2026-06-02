@@ -1,12 +1,10 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
-/* Google fonts: luxe artsy editorial */
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&family=Italiana&display=swap");
+/* Editorial brand: Avenir/Helvetica substitutes (Nunito Sans + system) and Lithos-style display caps (Cinzel). */
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Cinzel:wght@400;500;600;700&family=Italiana&display=swap");
 
 @custom-variant dark (&:is(.dark *));
-
-
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -32,45 +30,59 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-ruby: var(--ruby);
+  --color-ruby-deep: var(--ruby-deep);
   --color-gold: var(--gold);
   --color-ink: var(--ink);
   --color-cream: var(--cream);
+  --color-paper: var(--paper);
   --font-display: var(--font-display);
   --font-serif: var(--font-serif);
   --font-sans: var(--font-sans);
+  --font-numerals: var(--font-numerals);
+  --font-brand: var(--font-brand);
 }
 
 :root {
-  --radius: 0.25rem;
+  --radius: 0.125rem;
 
-  /* Luxe artsy clean palette */
-  --cream: oklch(0.975 0.012 85);     /* warm paper */
-  --ink: oklch(0.18 0.012 60);        /* deep ink near-black */
-  --gold: oklch(0.72 0.115 75);       /* refined antique gold */
+  /* Paper & Ink + ruby pop */
+  --paper: oklch(0.975 0.004 90);       /* off-white paper */
+  --cream: oklch(0.97 0.006 88);
+  --ink: oklch(0.16 0.005 270);         /* near-black */
+  --ash: oklch(0.46 0.006 270);         /* gray */
+  --ruby: oklch(0.45 0.155 22);         /* burgundy/ruby pop */
+  --ruby-deep: oklch(0.34 0.13 20);
+  --gold: oklch(0.72 0.115 75);         /* legacy token kept for compat */
 
-  --background: oklch(0.985 0.006 80);
+  --background: var(--paper);
   --foreground: var(--ink);
   --card: oklch(1 0 0);
   --card-foreground: var(--ink);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--ink);
   --primary: var(--ink);
-  --primary-foreground: var(--cream);
-  --secondary: oklch(0.95 0.008 80);
+  --primary-foreground: var(--paper);
+  --secondary: oklch(0.955 0.004 90);
   --secondary-foreground: var(--ink);
-  --muted: oklch(0.94 0.006 80);
-  --muted-foreground: oklch(0.45 0.012 70);
-  --accent: var(--gold);
-  --accent-foreground: var(--ink);
-  --destructive: oklch(0.55 0.22 27);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.9 0.01 80);
-  --input: oklch(0.9 0.01 80);
-  --ring: var(--gold);
+  --muted: oklch(0.94 0.004 90);
+  --muted-foreground: var(--ash);
+  --accent: var(--ruby);
+  --accent-foreground: oklch(0.99 0 0);
+  --destructive: var(--ruby-deep);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.89 0.004 90);
+  --input: oklch(0.89 0.004 90);
+  --ring: var(--ruby);
 
+  /* UI chrome / brand fonts (separate from per-issue page fonts) */
+  --font-brand: "Cinzel", "Trajan Pro", "Times New Roman", serif;
+  --font-numerals: "Cinzel", "Lithos Pro", "Trajan Pro", serif;
+  --font-sans: "Nunito Sans", "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Per-issue defaults — overridden by FontPicker at runtime */
   --font-display: "Italiana", "Cormorant Garamond", serif;
   --font-serif: "Cormorant Garamond", Georgia, serif;
-  --font-sans: "Inter", system-ui, sans-serif;
 }
 
 @layer base {
@@ -82,5 +94,14 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+}
+
+@layer utilities {
+  .font-brand { font-family: var(--font-brand); letter-spacing: 0.08em; }
+  .font-numerals { font-family: var(--font-numerals); font-feature-settings: "lnum"; }
+  .ruby-rule {
+    background: linear-gradient(90deg, var(--ruby) 0%, var(--ruby-deep) 100%);
   }
 }
