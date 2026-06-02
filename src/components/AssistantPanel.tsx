@@ -26,6 +26,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { snapshotIssue } from "@/lib/issue-snapshot";
 import { applyPatch, describePatch, type IssuePatch } from "@/lib/issue-patch";
 import type { IssueDoc } from "@/lib/coverDefaults";
+import type { AttachmentWithUrl } from "@/lib/attachments";
+import { isImage, isPdf, isWordDoc } from "@/lib/attachments";
+import { Paperclip } from "lucide-react";
 
 type ToolPart = Extract<UIMessage["parts"][number], { type: `tool-${string}` }>;
 
@@ -38,20 +41,28 @@ export function AssistantPanel({
   onClose,
   issue,
   setIssue,
+  attachments,
+  selectedPageId,
 }: {
   open: boolean;
   onClose: () => void;
   issue: IssueDoc;
   setIssue: (next: IssueDoc | ((prev: IssueDoc) => IssueDoc)) => void;
+  attachments: AttachmentWithUrl[];
+  selectedPageId: string;
 }) {
   const issueId = issue.meta.issueId;
   const [initial, setInitial] = useState<UIMessage[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Snapshot stays in a ref so transport reads the latest issue without
-  // recreating the chat instance on every state change.
+  // Snapshot + attachments stay in refs so the transport reads the latest
+  // values without recreating the chat instance on every render.
   const issueRef = useRef(issue);
   useEffect(() => { issueRef.current = issue; }, [issue]);
+  const attachmentsRef = useRef(attachments);
+  useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
+  const selectedPageIdRef = useRef(selectedPageId);
+  useEffect(() => { selectedPageIdRef.current = selectedPageId; }, [selectedPageId]);
 
   // Load history for this issue.
   useEffect(() => {
@@ -86,6 +97,15 @@ export function AssistantPanel({
           ...body,
           messages,
           issueSnapshot: snapshotIssue(issueRef.current),
+          selectedPageId: selectedPageIdRef.current,
+          attachments: attachmentsRef.current.map((a) => ({
+            kind: a.kind,
+            page_id: a.page_id,
+            file_name: a.file_name,
+            mime_type: a.mime_type,
+            signed_url: a.signedUrl,
+            extracted_text: a.extracted_text,
+          })),
         },
       }),
     }),
@@ -172,6 +192,10 @@ export function AssistantPanel({
           Close
         </button>
       </header>
+
+      <ReferencesStrip attachments={attachments} selectedPageId={selectedPageId} />
+
+
 
       <Conversation className="flex-1">
         <ConversationContent>
@@ -267,3 +291,38 @@ export function AssistantPanel({
     </aside>
   );
 }
+
+function ReferencesStrip({
+  attachments,
+  selectedPageId,
+}: {
+  attachments: AttachmentWithUrl[];
+  selectedPageId: string;
+}) {
+  const template = attachments.find((a) => a.kind === "template");
+  const selectedRef = attachments.find(
+    (a) => a.kind === "reference" && a.page_id === selectedPageId,
+  );
+  if (!template && !selectedRef) return null;
+
+  const Chip = ({ a, label }: { a: AttachmentWithUrl; label: string }) => {
+    const kind = isPdf(a.mime_type) ? "PDF" : isImage(a.mime_type) ? "Image" : isWordDoc(a.mime_type) ? "Word" : "File";
+    return (
+      <div className="flex items-center gap-1.5 border border-[color:var(--ruby)]/40 bg-[color:var(--ruby)]/5 px-2 py-1 rounded-sm max-w-full">
+        <Paperclip className="h-3 w-3 text-[color:var(--ruby)] shrink-0" />
+        <div className="min-w-0">
+          <div className="text-[8px] tracking-[0.3em] uppercase text-muted-foreground">{label} · {kind}</div>
+          <div className="text-[11px] truncate" title={a.file_name}>{a.file_name}</div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="px-4 py-2 border-b border-border bg-secondary/40 flex flex-wrap gap-2">
+      {template && <Chip a={template} label="Issue template" />}
+      {selectedRef && <Chip a={selectedRef} label="This page" />}
+    </div>
+  );
+}
+

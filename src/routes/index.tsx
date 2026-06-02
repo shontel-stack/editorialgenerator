@@ -4,6 +4,8 @@ import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, 
 import { PagePreview } from "@/components/PagePreview";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
+import { AttachmentControl } from "@/components/AttachmentControl";
+import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -97,6 +99,7 @@ function Index() {
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const attachments = useIssueAttachments(issue.meta.issueId);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -488,10 +491,13 @@ function Index() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground hidden xl:block">
-              <span className="font-numerals text-foreground">{COVER_INCHES.w}″ × {COVER_INCHES.h}″</span> · 300 DPI
-            </div>
+          <div className="flex items-center gap-4">
+            <AttachmentControl
+              label="Layout template (whole issue)"
+              attachment={attachments.template}
+              onUpload={(file) => attachments.upload({ pageId: null, kind: "template", file })}
+              onRemove={() => attachments.template ? attachments.remove(attachments.template) : Promise.resolve()}
+            />
             <button
               onClick={() => setAssistantOpen((v) => !v)}
               className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
@@ -791,6 +797,23 @@ function Index() {
               </Section>
             )}
 
+          {selected.pageType !== "cover" && selected.pageType !== "back" && (
+            <Section title="Reference for this page" defaultOpen>
+              <AttachmentControl
+                label="Layout / image / Word reference"
+                attachment={attachments.referencesByPage.get(selected.id) ?? null}
+                onUpload={(file) => attachments.upload({ pageId: selected.id, kind: "reference", file })}
+                onRemove={() => {
+                  const r = attachments.referencesByPage.get(selected.id);
+                  return r ? attachments.remove(r) : Promise.resolve();
+                }}
+              />
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                The editor sees PDFs and images directly. Word docs are converted to text.
+              </p>
+            </Section>
+          )}
+
           <Section title="Export · this page">
             <div className="grid grid-cols-3 gap-2">
               <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
@@ -860,6 +883,8 @@ function Index() {
         onClose={() => setAssistantOpen(false)}
         issue={issue}
         setIssue={setIssue}
+        attachments={attachments.rows}
+        selectedPageId={selected.id}
       />
     </main>
   );
