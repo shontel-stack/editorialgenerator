@@ -451,52 +451,60 @@ function Index() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border">
-        <div className="mx-auto max-w-[1800px] px-8 py-6 flex items-end justify-between gap-8 flex-wrap">
-          <div>
-            <div className="text-[11px] tracking-[0.4em] uppercase text-muted-foreground">
-              Pageluxe · The Arts Today
+      <header className="border-b border-border bg-card sticky top-0 z-30">
+        <div className="mx-auto max-w-[1800px] px-8 py-4 flex items-center justify-between gap-6 flex-wrap">
+          <div className="flex items-center gap-4">
+            {/* Brand wordmark */}
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-foreground text-background flex items-center justify-center font-brand text-lg">P</div>
+              <div className="leading-tight">
+                <div className="font-brand text-[15px] text-foreground">PAGELUXE</div>
+                <div className="text-[9px] tracking-[0.45em] uppercase text-muted-foreground -mt-0.5">
+                  The Arts Today · Issue Builder
+                </div>
+              </div>
             </div>
-            <h1 className="text-4xl mt-1" style={{ fontFamily: "var(--font-display)" }}>
-              Issue Builder
-            </h1>
+            <div className="h-8 w-px bg-border mx-2" />
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <label className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                  Issue
+                </label>
+                <input
+                  value={issue.meta.issue}
+                  onChange={(e) => updateMeta({ issue: e.target.value })}
+                  className="border border-input bg-background px-2.5 py-1.5 text-sm w-[180px] rounded-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                  Date
+                </label>
+                <input
+                  value={issue.meta.date}
+                  onChange={(e) => updateMeta({ date: e.target.value })}
+                  className="border border-input bg-background px-2.5 py-1.5 text-sm w-[160px] rounded-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex flex-col">
-              <label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
-                Issue
-              </label>
-              <input
-                value={issue.meta.issue}
-                onChange={(e) => updateMeta({ issue: e.target.value })}
-                className="border border-input bg-background px-3 py-1.5 text-sm w-[200px]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
-                Date
-              </label>
-              <input
-                value={issue.meta.date}
-                onChange={(e) => updateMeta({ date: e.target.value })}
-                className="border border-input bg-background px-3 py-1.5 text-sm w-[180px]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              />
-            </div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
-              {COVER_INCHES.w}″ × {COVER_INCHES.h}″ · 300 DPI · {COVER_PX.w}×{COVER_PX.h}
+          <div className="flex items-center gap-3">
+            <div className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground hidden xl:block">
+              <span className="font-numerals text-foreground">{COVER_INCHES.w}″ × {COVER_INCHES.h}″</span> · 300 DPI
             </div>
             <button
               onClick={() => setAssistantOpen((v) => !v)}
-              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase hover:opacity-90 transition"
+              className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
               title="Editorial assistant"
             >
-              ✦ Ask the editor
+              <Sparkles className="h-3.5 w-3.5" />
+              Ask the editor
             </button>
           </div>
         </div>
+        <div className="h-[2px] ruby-rule" />
       </header>
+
 
       <div className="mx-auto max-w-[1800px] px-8 py-8 grid gap-6 lg:grid-cols-[260px_380px_1fr]">
         {/* Page list */}
