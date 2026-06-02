@@ -136,9 +136,6 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
       return { ...issue, pages: rebuilt };
     }
   }
-  // Exhaustive but TS still wants a fallback.
-  void (issue as CoverData & ContentsData & PhotoData & AdData & BackCoverData);
-  return issue;
 }
 
 export function describePatch(patch: IssuePatch): string {
