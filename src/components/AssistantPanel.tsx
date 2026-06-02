@@ -55,10 +55,14 @@ export function AssistantPanel({
   const [initial, setInitial] = useState<UIMessage[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Snapshot stays in a ref so transport reads the latest issue without
-  // recreating the chat instance on every state change.
+  // Snapshot + attachments stay in refs so the transport reads the latest
+  // values without recreating the chat instance on every render.
   const issueRef = useRef(issue);
   useEffect(() => { issueRef.current = issue; }, [issue]);
+  const attachmentsRef = useRef(attachments);
+  useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
+  const selectedPageIdRef = useRef(selectedPageId);
+  useEffect(() => { selectedPageIdRef.current = selectedPageId; }, [selectedPageId]);
 
   // Load history for this issue.
   useEffect(() => {
@@ -93,6 +97,15 @@ export function AssistantPanel({
           ...body,
           messages,
           issueSnapshot: snapshotIssue(issueRef.current),
+          selectedPageId: selectedPageIdRef.current,
+          attachments: attachmentsRef.current.map((a) => ({
+            kind: a.kind,
+            page_id: a.page_id,
+            file_name: a.file_name,
+            mime_type: a.mime_type,
+            signed_url: a.signedUrl,
+            extracted_text: a.extracted_text,
+          })),
         },
       }),
     }),
