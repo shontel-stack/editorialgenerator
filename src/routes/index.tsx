@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PagePreview } from "@/components/PagePreview";
 import {
+  ARTICLE_LAYOUTS,
   COVER_INCHES,
   COVER_PX,
   COVER_RATIO,
@@ -11,19 +12,25 @@ import {
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
   DEFAULT_ISSUE,
+  DEFAULT_MASTER,
   DEFAULT_PHOTO,
   LOGO_COLORS,
   PAGE_LABELS,
+  PAGE_NUMBER_FORMATS,
   PALETTES,
   deriveContentsEntries,
+  formatPageNumber,
   makeNode,
   pageNumberFor,
+  renderFolio,
   type AdData,
   type ArticleData,
+  type ArticleLayout,
   type BackCoverData,
   type ContentsData,
   type CoverData,
   type IssueDoc,
+  type IssueMaster,
   type IssuePageNode,
   type PageType,
   type Palette,
@@ -61,6 +68,7 @@ function Index() {
   const [issue, setIssue] = useState<IssueDoc>(DEFAULT_ISSUE);
   const [selectedId, setSelectedId] = useState<string>(DEFAULT_ISSUE.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
+  const [spreadView, setSpreadView] = useState(false);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -82,9 +90,10 @@ function Index() {
   // with the issue list automatically.
   const pagesForRender = useMemo(() => {
     const contentsEntries = deriveContentsEntries(issue);
-    const folio = `THE ARTS TODAY  ·  ${issue.meta.issue}`;
-    return issue.pages.map((p) => {
-      const num = pageNumberFor(issue, p.id);
+    const folio = renderFolio(issue.master, issue.meta);
+    const total = issue.pages.length;
+    return issue.pages.map((p, i) => {
+      const num = formatPageNumber(issue.master, i + 1, total);
       switch (p.pageType) {
         case "cover":
           return { ...p, data: { ...p.data, issue: issue.meta.issue, date: issue.meta.date } };
@@ -101,9 +110,32 @@ function Index() {
             },
           };
         case "article":
+          return {
+            ...p,
+            data: {
+              ...p.data,
+              folio: issue.master.showFolioOnArticles ? folio : "",
+              pageNumber: num,
+            },
+          };
         case "photo":
+          return {
+            ...p,
+            data: {
+              ...p.data,
+              folio: issue.master.showFolioOnPhotos ? folio : "",
+              pageNumber: num,
+            },
+          };
         case "ad":
-          return { ...p, data: { ...p.data, folio, pageNumber: num } };
+          return {
+            ...p,
+            data: {
+              ...p.data,
+              folio: issue.master.showFolioOnAds ? folio : "",
+              pageNumber: num,
+            },
+          };
         case "back":
           return { ...p, data: { ...p.data, pageNumber: num } };
       }
@@ -112,25 +144,42 @@ function Index() {
 
   const selectedForRender = pagesForRender.find((p) => p.id === selected.id) ?? selected;
 
+  /* --- spread pairing --- */
+  // Page 1 (cover) stands alone, then pairs 2-3, 4-5, etc.
+  const selectedIdx = pagesForRender.findIndex((p) => p.id === selected.id);
+  const spread = useMemo(() => {
+    if (!spreadView || selectedIdx <= 0) {
+      return { left: selectedForRender, right: null as IssuePageNode | null };
+    }
+    const groupStart = 1 + 2 * Math.floor((selectedIdx - 1) / 2);
+    const left = pagesForRender[groupStart] ?? selectedForRender;
+    const right = pagesForRender[groupStart + 1] ?? null;
+    return { left, right };
+  }, [spreadView, selectedIdx, pagesForRender, selectedForRender]);
+
   /* --- preview stage sizing --- */
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
+  const stageW = spreadView && spread.right ? COVER_PX.w * 2 : COVER_PX.w;
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const update = () => {
-      setScale(Math.min(el.clientWidth / COVER_PX.w, el.clientHeight / COVER_PX.h));
+      setScale(Math.min(el.clientWidth / stageW, el.clientHeight / COVER_PX.h));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [stageW]);
 
   /* --- mutators --- */
 
   const updateMeta = (patch: Partial<IssueDoc["meta"]>) =>
     setIssue((d) => ({ ...d, meta: { ...d.meta, ...patch } }));
+
+  const updateMaster = (patch: Partial<IssueMaster>) =>
+    setIssue((d) => ({ ...d, master: { ...d.master, ...patch } }));
 
   const updateNode = (id: string, patch: Partial<IssuePageNode>) =>
     setIssue((d) => ({
@@ -266,8 +315,18 @@ function Index() {
       try {
         const parsed = JSON.parse(String(r.result)) as IssueDoc;
         if (!parsed?.pages?.length || !parsed?.meta) throw new Error("Invalid issue file");
-        setIssue(parsed);
-        setSelectedId(parsed.pages[0].id);
+        // Back-compat: older files may lack master / per-article layout
+        const hydrated: IssueDoc = {
+          ...parsed,
+          master: { ...DEFAULT_MASTER, ...(parsed.master ?? {}) },
+          pages: parsed.pages.map((p) => {
+            if (p.pageType !== "article") return p;
+            const d = p.data as Partial<ArticleData>;
+            return { ...p, data: { ...d, layout: d.layout ?? "image-top-2col" } as ArticleData } as IssuePageNode;
+          }),
+        };
+        setIssue(hydrated);
+        setSelectedId(hydrated.pages[0].id);
       } catch (e) {
         alert(`Could not load issue: ${(e as Error).message}`);
       }
@@ -403,6 +462,68 @@ function Index() {
             </div>
           </div>
 
+          {/* Master pages — issue-wide folio & page-number defaults */}
+          <div className="border border-border bg-card p-3 space-y-3">
+            <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+              Master pages
+            </div>
+            <Field label="Publication name">
+              <Input
+                value={issue.master.publication}
+                onChange={(v) => updateMaster({ publication: v })}
+              />
+            </Field>
+            <Field label="Folio template">
+              <Input
+                value={issue.master.folioTemplate}
+                onChange={(v) => updateMaster({ folioTemplate: v })}
+              />
+            </Field>
+            <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2">
+              Tokens: <code>{"{publication}"}</code> <code>{"{issue}"}</code> <code>{"{date}"}</code>
+            </p>
+            <Field label="Page number style">
+              <select
+                value={issue.master.pageNumberFormat}
+                onChange={(e) =>
+                  updateMaster({ pageNumberFormat: e.target.value as IssueMaster["pageNumberFormat"] })
+                }
+                className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+              >
+                {PAGE_NUMBER_FORMATS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="space-y-1.5">
+              <MasterToggle
+                label="Folio on articles"
+                checked={issue.master.showFolioOnArticles}
+                onChange={(v) => updateMaster({ showFolioOnArticles: v })}
+              />
+              <MasterToggle
+                label="Folio on photo essays"
+                checked={issue.master.showFolioOnPhotos}
+                onChange={(v) => updateMaster({ showFolioOnPhotos: v })}
+              />
+              <MasterToggle
+                label="Folio on advertisements"
+                checked={issue.master.showFolioOnAds}
+                onChange={(v) => updateMaster({ showFolioOnAds: v })}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground pt-2 border-t border-border">
+              <input
+                type="checkbox"
+                checked={spreadView}
+                onChange={(e) => setSpreadView(e.target.checked)}
+                className="accent-[color:var(--gold)]"
+              />
+              Spread view (preview pages as 2-up)
+            </label>
+          </div>
+
+
           <div className="border border-border bg-card p-3 space-y-2">
             <button
               onClick={doExportPublication}
@@ -505,20 +626,36 @@ function Index() {
         <section
           ref={stageRef}
           className="relative bg-secondary/60 border border-border overflow-hidden"
-          style={{ minHeight: "85vh", aspectRatio: `${COVER_RATIO}` }}
+          style={{ minHeight: "85vh", aspectRatio: `${stageW / COVER_PX.h}` }}
         >
           <div
-            className="absolute left-1/2 top-1/2 origin-center shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
+            className="absolute left-1/2 top-1/2 origin-center"
             style={{
               transform: `translate(-50%, -50%) scale(${scale})`,
-              width: COVER_PX.w,
+              width: stageW,
               height: COVER_PX.h,
+              display: "flex",
+              gap: 0,
             }}
           >
-            <PagePreview pageType={selectedForRender.pageType} data={selectedForRender.data} />
+            <div
+              className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
+              style={{ width: COVER_PX.w, height: COVER_PX.h }}
+            >
+              <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+            </div>
+            {spreadView && spread.right && (
+              <div
+                className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
+                style={{ width: COVER_PX.w, height: COVER_PX.h }}
+              >
+                <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+              </div>
+            )}
           </div>
         </section>
       </div>
+
 
       {/* Off-screen capture stage — one ref per page in the issue. */}
       <div
@@ -652,6 +789,19 @@ function ArticleEditor({
         onY={(y) => set({ imageY: y })}
         hideFit
       />
+      <Section title="Layout">
+        <Field label="Page layout preset">
+          <select
+            value={data.layout}
+            onChange={(e) => set({ layout: e.target.value as ArticleLayout })}
+            className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+          >
+            {ARTICLE_LAYOUTS.map((l) => (
+              <option key={l.value} value={l.value}>{l.label}</option>
+            ))}
+          </select>
+        </Field>
+      </Section>
       <Section title="Style">
         <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
       </Section>
@@ -1008,5 +1158,27 @@ function AddBtn({ onClick, children }: { onClick: () => void; children: React.Re
     >
       {children}
     </button>
+  );
+}
+
+function MasterToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="accent-[color:var(--gold)]"
+      />
+      {label}
+    </label>
   );
 }
