@@ -14,6 +14,8 @@ import {
   DEFAULT_COVER,
   DEFAULT_FONTS,
   DEFAULT_ISSUE,
+  makeDefaultIssue,
+  newIssueId,
   DEFAULT_MASTER,
   DEFAULT_PHOTO,
   DISPLAY_FONTS,
