@@ -1,8 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   ARTICLE_LAYOUTS,
   COVER_INCHES,
@@ -434,60 +451,88 @@ function Index() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border">
-        <div className="mx-auto max-w-[1800px] px-8 py-6 flex items-end justify-between gap-8 flex-wrap">
-          <div>
-            <div className="text-[11px] tracking-[0.4em] uppercase text-muted-foreground">
-              Pageluxe · The Arts Today
+      <header className="border-b border-border bg-card sticky top-0 z-30">
+        <div className="mx-auto max-w-[1800px] px-8 py-4 flex items-center justify-between gap-6 flex-wrap">
+          <div className="flex items-center gap-4">
+            {/* Brand wordmark */}
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-foreground text-background flex items-center justify-center font-brand text-lg">P</div>
+              <div className="leading-tight">
+                <div className="font-brand text-[15px] text-foreground">PAGELUXE</div>
+                <div className="text-[9px] tracking-[0.45em] uppercase text-muted-foreground -mt-0.5">
+                  The Arts Today · Issue Builder
+                </div>
+              </div>
             </div>
-            <h1 className="text-4xl mt-1" style={{ fontFamily: "var(--font-display)" }}>
-              Issue Builder
-            </h1>
+            <div className="h-8 w-px bg-border mx-2" />
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <label className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                  Issue
+                </label>
+                <input
+                  value={issue.meta.issue}
+                  onChange={(e) => updateMeta({ issue: e.target.value })}
+                  className="border border-input bg-background px-2.5 py-1.5 text-sm w-[180px] rounded-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                  Date
+                </label>
+                <input
+                  value={issue.meta.date}
+                  onChange={(e) => updateMeta({ date: e.target.value })}
+                  className="border border-input bg-background px-2.5 py-1.5 text-sm w-[160px] rounded-sm focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex flex-col">
-              <label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
-                Issue
-              </label>
-              <input
-                value={issue.meta.issue}
-                onChange={(e) => updateMeta({ issue: e.target.value })}
-                className="border border-input bg-background px-3 py-1.5 text-sm w-[200px]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
-                Date
-              </label>
-              <input
-                value={issue.meta.date}
-                onChange={(e) => updateMeta({ date: e.target.value })}
-                className="border border-input bg-background px-3 py-1.5 text-sm w-[180px]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              />
-            </div>
-            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
-              {COVER_INCHES.w}″ × {COVER_INCHES.h}″ · 300 DPI · {COVER_PX.w}×{COVER_PX.h}
+          <div className="flex items-center gap-3">
+            <div className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground hidden xl:block">
+              <span className="font-numerals text-foreground">{COVER_INCHES.w}″ × {COVER_INCHES.h}″</span> · 300 DPI
             </div>
             <button
               onClick={() => setAssistantOpen((v) => !v)}
-              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase hover:opacity-90 transition"
+              className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
               title="Editorial assistant"
             >
-              ✦ Ask the editor
+              <Sparkles className="h-3.5 w-3.5" />
+              Ask the editor
             </button>
           </div>
         </div>
+        <div className="h-[2px] ruby-rule" />
       </header>
+
 
       <div className="mx-auto max-w-[1800px] px-8 py-8 grid gap-6 lg:grid-cols-[260px_380px_1fr]">
         {/* Page list */}
         <aside className="space-y-3">
           <div className="border border-border bg-card">
-            <div className="px-4 py-3 border-b border-border text-[10px] tracking-[0.4em] uppercase text-muted-foreground flex items-center justify-between">
-              <span>Pages · {issue.pages.length}</span>
+            <div className="px-3 py-2.5 border-b border-border flex items-center justify-between gap-2">
+              <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+                Pages · <span className="font-numerals text-foreground">{issue.pages.length.toString().padStart(2, "0")}</span>
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="inline-flex items-center gap-1 bg-foreground text-background px-2.5 py-1.5 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-[color:var(--ruby)] transition">
+                  <Plus className="h-3 w-3" /> Add <ChevronDown className="h-3 w-3 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Single page</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => addPage("article")}><FileText className="h-3.5 w-3.5 mr-2" /> Article</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("photo")}><ImageIcon className="h-3.5 w-3.5 mr-2" /> Photo essay</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("ad")}><Megaphone className="h-3.5 w-3.5 mr-2" /> Advertisement</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Contents page</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Two-page spread</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => addSpread("article", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Article + Photo</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSpread("photo", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Photo + Photo</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSpread("ad", "ad")}><Layers className="h-3.5 w-3.5 mr-2" /> Ad + Ad</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
+
             <div className="divide-y divide-border">
               <SortableList
                 items={issue.pages}
@@ -555,24 +600,30 @@ function Index() {
                 }}
               />
             </div>
-            <div className="p-3 border-t border-border grid grid-cols-2 gap-2">
-              <AddBtn onClick={() => addPage("article")}>+ Article</AddBtn>
-              <AddBtn onClick={() => addPage("photo")}>+ Photo</AddBtn>
-              <AddBtn onClick={() => addPage("ad")}>+ Ad</AddBtn>
-              <AddBtn onClick={() => addPage("contents")}>+ Contents</AddBtn>
-            </div>
-            <div className="px-3 pb-3 grid grid-cols-3 gap-2">
-              <AddBtn onClick={() => addSpread("article", "photo")}>+ Article spread</AddBtn>
-              <AddBtn onClick={() => addSpread("photo", "photo")}>+ Photo spread</AddBtn>
-              <AddBtn onClick={() => addSpread("ad", "ad")}>+ Ad spread</AddBtn>
+          </div>
+
+
+          {/* Spread view toggle as a clean toolbar pill */}
+          <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between">
+            <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Preview mode</span>
+            <div className="inline-flex border border-border rounded-sm overflow-hidden">
+              <button
+                onClick={() => setSpreadView(false)}
+                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase transition ${!spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                Single
+              </button>
+              <button
+                onClick={() => setSpreadView(true)}
+                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase transition ${spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                Spread
+              </button>
             </div>
           </div>
 
           {/* Master pages — issue-wide folio & page-number defaults */}
-          <div className="border border-border bg-card p-3 space-y-3">
-            <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-              Master pages
-            </div>
+          <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
               <Input
                 value={issue.master.publication}
@@ -589,19 +640,23 @@ function Index() {
               Tokens: <code>{"{publication}"}</code> <code>{"{issue}"}</code> <code>{"{date}"}</code>
             </p>
             <Field label="Page number style">
-              <select
+              <Select
                 value={issue.master.pageNumberFormat}
-                onChange={(e) =>
-                  updateMaster({ pageNumberFormat: e.target.value as IssueMaster["pageNumberFormat"] })
+                onValueChange={(v) =>
+                  updateMaster({ pageNumberFormat: v as IssueMaster["pageNumberFormat"] })
                 }
-                className="w-full border border-input bg-background px-2 py-1.5 text-sm"
               >
-                {PAGE_NUMBER_FORMATS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_NUMBER_FORMATS.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pt-2 border-t border-border">
               <MasterToggle
                 label="Folio on articles"
                 checked={issue.master.showFolioOnArticles}
@@ -618,66 +673,54 @@ function Index() {
                 onChange={(v) => updateMaster({ showFolioOnAds: v })}
               />
             </div>
+          </Section>
 
-            <div className="pt-3 border-t border-border space-y-2">
-              <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-                Typography
-              </div>
-              <FontPicker
-                label="Display (headlines)"
-                options={DISPLAY_FONTS}
-                value={issue.master.fonts.display}
-                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, display: v } })}
-              />
-              <FontPicker
-                label="Serif (body copy)"
-                options={SERIF_FONTS}
-                value={issue.master.fonts.serif}
-                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, serif: v } })}
-              />
-              <FontPicker
-                label="Sans (folio &amp; labels)"
-                options={SANS_FONTS}
-                value={issue.master.fonts.sans}
-                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, sans: v } })}
-              />
-              <button
-                type="button"
-                onClick={() => updateMaster({ fonts: DEFAULT_FONTS })}
-                className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-              >
-                Reset to defaults
-              </button>
-            </div>
-            <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground pt-2 border-t border-border">
-              <input
-                type="checkbox"
-                checked={spreadView}
-                onChange={(e) => setSpreadView(e.target.checked)}
-                className="accent-[color:var(--gold)]"
-              />
-              Spread view (preview pages as 2-up)
-            </label>
-          </div>
+          <Section title="Typography" defaultOpen={false}>
+            <FontPicker
+              label="Display (headlines)"
+              options={DISPLAY_FONTS}
+              value={issue.master.fonts.display}
+              onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, display: v } })}
+            />
+            <FontPicker
+              label="Serif (body copy)"
+              options={SERIF_FONTS}
+              value={issue.master.fonts.serif}
+              onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, serif: v } })}
+            />
+            <FontPicker
+              label="Sans (folio & labels)"
+              options={SANS_FONTS}
+              value={issue.master.fonts.sans}
+              onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, sans: v } })}
+            />
+            <button
+              type="button"
+              onClick={() => updateMaster({ fonts: DEFAULT_FONTS })}
+              className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-[color:var(--ruby)] underline-offset-4 hover:underline"
+            >
+              Reset to defaults
+            </button>
+          </Section>
 
-
-          <div className="border border-border bg-card p-3 space-y-2">
+          <Section title="Issue · Save & Export" defaultOpen>
             <button
               onClick={doExportPublication}
               disabled={busy === "PUBLICATION"}
-              className="w-full bg-[color:var(--gold)] text-background px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:opacity-90 transition disabled:opacity-60"
+              className="w-full bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:bg-[color:var(--ruby-deep)] transition disabled:opacity-60 flex items-center justify-center gap-2 rounded-sm"
             >
-              {busy === "PUBLICATION" ? "Assembling…" : "⤓ Export Publication PDF"}
+              <Download className="h-3.5 w-3.5" />
+              {busy === "PUBLICATION" ? "Assembling…" : "Export Publication PDF"}
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={saveIssue}
-                className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary"
+                className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
               >
-                Save issue
+                <Save className="h-3 w-3" /> Save issue
               </button>
-              <label className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary cursor-pointer text-center">
-                Load issue
+              <label className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary cursor-pointer text-center rounded-sm flex items-center justify-center gap-1.5">
+                <Upload className="h-3 w-3" /> Load issue
                 <input
                   type="file"
                   accept="application/json"
@@ -689,8 +732,9 @@ function Index() {
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               Save JSON = your monthly source of truth. Reload it next issue, edit, re-export.
             </p>
-          </div>
+          </Section>
         </aside>
+
 
         {/* Editor for selected page */}
         <aside className="space-y-6">
@@ -740,7 +784,7 @@ function Index() {
                     type="checkbox"
                     checked={selected.includeInContents}
                     onChange={(e) => updateNode(selected.id, { includeInContents: e.target.checked })}
-                    className="accent-[color:var(--gold)]"
+                    className="accent-[color:var(--ruby)]"
                   />
                   Show this page in the Contents index
                 </label>
@@ -916,7 +960,7 @@ function ArticleEditor({
             type="checkbox"
             checked={data.dropCap}
             onChange={(e) => set({ dropCap: e.target.checked })}
-            className="accent-[color:var(--gold)]"
+            className="accent-[color:var(--ruby)]"
           />
           Drop cap
         </label>
@@ -1130,7 +1174,7 @@ function ImageBlock({
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
         className={`border-2 border-dashed p-3 transition ${
-          dragOver ? "border-[color:var(--gold)] bg-secondary" : "border-border"
+          dragOver ? "border-[color:var(--ruby)] bg-secondary" : "border-border"
         }`}
       >
         <input
@@ -1194,7 +1238,7 @@ function ImageBlock({
               style={{
                 top: `${y}%`,
                 height: 2,
-                background: "var(--gold)",
+                background: "var(--ruby)",
                 boxShadow: "0 0 0 1px rgba(0,0,0,0.5)",
                 transform: "translateY(-1px)",
               }}
@@ -1207,7 +1251,7 @@ function ImageBlock({
           max={100}
           value={y}
           onChange={(e) => onY(Number(e.target.value))}
-          className="w-full accent-[color:var(--gold)] mt-2"
+          className="w-full accent-[color:var(--ruby)] mt-2"
         />
       </Field>
     </Section>
@@ -1256,7 +1300,7 @@ function LogoColorField({ value, onChange }: { value: string; onChange: (v: stri
             onClick={() => onChange(c.value)}
             title={c.label}
             className={`h-7 w-7 rounded-full border-2 transition ${
-              value === c.value ? "border-[color:var(--gold)] scale-110" : "border-border"
+              value === c.value ? "border-[color:var(--ruby)] scale-110" : "border-border"
             }`}
             style={{ background: c.value }}
           />
@@ -1275,14 +1319,22 @@ function LogoColorField({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   return (
-    <div className="border border-border bg-card p-5">
-      <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">{title}</div>
-      <div className="space-y-4">{children}</div>
-    </div>
+    <Collapsible defaultOpen={defaultOpen} className="border border-border bg-card rounded-sm group/section">
+      <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-secondary/60 transition border-b border-transparent data-[state=open]:border-border">
+        <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground group-hover/section:text-foreground transition">
+          {title}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 data-[state=open]:rotate-180 group-data-[state=open]/section:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+        <div className="p-4 space-y-4">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -1387,7 +1439,7 @@ function MasterToggle({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="accent-[color:var(--gold)]"
+        className="accent-[color:var(--ruby)]"
       />
       {label}
     </label>
