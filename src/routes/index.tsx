@@ -539,6 +539,37 @@ function Index() {
                 onChange={(v) => updateMaster({ showFolioOnAds: v })}
               />
             </div>
+
+            <div className="pt-3 border-t border-border space-y-2">
+              <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+                Typography
+              </div>
+              <FontPicker
+                label="Display (headlines)"
+                options={DISPLAY_FONTS}
+                value={issue.master.fonts.display}
+                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, display: v } })}
+              />
+              <FontPicker
+                label="Serif (body copy)"
+                options={SERIF_FONTS}
+                value={issue.master.fonts.serif}
+                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, serif: v } })}
+              />
+              <FontPicker
+                label="Sans (folio &amp; labels)"
+                options={SANS_FONTS}
+                value={issue.master.fonts.sans}
+                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, sans: v } })}
+              />
+              <button
+                type="button"
+                onClick={() => updateMaster({ fonts: DEFAULT_FONTS })}
+                className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+              >
+                Reset to defaults
+              </button>
+            </div>
             <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground pt-2 border-t border-border">
               <input
                 type="checkbox"
