@@ -514,16 +514,30 @@ function Index() {
                         </div>
                       </div>
                       {!locked && p.pageType !== "contents" && (
-                        <button
-                          title="Remove"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
-                          }}
-                          className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
-                        >
-                          ✕
-                        </button>
+                        <>
+                          {spreadView && (
+                            <button
+                              title="Remove spread (this page + its facing page)"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Remove this spread (both facing pages)?")) removeSpread(p.id);
+                              }}
+                              className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
+                            >
+                              ✕✕
+                            </button>
+                          )}
+                          <button
+                            title="Remove page"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Remove this ${PAGE_LABELS[p.pageType]} page?`)) removePage(p.id);
+                            }}
+                            className="text-[10px] px-1 opacity-60 hover:opacity-100 hover:text-destructive"
+                          >
+                            ✕
+                          </button>
+                        </>
                       )}
                     </div>
                   );
