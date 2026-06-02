@@ -364,7 +364,7 @@ function ContentsEditor({
     set({
       entries: [
         ...data.entries,
-        { section: "SECTION", title: "Untitled", byline: "—", page: "000" },
+        { section: "SECTION", title: "Untitled", byline: "—", page: "000", link: "none" },
       ],
     });
 
