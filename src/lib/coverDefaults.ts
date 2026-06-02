@@ -10,14 +10,12 @@ export const COVER_RATIO = COVER_INCHES.w / COVER_INCHES.h; // 0.75
 
 export type PageType = "cover" | "feature" | "photo" | "contents";
 
-export type Palette = "burgundy" | "ink" | "paper";
+export type Palette = "paper" | "ink" | "burgundy";
 
 export const LOGO_COLORS: { value: string; label: string }[] = [
-  { value: "#ffffff", label: "White" },
-  { value: "#0a0a0a", label: "Black" },
   { value: "#6b1320", label: "Burgundy" },
-  { value: "#c9a24a", label: "Gold" },
-  { value: "#e8d9b8", label: "Cream" },
+  { value: "#0a0a0a", label: "Black" },
+  { value: "#ffffff", label: "White" },
 ];
 
 export type CoverData = {
@@ -99,9 +97,9 @@ export const DEFAULT_COVER: CoverData = {
   imageUrl: null,
   imageFit: "cover",
   imageY: 50,
-  palette: "burgundy",
+  palette: "paper",
   layout: "classic",
-  logoColor: "#ffffff",
+  logoColor: "#6b1320",
 };
 
 export const DEFAULT_FEATURE: FeatureData = {
@@ -163,9 +161,9 @@ export const PALETTES: Record<
   Palette,
   { bg: string; fg: string; rule: string; muted: string; label: string }
 > = {
-  burgundy: { bg: "#5a0f1c", fg: "#ffffff", rule: "#e8d9b8", muted: "#d9b8b8", label: "Burgundy" },
-  ink:      { bg: "#0a0a0a", fg: "#ffffff", rule: "#6b1320", muted: "#8a8a8a", label: "Black" },
   paper:    { bg: "#ffffff", fg: "#0a0a0a", rule: "#6b1320", muted: "#666666", label: "White" },
+  ink:      { bg: "#0a0a0a", fg: "#ffffff", rule: "#6b1320", muted: "#8a8a8a", label: "Black" },
+  burgundy: { bg: "#6b1320", fg: "#ffffff", rule: "#ffffff", muted: "#e8c8cc", label: "Burgundy" },
 };
 
 export const PAGE_LABELS: Record<PageType, string> = {
