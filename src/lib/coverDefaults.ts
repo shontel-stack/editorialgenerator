@@ -38,6 +38,31 @@ export type CoverData = {
   qrCaption: string;   // small caption below the QR
 };
 
+export type ArticleLayout =
+  | "image-top-2col"
+  | "image-top-3col"
+  | "image-left-1col"
+  | "image-left-2col"
+  | "image-right-1col"
+  | "image-right-2col"
+  | "image-bottom-2col"
+  | "full-image-overlay"
+  | "text-only-2col"
+  | "text-only-3col";
+
+export const ARTICLE_LAYOUTS: { value: ArticleLayout; label: string }[] = [
+  { value: "image-top-2col",     label: "Image top · 2 col" },
+  { value: "image-top-3col",     label: "Image top · 3 col" },
+  { value: "image-left-1col",    label: "Image left · 1 col" },
+  { value: "image-left-2col",    label: "Image left · 2 col" },
+  { value: "image-right-1col",   label: "Image right · 1 col" },
+  { value: "image-right-2col",   label: "Image right · 2 col" },
+  { value: "image-bottom-2col",  label: "Image bottom · 2 col" },
+  { value: "full-image-overlay", label: "Full image · overlay" },
+  { value: "text-only-2col",     label: "Text only · 2 col" },
+  { value: "text-only-3col",     label: "Text only · 3 col" },
+];
+
 export type ArticleData = {
   section: string;        // e.g. "FEATURE  ·  IN CONVERSATION"
   folio: string;
@@ -52,6 +77,7 @@ export type ArticleData = {
   imageCaption: string;
   imageY: number;
   palette: Palette;
+  layout: ArticleLayout;
 };
 
 // Backwards-compatible alias — earlier code referenced FeatureData.
