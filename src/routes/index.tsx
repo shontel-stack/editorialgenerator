@@ -470,6 +470,13 @@ function Index() {
             <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
               {COVER_INCHES.w}″ × {COVER_INCHES.h}″ · 300 DPI · {COVER_PX.w}×{COVER_PX.h}
             </div>
+            <button
+              onClick={() => setAssistantOpen((v) => !v)}
+              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase hover:opacity-90 transition"
+              title="Editorial assistant"
+            >
+              ✦ Ask the editor
+            </button>
           </div>
         </div>
       </header>
