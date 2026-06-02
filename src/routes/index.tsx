@@ -510,9 +510,29 @@ function Index() {
         {/* Page list */}
         <aside className="space-y-3">
           <div className="border border-border bg-card">
-            <div className="px-4 py-3 border-b border-border text-[10px] tracking-[0.4em] uppercase text-muted-foreground flex items-center justify-between">
-              <span>Pages · {issue.pages.length}</span>
+            <div className="px-3 py-2.5 border-b border-border flex items-center justify-between gap-2">
+              <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+                Pages · <span className="font-numerals text-foreground">{issue.pages.length.toString().padStart(2, "0")}</span>
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="inline-flex items-center gap-1 bg-foreground text-background px-2.5 py-1.5 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-[color:var(--ruby)] transition">
+                  <Plus className="h-3 w-3" /> Add <ChevronDown className="h-3 w-3 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Single page</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => addPage("article")}><FileText className="h-3.5 w-3.5 mr-2" /> Article</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("photo")}><ImageIcon className="h-3.5 w-3.5 mr-2" /> Photo essay</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("ad")}><Megaphone className="h-3.5 w-3.5 mr-2" /> Advertisement</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Contents page</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Two-page spread</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => addSpread("article", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Article + Photo</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSpread("photo", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Photo + Photo</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addSpread("ad", "ad")}><Layers className="h-3.5 w-3.5 mr-2" /> Ad + Ad</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
+
             <div className="divide-y divide-border">
               <SortableList
                 items={issue.pages}
