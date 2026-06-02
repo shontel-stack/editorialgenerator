@@ -784,7 +784,7 @@ function Index() {
                     type="checkbox"
                     checked={selected.includeInContents}
                     onChange={(e) => updateNode(selected.id, { includeInContents: e.target.checked })}
-                    className="accent-[color:var(--gold)]"
+                    className="accent-[color:var(--ruby)]"
                   />
                   Show this page in the Contents index
                 </label>
@@ -960,7 +960,7 @@ function ArticleEditor({
             type="checkbox"
             checked={data.dropCap}
             onChange={(e) => set({ dropCap: e.target.checked })}
-            className="accent-[color:var(--gold)]"
+            className="accent-[color:var(--ruby)]"
           />
           Drop cap
         </label>
@@ -1174,7 +1174,7 @@ function ImageBlock({
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
         className={`border-2 border-dashed p-3 transition ${
-          dragOver ? "border-[color:var(--gold)] bg-secondary" : "border-border"
+          dragOver ? "border-[color:var(--ruby)] bg-secondary" : "border-border"
         }`}
       >
         <input
@@ -1238,7 +1238,7 @@ function ImageBlock({
               style={{
                 top: `${y}%`,
                 height: 2,
-                background: "var(--gold)",
+                background: "var(--ruby)",
                 boxShadow: "0 0 0 1px rgba(0,0,0,0.5)",
                 transform: "translateY(-1px)",
               }}
@@ -1251,7 +1251,7 @@ function ImageBlock({
           max={100}
           value={y}
           onChange={(e) => onY(Number(e.target.value))}
-          className="w-full accent-[color:var(--gold)] mt-2"
+          className="w-full accent-[color:var(--ruby)] mt-2"
         />
       </Field>
     </Section>
@@ -1300,7 +1300,7 @@ function LogoColorField({ value, onChange }: { value: string; onChange: (v: stri
             onClick={() => onChange(c.value)}
             title={c.label}
             className={`h-7 w-7 rounded-full border-2 transition ${
-              value === c.value ? "border-[color:var(--gold)] scale-110" : "border-border"
+              value === c.value ? "border-[color:var(--ruby)] scale-110" : "border-border"
             }`}
             style={{ background: c.value }}
           />
@@ -1439,7 +1439,7 @@ function MasterToggle({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="accent-[color:var(--gold)]"
+        className="accent-[color:var(--ruby)]"
       />
       {label}
     </label>
