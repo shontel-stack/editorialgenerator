@@ -810,6 +810,13 @@ function Index() {
           <span>Pageluxe Spec · 10.6667 × 14.2222 in</span>
         </div>
       </footer>
+
+      <AssistantPanel
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        issue={issue}
+        setIssue={setIssue}
+      />
     </main>
   );
 }
