@@ -603,11 +603,27 @@ function Index() {
           </div>
 
 
-          {/* Master pages — issue-wide folio & page-number defaults */}
-          <div className="border border-border bg-card p-3 space-y-3">
-            <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-              Master pages
+          {/* Spread view toggle as a clean toolbar pill */}
+          <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between">
+            <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Preview mode</span>
+            <div className="inline-flex border border-border rounded-sm overflow-hidden">
+              <button
+                onClick={() => setSpreadView(false)}
+                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase transition ${!spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                Single
+              </button>
+              <button
+                onClick={() => setSpreadView(true)}
+                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase transition ${spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                Spread
+              </button>
             </div>
+          </div>
+
+          {/* Master pages — issue-wide folio & page-number defaults */}
+          <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
               <Input
                 value={issue.master.publication}
@@ -624,19 +640,23 @@ function Index() {
               Tokens: <code>{"{publication}"}</code> <code>{"{issue}"}</code> <code>{"{date}"}</code>
             </p>
             <Field label="Page number style">
-              <select
+              <Select
                 value={issue.master.pageNumberFormat}
-                onChange={(e) =>
-                  updateMaster({ pageNumberFormat: e.target.value as IssueMaster["pageNumberFormat"] })
+                onValueChange={(v) =>
+                  updateMaster({ pageNumberFormat: v as IssueMaster["pageNumberFormat"] })
                 }
-                className="w-full border border-input bg-background px-2 py-1.5 text-sm"
               >
-                {PAGE_NUMBER_FORMATS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_NUMBER_FORMATS.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pt-2 border-t border-border">
               <MasterToggle
                 label="Folio on articles"
                 checked={issue.master.showFolioOnArticles}
@@ -653,66 +673,54 @@ function Index() {
                 onChange={(v) => updateMaster({ showFolioOnAds: v })}
               />
             </div>
+          </Section>
 
-            <div className="pt-3 border-t border-border space-y-2">
-              <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-                Typography
-              </div>
-              <FontPicker
-                label="Display (headlines)"
-                options={DISPLAY_FONTS}
-                value={issue.master.fonts.display}
-                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, display: v } })}
-              />
-              <FontPicker
-                label="Serif (body copy)"
-                options={SERIF_FONTS}
-                value={issue.master.fonts.serif}
-                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, serif: v } })}
-              />
-              <FontPicker
-                label="Sans (folio &amp; labels)"
-                options={SANS_FONTS}
-                value={issue.master.fonts.sans}
-                onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, sans: v } })}
-              />
-              <button
-                type="button"
-                onClick={() => updateMaster({ fonts: DEFAULT_FONTS })}
-                className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-              >
-                Reset to defaults
-              </button>
-            </div>
-            <label className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground pt-2 border-t border-border">
-              <input
-                type="checkbox"
-                checked={spreadView}
-                onChange={(e) => setSpreadView(e.target.checked)}
-                className="accent-[color:var(--gold)]"
-              />
-              Spread view (preview pages as 2-up)
-            </label>
-          </div>
+          <Section title="Typography" defaultOpen={false}>
+            <FontPicker
+              label="Display (headlines)"
+              options={DISPLAY_FONTS}
+              value={issue.master.fonts.display}
+              onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, display: v } })}
+            />
+            <FontPicker
+              label="Serif (body copy)"
+              options={SERIF_FONTS}
+              value={issue.master.fonts.serif}
+              onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, serif: v } })}
+            />
+            <FontPicker
+              label="Sans (folio & labels)"
+              options={SANS_FONTS}
+              value={issue.master.fonts.sans}
+              onChange={(v) => updateMaster({ fonts: { ...issue.master.fonts, sans: v } })}
+            />
+            <button
+              type="button"
+              onClick={() => updateMaster({ fonts: DEFAULT_FONTS })}
+              className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-[color:var(--ruby)] underline-offset-4 hover:underline"
+            >
+              Reset to defaults
+            </button>
+          </Section>
 
-
-          <div className="border border-border bg-card p-3 space-y-2">
+          <Section title="Issue · Save & Export" defaultOpen>
             <button
               onClick={doExportPublication}
               disabled={busy === "PUBLICATION"}
-              className="w-full bg-[color:var(--gold)] text-background px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:opacity-90 transition disabled:opacity-60"
+              className="w-full bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-3 py-3 text-[11px] uppercase tracking-[0.3em] hover:bg-[color:var(--ruby-deep)] transition disabled:opacity-60 flex items-center justify-center gap-2 rounded-sm"
             >
-              {busy === "PUBLICATION" ? "Assembling…" : "⤓ Export Publication PDF"}
+              <Download className="h-3.5 w-3.5" />
+              {busy === "PUBLICATION" ? "Assembling…" : "Export Publication PDF"}
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={saveIssue}
-                className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary"
+                className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
               >
-                Save issue
+                <Save className="h-3 w-3" /> Save issue
               </button>
-              <label className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary cursor-pointer text-center">
-                Load issue
+              <label className="border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary cursor-pointer text-center rounded-sm flex items-center justify-center gap-1.5">
+                <Upload className="h-3 w-3" /> Load issue
                 <input
                   type="file"
                   accept="application/json"
@@ -724,8 +732,9 @@ function Index() {
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               Save JSON = your monthly source of truth. Reload it next issue, edit, re-export.
             </p>
-          </div>
+          </Section>
         </aside>
+
 
         {/* Editor for selected page */}
         <aside className="space-y-6">
