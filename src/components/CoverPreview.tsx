@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { COVER_PX, PALETTES, type CoverData } from "@/lib/coverDefaults";
+import { Draggable } from "./LayoutEdit";
 
 type Props = { data: CoverData };
 
@@ -20,7 +21,6 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
       setQrDataUrl("");
       return;
     }
-    // High error-correction, large module size for clean 300 DPI print
     QRCode.toDataURL(data.qrUrl.trim(), {
       errorCorrectionLevel: "H",
       margin: 1,
@@ -47,58 +47,62 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
       }}
     >
       {/* Hero image */}
-      {data.imageUrl ? (
-        <div
-          style={{
-            position: "absolute",
-            inset: data.layout === "framed" ? "12% 10% 22% 10%" : 0,
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={data.imageUrl}
-            alt=""
-            crossOrigin="anonymous"
+      <Draggable
+        blockKey="hero"
+        style={{
+          position: "absolute",
+          inset: data.layout === "framed" ? "12% 10% 22% 10%" : 0,
+          overflow: "hidden",
+        }}
+      >
+        {data.imageUrl ? (
+          <>
+            <img
+              src={data.imageUrl}
+              alt=""
+              crossOrigin="anonymous"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: data.imageFit,
+                objectPosition: `center ${data.imageY}%`,
+                display: "block",
+              }}
+            />
+            {data.layout === "classic" && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.45) 100%)`,
+                }}
+              />
+            )}
+          </>
+        ) : (
+          <div
             style={{
               width: "100%",
               height: "100%",
-              objectFit: data.imageFit,
-              objectPosition: `center ${data.imageY}%`,
-              display: "block",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: pal.muted,
+              fontFamily: "var(--font-sans)",
+              fontSize: 64,
+              letterSpacing: 6,
+              textTransform: "uppercase",
+              background: `repeating-linear-gradient(45deg, ${pal.bg} 0 40px, ${pal.muted}11 40px 80px)`,
             }}
-          />
-          {data.layout === "classic" && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.45) 100%)`,
-              }}
-            />
-          )}
-        </div>
-      ) : (
-        <div
-          style={{
-            position: "absolute",
-            inset: data.layout === "framed" ? "12% 10% 22% 10%" : 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: pal.muted,
-            fontFamily: "var(--font-sans)",
-            fontSize: 64,
-            letterSpacing: 6,
-            textTransform: "uppercase",
-            background: `repeating-linear-gradient(45deg, ${pal.bg} 0 40px, ${pal.muted}11 40px 80px)`,
-          }}
-        >
-          Upload cover image
-        </div>
-      )}
+          >
+            Upload cover image
+          </div>
+        )}
+      </Draggable>
 
       {/* Top masthead bar */}
-      <div
+      <Draggable
+        blockKey="masthead-bar"
         style={{
           position: "absolute",
           top: 120,
@@ -107,7 +111,7 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          color: data.layout === "framed" ? pal.fg : pal.fg,
+          color: pal.fg,
           mixBlendMode: data.layout === "edge" && data.imageUrl ? "difference" : "normal",
         }}
       >
@@ -133,10 +137,11 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
         >
           {data.date}
         </span>
-      </div>
+      </Draggable>
 
       {/* Masthead title */}
-      <div
+      <Draggable
+        blockKey="masthead-title"
         style={{
           position: "absolute",
           top: 200,
@@ -180,10 +185,11 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
             {data.tagline}
           </span>
         </div>
-      </div>
+      </Draggable>
 
       {/* Bottom title block */}
-      <div
+      <Draggable
+        blockKey="title-block"
         style={{
           position: "absolute",
           left: 160,
@@ -229,10 +235,11 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
         >
           {data.dek}
         </p>
-      </div>
+      </Draggable>
 
       {/* Bottom rule + meta */}
-      <div
+      <Draggable
+        blockKey="bottom-rule"
         style={{
           position: "absolute",
           left: 160,
@@ -270,10 +277,11 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
         >
           {data.price}
         </div>
-      </div>
+      </Draggable>
 
       {/* Credit micro-text */}
-      <div
+      <Draggable
+        blockKey="credit"
         style={{
           position: "absolute",
           left: 160,
@@ -286,11 +294,12 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
         }}
       >
         {data.credit}
-      </div>
+      </Draggable>
 
       {/* QR code */}
       {qrDataUrl && (
-        <div
+        <Draggable
+          blockKey="qr"
           style={{
             position: "absolute",
             right: 160,
@@ -325,7 +334,7 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
               {data.qrCaption}
             </div>
           )}
-        </div>
+        </Draggable>
       )}
     </div>
   );
