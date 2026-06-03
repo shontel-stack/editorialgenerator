@@ -642,8 +642,10 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
       );
       if (data.pullQuote) {
         blocks.push(
-          <div
+        blocks.push(
+          <Draggable
             key="pq"
+            blockKey="pull-quote"
             style={{
               position: "absolute",
               left: M,
@@ -661,7 +663,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
             }}
           >
             {data.pullQuote}
-          </div>,
+          </Draggable>,
         );
       }
       break;
