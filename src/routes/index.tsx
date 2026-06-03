@@ -648,6 +648,33 @@ function Index() {
             </div>
           </div>
 
+          {/* Layout edit toggle — drag blocks to reposition on the current page */}
+          <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between gap-2">
+            <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Edit layout</span>
+            <div className="flex items-center gap-2">
+              {editLayout && (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) && (
+                <button
+                  onClick={() => resetOverrides(selected.id)}
+                  className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary"
+                  title="Reset all block positions on this page"
+                >
+                  Reset
+                </button>
+              )}
+              <button
+                onClick={() => setEditLayout((v) => !v)}
+                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${editLayout ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                {editLayout ? "Done" : "Drag blocks"}
+              </button>
+            </div>
+          </div>
+          {editLayout && (
+            <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2 px-1">
+              Drag any outlined block on the page. Positions snap to a 40-px grid and are saved with the issue.
+            </p>
+          )}
+
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
