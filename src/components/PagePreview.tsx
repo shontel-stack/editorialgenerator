@@ -867,7 +867,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
     <Page innerRef={ref} pal={pal}>
       <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
 
-      <div
+      <Draggable
+        blockKey="section"
         style={{
           position: "absolute",
           top: 240,
@@ -881,43 +882,55 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         }}
       >
         Contents  ·  {data.issue}  ·  {data.date}
-      </div>
+      </Draggable>
 
-      <h1
+      <Draggable
+        blockKey="title"
         style={{
           position: "absolute",
           top: 320,
           left: 160,
           right: 160,
-          fontFamily: "var(--font-display)",
-          fontWeight: 400,
-          fontSize: 280,
-          lineHeight: 0.9,
-          letterSpacing: -3,
-          margin: 0,
-          color: pal.fg,
         }}
       >
-        Inside
-      </h1>
+        <h1
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 400,
+            fontSize: 280,
+            lineHeight: 0.9,
+            letterSpacing: -3,
+            margin: 0,
+            color: pal.fg,
+          }}
+        >
+          Inside
+        </h1>
+      </Draggable>
 
-      <p
+      <Draggable
+        blockKey="intro"
         style={{
           position: "absolute",
           top: 680,
           left: 160,
           right: 1200,
-          fontFamily: "var(--font-serif)",
-          fontStyle: "italic",
-          fontSize: 44,
-          lineHeight: 1.3,
-          margin: 0,
-          color: pal.fg,
-          opacity: 0.9,
         }}
       >
-        {data.intro}
-      </p>
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 44,
+            lineHeight: 1.3,
+            margin: 0,
+            color: pal.fg,
+            opacity: 0.9,
+          }}
+        >
+          {data.intro}
+        </p>
+      </Draggable>
 
       <div
         style={{
