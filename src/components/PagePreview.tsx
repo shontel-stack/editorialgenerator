@@ -398,8 +398,9 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
         />,
       );
       blocks.push(
-        <div
+        <Draggable
           key="cap"
+          blockKey="caption"
           style={{
             position: "absolute",
             top: 2120,
@@ -412,7 +413,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
           }}
         >
           {data.imageCaption}
-        </div>,
+        </Draggable>,
       );
       blocks.push(
         <BodyColumns
