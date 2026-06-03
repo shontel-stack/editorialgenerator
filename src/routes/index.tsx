@@ -98,6 +98,7 @@ function Index() {
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
+  const [editLayout, setEditLayout] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const attachments = useIssueAttachments(issue.meta.issueId);
 
