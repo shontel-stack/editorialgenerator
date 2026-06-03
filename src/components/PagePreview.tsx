@@ -1025,7 +1025,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
       </Draggable>
 
 
-      <div
+      <Draggable
+        blockKey="contents-footer"
         style={{
           position: "absolute",
           bottom: 100,
@@ -1042,7 +1043,7 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
       >
         <span>{data.folio}</span>
         <span>{data.pageNumber}</span>
-      </div>
+      </Draggable>
     </Page>
   );
 });
