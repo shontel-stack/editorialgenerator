@@ -1061,7 +1061,8 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
   return (
     <Page innerRef={ref} pal={pal}>
       {/* Image */}
-      <div
+      <Draggable
+        blockKey="image"
         style={{
           position: "absolute",
           top: isFramed ? 320 : 0,
@@ -1104,10 +1105,11 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
             Place ad image
           </div>
         )}
-      </div>
+      </Draggable>
 
       {/* Eyebrow */}
-      <div
+      <Draggable
+        blockKey="eyebrow"
         style={{
           position: "absolute",
           top: 120,
@@ -1122,10 +1124,11 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
         }}
       >
         {data.eyebrow}
-      </div>
+      </Draggable>
 
       {/* Copy block */}
-      <div
+      <Draggable
+        blockKey="copy"
         style={{
           position: "absolute",
           left: isSplit ? "calc(50% + 120px)" : 160,
@@ -1186,10 +1189,11 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
         >
           {data.cta}
         </div>
-      </div>
+      </Draggable>
 
       {/* Bottom folio */}
-      <div
+      <Draggable
+        blockKey="ad-footer"
         style={{
           position: "absolute",
           bottom: 100,
@@ -1208,7 +1212,7 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
       >
         <span>{data.folio}</span>
         <span>{data.pageNumber}</span>
-      </div>
+      </Draggable>
     </Page>
   );
 });
