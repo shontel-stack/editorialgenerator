@@ -866,14 +866,28 @@ function Index() {
               className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
               style={{ width: COVER_PX.w, height: COVER_PX.h }}
             >
-              <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+              <LayoutEditProvider
+                editing={editLayout && spread.left.id === selected.id}
+                scale={scale}
+                overrides={spread.left.positionOverrides ?? {}}
+                setOverride={(k, v) => setOverride(spread.left.id, k, v)}
+              >
+                <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+              </LayoutEditProvider>
             </div>
             {spreadView && spread.right && (
               <div
                 className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
                 style={{ width: COVER_PX.w, height: COVER_PX.h }}
               >
-                <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+                <LayoutEditProvider
+                  editing={editLayout && spread.right.id === selected.id}
+                  scale={scale}
+                  overrides={spread.right.positionOverrides ?? {}}
+                  setOverride={(k, v) => setOverride(spread.right!.id, k, v)}
+                >
+                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+                </LayoutEditProvider>
               </div>
             )}
           </div>
@@ -887,9 +901,18 @@ function Index() {
         style={{ position: "fixed", left: -100000, top: 0, pointerEvents: "none", opacity: 0 }}
       >
         {pagesForRender.map((p) => (
-          <PagePreview key={p.id} ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
+          <LayoutEditProvider
+            key={p.id}
+            editing={false}
+            scale={1}
+            overrides={p.positionOverrides ?? {}}
+            setOverride={() => {}}
+          >
+            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
+          </LayoutEditProvider>
         ))}
       </div>
+
 
       <footer className="border-t border-border mt-8">
         <div className="mx-auto max-w-[1800px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
