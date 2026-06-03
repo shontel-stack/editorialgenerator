@@ -172,7 +172,8 @@ function BodyColumns({
 }) {
   const paragraphs = data.body.split(/\n\s*\n/).filter(Boolean);
   return (
-    <div
+    <Draggable
+      blockKey="body"
       style={{
         ...style,
         columnCount: columns,
@@ -208,7 +209,7 @@ function BodyColumns({
           )}
         </p>
       ))}
-    </div>
+    </Draggable>
   );
 }
 
