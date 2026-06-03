@@ -1022,7 +1022,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
             Mark pages as “List in contents” to populate this index.
           </div>
         )}
-      </div>
+      </Draggable>
+
 
       <div
         style={{
