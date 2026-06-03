@@ -12,6 +12,7 @@ import {
   type PhotoData,
 } from "@/lib/coverDefaults";
 import { CoverPreview } from "./CoverPreview";
+import { Draggable } from "./LayoutEdit";
 
 type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData;
 
