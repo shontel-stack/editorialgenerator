@@ -230,7 +230,8 @@ function ArticleHeader({
 }) {
   return (
     <>
-      <div
+      <Draggable
+        blockKey="section"
         style={{
           position: "absolute",
           top,
@@ -245,24 +246,30 @@ function ArticleHeader({
         }}
       >
         {data.section}
-      </div>
-      <h1
+      </Draggable>
+      <Draggable
+        blockKey="headline"
         style={{
           position: "absolute",
           top: top + 60,
           left,
           right,
-          fontFamily: "var(--font-display)",
-          fontWeight: 400,
-          fontSize: headlineSize,
-          lineHeight: 0.95,
-          letterSpacing: -3,
-          margin: 0,
-          color: pal.fg,
         }}
       >
-        {data.headline}
-      </h1>
+        <h1
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 400,
+            fontSize: headlineSize,
+            lineHeight: 0.95,
+            letterSpacing: -3,
+            margin: 0,
+            color: pal.fg,
+          }}
+        >
+          {data.headline}
+        </h1>
+      </Draggable>
     </>
   );
 }
@@ -282,24 +289,31 @@ function ArticleByline({
 }) {
   return (
     <>
-      <p
+      <Draggable
+        blockKey="dek"
         style={{
           position: "absolute",
           top,
           left,
           right,
-          fontFamily: "var(--font-serif)",
-          fontStyle: "italic",
-          fontSize: 38,
-          lineHeight: 1.3,
-          margin: 0,
-          color: pal.fg,
-          opacity: 0.9,
         }}
       >
-        {data.dek}
-      </p>
-      <div
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 38,
+            lineHeight: 1.3,
+            margin: 0,
+            color: pal.fg,
+            opacity: 0.9,
+          }}
+        >
+          {data.dek}
+        </p>
+      </Draggable>
+      <Draggable
+        blockKey="byline"
         style={{
           position: "absolute",
           top: top + 160,
@@ -313,7 +327,7 @@ function ArticleByline({
         }}
       >
         {data.byline}
-      </div>
+      </Draggable>
     </>
   );
 }
@@ -326,7 +340,8 @@ function ArticleFooter({
   pal: typeof PALETTES[keyof typeof PALETTES];
 }) {
   return (
-    <div
+    <Draggable
+      blockKey="article-footer"
       style={{
         position: "absolute",
         bottom: 100,
@@ -345,7 +360,7 @@ function ArticleFooter({
     >
       <span>{data.folio}</span>
       <span>{data.pageNumber}</span>
-    </div>
+    </Draggable>
   );
 }
 
