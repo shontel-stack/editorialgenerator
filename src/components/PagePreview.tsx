@@ -90,9 +90,10 @@ function Folio({
   };
   return (
     <>
-      <div style={{ position: "absolute", top: 120, left: 160, ...base }}>{left}</div>
-      <div style={{ position: "absolute", top: 120, right: 160, ...base }}>{right}</div>
-      <div
+      <Draggable blockKey="folio-left" style={{ position: "absolute", top: 120, left: 160, ...base }}>{left}</Draggable>
+      <Draggable blockKey="folio-right" style={{ position: "absolute", top: 120, right: 160, ...base }}>{right}</Draggable>
+      <Draggable
+        blockKey="folio-rule"
         style={{
           position: "absolute",
           top: 175,
