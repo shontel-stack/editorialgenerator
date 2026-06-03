@@ -693,7 +693,8 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
 
   return (
     <Page innerRef={ref} pal={pal}>
-      <div
+      <Draggable
+        blockKey="image"
         style={{
           position: "absolute",
           top: isFramed ? 380 : 0,
@@ -742,12 +743,14 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
               position: "absolute",
               inset: 0,
               background: `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%)`,
+              pointerEvents: "none",
             }}
           />
         )}
-      </div>
+      </Draggable>
 
-      <div
+      <Draggable
+        blockKey="photo-header"
         style={{
           position: "absolute",
           top: 120,
@@ -765,9 +768,10 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
       >
         <span>{data.folio}</span>
         <span>{data.section}</span>
-      </div>
+      </Draggable>
 
-      <div
+      <Draggable
+        blockKey="copy"
         style={{
           position: "absolute",
           left: isSplit ? "calc(55% + 60px)" : 160,
@@ -829,9 +833,10 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
         >
           {data.credit}
         </div>
-      </div>
+      </Draggable>
 
-      <div
+      <Draggable
+        blockKey="page-number"
         style={{
           position: "absolute",
           bottom: 90,
@@ -845,7 +850,7 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
         }}
       >
         {data.pageNumber}
-      </div>
+      </Draggable>
     </Page>
   );
 });
