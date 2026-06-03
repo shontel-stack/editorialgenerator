@@ -154,6 +154,8 @@ export type AnyPageData =
 export type IssuePageNode = AnyPageData & {
   id: string;
   includeInContents: boolean;
+  /** Per-block pixel offsets (intrinsic 3200x4267 space). Set by drag-to-reposition. */
+  positionOverrides?: Record<string, { dx: number; dy: number }>;
 };
 
 /* --- Master pages — issue-wide folio / page-number defaults --- */
