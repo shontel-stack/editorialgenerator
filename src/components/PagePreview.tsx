@@ -642,7 +642,6 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
       );
       if (data.pullQuote) {
         blocks.push(
-        blocks.push(
           <Draggable
             key="pq"
             blockKey="pull-quote"
