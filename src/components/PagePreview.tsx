@@ -932,7 +932,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         </p>
       </Draggable>
 
-      <div
+      <Draggable
+        blockKey="entries"
         style={{
           position: "absolute",
           top: 1100,
