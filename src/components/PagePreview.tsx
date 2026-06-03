@@ -12,6 +12,7 @@ import {
   type PhotoData,
 } from "@/lib/coverDefaults";
 import { CoverPreview } from "./CoverPreview";
+import { Draggable } from "./LayoutEdit";
 
 type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData;
 
@@ -89,9 +90,10 @@ function Folio({
   };
   return (
     <>
-      <div style={{ position: "absolute", top: 120, left: 160, ...base }}>{left}</div>
-      <div style={{ position: "absolute", top: 120, right: 160, ...base }}>{right}</div>
-      <div
+      <Draggable blockKey="folio-left" style={{ position: "absolute", top: 120, left: 160, ...base }}>{left}</Draggable>
+      <Draggable blockKey="folio-right" style={{ position: "absolute", top: 120, right: 160, ...base }}>{right}</Draggable>
+      <Draggable
+        blockKey="folio-rule"
         style={{
           position: "absolute",
           top: 175,
@@ -110,13 +112,15 @@ function ImageBox({
   data,
   pal,
   style,
+  blockKey = "image",
 }: {
   data: ArticleData;
   pal: typeof PALETTES[keyof typeof PALETTES];
   style: React.CSSProperties;
+  blockKey?: string;
 }) {
   return (
-    <div style={{ ...style, overflow: "hidden", background: pal.muted + "22" }}>
+    <Draggable blockKey={blockKey} style={{ ...style, overflow: "hidden", background: pal.muted + "22" }}>
       {data.imageUrl ? (
         <img
           src={data.imageUrl}
@@ -149,7 +153,7 @@ function ImageBox({
           Place image
         </div>
       )}
-    </div>
+    </Draggable>
   );
 }
 
@@ -168,7 +172,8 @@ function BodyColumns({
 }) {
   const paragraphs = data.body.split(/\n\s*\n/).filter(Boolean);
   return (
-    <div
+    <Draggable
+      blockKey="body"
       style={{
         ...style,
         columnCount: columns,
@@ -204,7 +209,7 @@ function BodyColumns({
           )}
         </p>
       ))}
-    </div>
+    </Draggable>
   );
 }
 
@@ -225,7 +230,8 @@ function ArticleHeader({
 }) {
   return (
     <>
-      <div
+      <Draggable
+        blockKey="section"
         style={{
           position: "absolute",
           top,
@@ -240,24 +246,30 @@ function ArticleHeader({
         }}
       >
         {data.section}
-      </div>
-      <h1
+      </Draggable>
+      <Draggable
+        blockKey="headline"
         style={{
           position: "absolute",
           top: top + 60,
           left,
           right,
-          fontFamily: "var(--font-display)",
-          fontWeight: 400,
-          fontSize: headlineSize,
-          lineHeight: 0.95,
-          letterSpacing: -3,
-          margin: 0,
-          color: pal.fg,
         }}
       >
-        {data.headline}
-      </h1>
+        <h1
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 400,
+            fontSize: headlineSize,
+            lineHeight: 0.95,
+            letterSpacing: -3,
+            margin: 0,
+            color: pal.fg,
+          }}
+        >
+          {data.headline}
+        </h1>
+      </Draggable>
     </>
   );
 }
@@ -277,24 +289,31 @@ function ArticleByline({
 }) {
   return (
     <>
-      <p
+      <Draggable
+        blockKey="dek"
         style={{
           position: "absolute",
           top,
           left,
           right,
-          fontFamily: "var(--font-serif)",
-          fontStyle: "italic",
-          fontSize: 38,
-          lineHeight: 1.3,
-          margin: 0,
-          color: pal.fg,
-          opacity: 0.9,
         }}
       >
-        {data.dek}
-      </p>
-      <div
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 38,
+            lineHeight: 1.3,
+            margin: 0,
+            color: pal.fg,
+            opacity: 0.9,
+          }}
+        >
+          {data.dek}
+        </p>
+      </Draggable>
+      <Draggable
+        blockKey="byline"
         style={{
           position: "absolute",
           top: top + 160,
@@ -308,7 +327,7 @@ function ArticleByline({
         }}
       >
         {data.byline}
-      </div>
+      </Draggable>
     </>
   );
 }
@@ -321,7 +340,8 @@ function ArticleFooter({
   pal: typeof PALETTES[keyof typeof PALETTES];
 }) {
   return (
-    <div
+    <Draggable
+      blockKey="article-footer"
       style={{
         position: "absolute",
         bottom: 100,
@@ -340,7 +360,7 @@ function ArticleFooter({
     >
       <span>{data.folio}</span>
       <span>{data.pageNumber}</span>
-    </div>
+    </Draggable>
   );
 }
 
@@ -378,8 +398,9 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
         />,
       );
       blocks.push(
-        <div
+        <Draggable
           key="cap"
+          blockKey="caption"
           style={{
             position: "absolute",
             top: 2120,
@@ -392,7 +413,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
           }}
         >
           {data.imageCaption}
-        </div>,
+        </Draggable>,
       );
       blocks.push(
         <BodyColumns
@@ -504,12 +525,14 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
             inset: 0,
             background:
               "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
+            pointerEvents: "none",
           }}
         />,
       );
       blocks.push(
-        <div
+        <Draggable
           key="section"
+          blockKey="section"
           style={{
             position: "absolute",
             top: 240,
@@ -524,51 +547,64 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
           }}
         >
           {data.section}
-        </div>,
+        </Draggable>,
       );
       blocks.push(
-        <h1
+        <Draggable
           key="hl"
+          blockKey="headline"
           style={{
             position: "absolute",
             bottom: 700,
             left: M,
             right: M,
-            fontFamily: "var(--font-display)",
-            fontWeight: 400,
-            fontSize: 280,
-            lineHeight: 0.92,
-            letterSpacing: -3,
-            margin: 0,
-            color: "#ffffff",
           }}
         >
-          {data.headline}
-        </h1>,
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 400,
+              fontSize: 280,
+              lineHeight: 0.92,
+              letterSpacing: -3,
+              margin: 0,
+              color: "#ffffff",
+            }}
+          >
+            {data.headline}
+          </h1>
+        </Draggable>,
       );
       blocks.push(
-        <p
+        <Draggable
           key="dek"
+          blockKey="dek"
           style={{
             position: "absolute",
             bottom: 400,
             left: M,
             right: M,
-            fontFamily: "var(--font-serif)",
-            fontStyle: "italic",
-            fontSize: 44,
-            lineHeight: 1.3,
-            margin: 0,
-            color: "#ffffff",
-            maxWidth: 2000,
           }}
         >
-          {data.dek}
-        </p>,
+          <p
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontStyle: "italic",
+              fontSize: 44,
+              lineHeight: 1.3,
+              margin: 0,
+              color: "#ffffff",
+              maxWidth: 2000,
+            }}
+          >
+            {data.dek}
+          </p>
+        </Draggable>,
       );
       blocks.push(
-        <div
+        <Draggable
           key="by"
+          blockKey="byline"
           style={{
             position: "absolute",
             bottom: 320,
@@ -582,7 +618,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
           }}
         >
           {data.byline}
-        </div>,
+        </Draggable>,
       );
       break;
     }
@@ -606,8 +642,9 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
       );
       if (data.pullQuote) {
         blocks.push(
-          <div
+          <Draggable
             key="pq"
+            blockKey="pull-quote"
             style={{
               position: "absolute",
               left: M,
@@ -625,7 +662,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
             }}
           >
             {data.pullQuote}
-          </div>,
+          </Draggable>,
         );
       }
       break;
@@ -656,7 +693,8 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
 
   return (
     <Page innerRef={ref} pal={pal}>
-      <div
+      <Draggable
+        blockKey="image"
         style={{
           position: "absolute",
           top: isFramed ? 380 : 0,
@@ -705,12 +743,14 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
               position: "absolute",
               inset: 0,
               background: `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%)`,
+              pointerEvents: "none",
             }}
           />
         )}
-      </div>
+      </Draggable>
 
-      <div
+      <Draggable
+        blockKey="photo-header"
         style={{
           position: "absolute",
           top: 120,
@@ -728,9 +768,10 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
       >
         <span>{data.folio}</span>
         <span>{data.section}</span>
-      </div>
+      </Draggable>
 
-      <div
+      <Draggable
+        blockKey="copy"
         style={{
           position: "absolute",
           left: isSplit ? "calc(55% + 60px)" : 160,
@@ -792,9 +833,10 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
         >
           {data.credit}
         </div>
-      </div>
+      </Draggable>
 
-      <div
+      <Draggable
+        blockKey="page-number"
         style={{
           position: "absolute",
           bottom: 90,
@@ -808,7 +850,7 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
         }}
       >
         {data.pageNumber}
-      </div>
+      </Draggable>
     </Page>
   );
 });
@@ -825,7 +867,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
     <Page innerRef={ref} pal={pal}>
       <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
 
-      <div
+      <Draggable
+        blockKey="section"
         style={{
           position: "absolute",
           top: 240,
@@ -839,45 +882,58 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
         }}
       >
         Contents  ·  {data.issue}  ·  {data.date}
-      </div>
+      </Draggable>
 
-      <h1
+      <Draggable
+        blockKey="title"
         style={{
           position: "absolute",
           top: 320,
           left: 160,
           right: 160,
-          fontFamily: "var(--font-display)",
-          fontWeight: 400,
-          fontSize: 280,
-          lineHeight: 0.9,
-          letterSpacing: -3,
-          margin: 0,
-          color: pal.fg,
         }}
       >
-        Inside
-      </h1>
+        <h1
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 400,
+            fontSize: 280,
+            lineHeight: 0.9,
+            letterSpacing: -3,
+            margin: 0,
+            color: pal.fg,
+          }}
+        >
+          Inside
+        </h1>
+      </Draggable>
 
-      <p
+      <Draggable
+        blockKey="intro"
         style={{
           position: "absolute",
           top: 680,
           left: 160,
           right: 1200,
-          fontFamily: "var(--font-serif)",
-          fontStyle: "italic",
-          fontSize: 44,
-          lineHeight: 1.3,
-          margin: 0,
-          color: pal.fg,
-          opacity: 0.9,
         }}
       >
-        {data.intro}
-      </p>
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: 44,
+            lineHeight: 1.3,
+            margin: 0,
+            color: pal.fg,
+            opacity: 0.9,
+          }}
+        >
+          {data.intro}
+        </p>
+      </Draggable>
 
-      <div
+      <Draggable
+        blockKey="entries"
         style={{
           position: "absolute",
           top: 1100,
@@ -966,9 +1022,11 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
             Mark pages as “List in contents” to populate this index.
           </div>
         )}
-      </div>
+      </Draggable>
 
-      <div
+
+      <Draggable
+        blockKey="contents-footer"
         style={{
           position: "absolute",
           bottom: 100,
@@ -985,7 +1043,7 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
       >
         <span>{data.folio}</span>
         <span>{data.pageNumber}</span>
-      </div>
+      </Draggable>
     </Page>
   );
 });
@@ -1003,7 +1061,8 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
   return (
     <Page innerRef={ref} pal={pal}>
       {/* Image */}
-      <div
+      <Draggable
+        blockKey="image"
         style={{
           position: "absolute",
           top: isFramed ? 320 : 0,
@@ -1046,10 +1105,11 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
             Place ad image
           </div>
         )}
-      </div>
+      </Draggable>
 
       {/* Eyebrow */}
-      <div
+      <Draggable
+        blockKey="eyebrow"
         style={{
           position: "absolute",
           top: 120,
@@ -1064,10 +1124,11 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
         }}
       >
         {data.eyebrow}
-      </div>
+      </Draggable>
 
       {/* Copy block */}
-      <div
+      <Draggable
+        blockKey="copy"
         style={{
           position: "absolute",
           left: isSplit ? "calc(50% + 120px)" : 160,
@@ -1128,10 +1189,11 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
         >
           {data.cta}
         </div>
-      </div>
+      </Draggable>
 
       {/* Bottom folio */}
-      <div
+      <Draggable
+        blockKey="ad-footer"
         style={{
           position: "absolute",
           bottom: 100,
@@ -1150,7 +1212,7 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
       >
         <span>{data.folio}</span>
         <span>{data.pageNumber}</span>
-      </div>
+      </Draggable>
     </Page>
   );
 });
@@ -1190,8 +1252,8 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
         </div>
       )}
 
-      {/* Logo / masthead */}
-      <div
+      <Draggable
+        blockKey="masthead"
         style={{
           position: "absolute",
           top: 280,
@@ -1206,10 +1268,11 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
         }}
       >
         {data.masthead}
-      </div>
+      </Draggable>
 
       {/* Center quote */}
-      <div
+      <Draggable
+        blockKey="quote"
         style={{
           position: "absolute",
           left: 280,
@@ -1242,10 +1305,11 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
         >
           {data.attribution}
         </div>
-      </div>
+      </Draggable>
 
       {/* Bottom rule */}
-      <div
+      <Draggable
+        blockKey="back-footer"
         style={{
           position: "absolute",
           left: 160,
@@ -1264,7 +1328,7 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
       >
         <span>The Arts Today · Pageluxe</span>
         <span>{data.pageNumber}</span>
-      </div>
+      </Draggable>
     </Page>
   );
 });

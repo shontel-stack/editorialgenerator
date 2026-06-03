@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
+import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { AttachmentControl } from "@/components/AttachmentControl";
@@ -98,6 +99,7 @@ function Index() {
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
+  const [editLayout, setEditLayout] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const attachments = useIssueAttachments(issue.meta.issueId);
 
@@ -243,6 +245,24 @@ function Index() {
       pages: d.pages.map((p) =>
         p.id === id ? ({ ...p, data: { ...p.data, ...dataPatch } } as IssuePageNode) : p,
       ),
+    }));
+
+  const setOverride = (id: string, key: string, value: { dx: number; dy: number } | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = { ...(p.positionOverrides ?? {}) };
+        if (value === null) delete cur[key];
+        else cur[key] = value;
+        return { ...p, positionOverrides: cur } as IssuePageNode;
+      }),
+    }));
+
+  const resetOverrides = (id: string) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => (p.id === id ? ({ ...p, positionOverrides: {} } as IssuePageNode) : p)),
     }));
 
   const movePage = (id: string, dir: -1 | 1) =>
@@ -628,6 +648,33 @@ function Index() {
             </div>
           </div>
 
+          {/* Layout edit toggle — drag blocks to reposition on the current page */}
+          <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between gap-2">
+            <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Edit layout</span>
+            <div className="flex items-center gap-2">
+              {editLayout && (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) && (
+                <button
+                  onClick={() => resetOverrides(selected.id)}
+                  className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary"
+                  title="Reset all block positions on this page"
+                >
+                  Reset
+                </button>
+              )}
+              <button
+                onClick={() => setEditLayout((v) => !v)}
+                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${editLayout ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                {editLayout ? "Done" : "Drag blocks"}
+              </button>
+            </div>
+          </div>
+          {editLayout && (
+            <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2 px-1">
+              Drag any outlined block on the page. Positions snap to a 40-px grid and are saved with the issue.
+            </p>
+          )}
+
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
@@ -846,14 +893,28 @@ function Index() {
               className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
               style={{ width: COVER_PX.w, height: COVER_PX.h }}
             >
-              <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+              <LayoutEditProvider
+                editing={editLayout && spread.left.id === selected.id}
+                scale={scale}
+                overrides={spread.left.positionOverrides ?? {}}
+                setOverride={(k, v) => setOverride(spread.left.id, k, v)}
+              >
+                <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+              </LayoutEditProvider>
             </div>
             {spreadView && spread.right && (
               <div
                 className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
                 style={{ width: COVER_PX.w, height: COVER_PX.h }}
               >
-                <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+                <LayoutEditProvider
+                  editing={editLayout && spread.right.id === selected.id}
+                  scale={scale}
+                  overrides={spread.right.positionOverrides ?? {}}
+                  setOverride={(k, v) => setOverride(spread.right!.id, k, v)}
+                >
+                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+                </LayoutEditProvider>
               </div>
             )}
           </div>
@@ -867,9 +928,18 @@ function Index() {
         style={{ position: "fixed", left: -100000, top: 0, pointerEvents: "none", opacity: 0 }}
       >
         {pagesForRender.map((p) => (
-          <PagePreview key={p.id} ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
+          <LayoutEditProvider
+            key={p.id}
+            editing={false}
+            scale={1}
+            overrides={p.positionOverrides ?? {}}
+            setOverride={() => {}}
+          >
+            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
+          </LayoutEditProvider>
         ))}
       </div>
+
 
       <footer className="border-t border-border mt-8">
         <div className="mx-auto max-w-[1800px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
