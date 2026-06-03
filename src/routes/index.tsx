@@ -247,6 +247,24 @@ function Index() {
       ),
     }));
 
+  const setOverride = (id: string, key: string, value: { dx: number; dy: number } | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = { ...(p.positionOverrides ?? {}) };
+        if (value === null) delete cur[key];
+        else cur[key] = value;
+        return { ...p, positionOverrides: cur } as IssuePageNode;
+      }),
+    }));
+
+  const resetOverrides = (id: string) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => (p.id === id ? ({ ...p, positionOverrides: {} } as IssuePageNode) : p)),
+    }));
+
   const movePage = (id: string, dir: -1 | 1) =>
     setIssue((d) => {
       const idx = d.pages.findIndex((p) => p.id === id);
