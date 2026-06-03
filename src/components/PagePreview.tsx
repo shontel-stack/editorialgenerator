@@ -1252,8 +1252,8 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
         </div>
       )}
 
-      {/* Logo / masthead */}
-      <div
+      <Draggable
+        blockKey="masthead"
         style={{
           position: "absolute",
           top: 280,
@@ -1268,10 +1268,11 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
         }}
       >
         {data.masthead}
-      </div>
+      </Draggable>
 
       {/* Center quote */}
-      <div
+      <Draggable
+        blockKey="quote"
         style={{
           position: "absolute",
           left: 280,
@@ -1304,10 +1305,11 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
         >
           {data.attribution}
         </div>
-      </div>
+      </Draggable>
 
       {/* Bottom rule */}
-      <div
+      <Draggable
+        blockKey="back-footer"
         style={{
           position: "absolute",
           left: 160,
@@ -1326,7 +1328,7 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(fun
       >
         <span>The Arts Today · Pageluxe</span>
         <span>{data.pageNumber}</span>
-      </div>
+      </Draggable>
     </Page>
   );
 });
