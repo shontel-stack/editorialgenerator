@@ -112,13 +112,15 @@ function ImageBox({
   data,
   pal,
   style,
+  blockKey = "image",
 }: {
   data: ArticleData;
   pal: typeof PALETTES[keyof typeof PALETTES];
   style: React.CSSProperties;
+  blockKey?: string;
 }) {
   return (
-    <div style={{ ...style, overflow: "hidden", background: pal.muted + "22" }}>
+    <Draggable blockKey={blockKey} style={{ ...style, overflow: "hidden", background: pal.muted + "22" }}>
       {data.imageUrl ? (
         <img
           src={data.imageUrl}
@@ -151,7 +153,7 @@ function ImageBox({
           Place image
         </div>
       )}
-    </div>
+    </Draggable>
   );
 }
 
