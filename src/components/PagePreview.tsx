@@ -525,12 +525,14 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
             inset: 0,
             background:
               "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%)",
+            pointerEvents: "none",
           }}
         />,
       );
       blocks.push(
-        <div
+        <Draggable
           key="section"
+          blockKey="section"
           style={{
             position: "absolute",
             top: 240,
@@ -545,51 +547,64 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
           }}
         >
           {data.section}
-        </div>,
+        </Draggable>,
       );
       blocks.push(
-        <h1
+        <Draggable
           key="hl"
+          blockKey="headline"
           style={{
             position: "absolute",
             bottom: 700,
             left: M,
             right: M,
-            fontFamily: "var(--font-display)",
-            fontWeight: 400,
-            fontSize: 280,
-            lineHeight: 0.92,
-            letterSpacing: -3,
-            margin: 0,
-            color: "#ffffff",
           }}
         >
-          {data.headline}
-        </h1>,
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 400,
+              fontSize: 280,
+              lineHeight: 0.92,
+              letterSpacing: -3,
+              margin: 0,
+              color: "#ffffff",
+            }}
+          >
+            {data.headline}
+          </h1>
+        </Draggable>,
       );
       blocks.push(
-        <p
+        <Draggable
           key="dek"
+          blockKey="dek"
           style={{
             position: "absolute",
             bottom: 400,
             left: M,
             right: M,
-            fontFamily: "var(--font-serif)",
-            fontStyle: "italic",
-            fontSize: 44,
-            lineHeight: 1.3,
-            margin: 0,
-            color: "#ffffff",
-            maxWidth: 2000,
           }}
         >
-          {data.dek}
-        </p>,
+          <p
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontStyle: "italic",
+              fontSize: 44,
+              lineHeight: 1.3,
+              margin: 0,
+              color: "#ffffff",
+              maxWidth: 2000,
+            }}
+          >
+            {data.dek}
+          </p>
+        </Draggable>,
       );
       blocks.push(
-        <div
+        <Draggable
           key="by"
+          blockKey="byline"
           style={{
             position: "absolute",
             bottom: 320,
@@ -603,7 +618,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
           }}
         >
           {data.byline}
-        </div>,
+        </Draggable>,
       );
       break;
     }
