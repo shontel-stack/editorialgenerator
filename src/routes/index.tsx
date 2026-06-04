@@ -259,10 +259,38 @@ function Index() {
       }),
     }));
 
+  const setTextScale = (id: string, key: string, value: number | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = { ...(p.textScales ?? {}) };
+        if (value === null) delete cur[key];
+        else cur[key] = value;
+        return { ...p, textScales: cur } as IssuePageNode;
+      }),
+    }));
+
+  const setBlockLink = (id: string, key: string, value: string | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = { ...(p.blockLinks ?? {}) };
+        if (value === null) delete cur[key];
+        else cur[key] = value;
+        return { ...p, blockLinks: cur } as IssuePageNode;
+      }),
+    }));
+
   const resetOverrides = (id: string) =>
     setIssue((d) => ({
       ...d,
-      pages: d.pages.map((p) => (p.id === id ? ({ ...p, positionOverrides: {} } as IssuePageNode) : p)),
+      pages: d.pages.map((p) =>
+        p.id === id
+          ? ({ ...p, positionOverrides: {}, textScales: {}, blockLinks: {} } as IssuePageNode)
+          : p,
+      ),
     }));
 
   const movePage = (id: string, dir: -1 | 1) =>
@@ -652,7 +680,11 @@ function Index() {
           <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between gap-2">
             <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Edit layout</span>
             <div className="flex items-center gap-2">
-              {editLayout && (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) && (
+              {editLayout && (
+                (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
+                (selected.textScales && Object.keys(selected.textScales).length > 0) ||
+                (selected.blockLinks && Object.keys(selected.blockLinks).length > 0)
+              ) && (
                 <button
                   onClick={() => resetOverrides(selected.id)}
                   className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary"
@@ -898,6 +930,10 @@ function Index() {
                 scale={scale}
                 overrides={spread.left.positionOverrides ?? {}}
                 setOverride={(k, v) => setOverride(spread.left.id, k, v)}
+                textScales={spread.left.textScales ?? {}}
+                setTextScale={(k, v) => setTextScale(spread.left.id, k, v)}
+                blockLinks={spread.left.blockLinks ?? {}}
+                setBlockLink={(k, v) => setBlockLink(spread.left.id, k, v)}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
               </LayoutEditProvider>
@@ -912,6 +948,10 @@ function Index() {
                   scale={scale}
                   overrides={spread.right.positionOverrides ?? {}}
                   setOverride={(k, v) => setOverride(spread.right!.id, k, v)}
+                  textScales={spread.right.textScales ?? {}}
+                  setTextScale={(k, v) => setTextScale(spread.right!.id, k, v)}
+                  blockLinks={spread.right.blockLinks ?? {}}
+                  setBlockLink={(k, v) => setBlockLink(spread.right!.id, k, v)}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
                 </LayoutEditProvider>
@@ -934,6 +974,10 @@ function Index() {
             scale={1}
             overrides={p.positionOverrides ?? {}}
             setOverride={() => {}}
+            textScales={p.textScales ?? {}}
+            setTextScale={() => {}}
+            blockLinks={p.blockLinks ?? {}}
+            setBlockLink={() => {}}
           >
             <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
           </LayoutEditProvider>
@@ -994,6 +1038,33 @@ function CoverEditor({
       <Section title="Masthead">
         <Field label="Title"><Input value={data.masthead} onChange={(v) => set({ masthead: v })} /></Field>
         <Field label="Tagline"><Input value={data.tagline} onChange={(v) => set({ tagline: v })} /></Field>
+        <Field label="Logo image (replaces title when present)">
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f || !f.type.startsWith("image/")) return;
+                const r = new FileReader();
+                r.onload = () => set({ mastheadLogoUrl: String(r.result) });
+                r.readAsDataURL(f);
+              }}
+              className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
+            />
+            {data.mastheadLogoUrl && (
+              <div className="flex items-center gap-3">
+                <img src={data.mastheadLogoUrl} alt="" className="h-10 max-w-[160px] object-contain border border-border bg-white p-1" />
+                <button
+                  onClick={() => set({ mastheadLogoUrl: null })}
+                  className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-destructive"
+                >
+                  Remove logo
+                </button>
+              </div>
+            )}
+          </div>
+        </Field>
       </Section>
       <Section title="Cover Story">
         <Field label="Headline"><Input value={data.headline} onChange={(v) => set({ headline: v })} /></Field>
