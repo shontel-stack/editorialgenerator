@@ -1038,6 +1038,33 @@ function CoverEditor({
       <Section title="Masthead">
         <Field label="Title"><Input value={data.masthead} onChange={(v) => set({ masthead: v })} /></Field>
         <Field label="Tagline"><Input value={data.tagline} onChange={(v) => set({ tagline: v })} /></Field>
+        <Field label="Logo image (replaces title when present)">
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f || !f.type.startsWith("image/")) return;
+                const r = new FileReader();
+                r.onload = () => set({ mastheadLogoUrl: String(r.result) });
+                r.readAsDataURL(f);
+              }}
+              className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
+            />
+            {data.mastheadLogoUrl && (
+              <div className="flex items-center gap-3">
+                <img src={data.mastheadLogoUrl} alt="" className="h-10 max-w-[160px] object-contain border border-border bg-white p-1" />
+                <button
+                  onClick={() => set({ mastheadLogoUrl: null })}
+                  className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-destructive"
+                >
+                  Remove logo
+                </button>
+              </div>
+            )}
+          </div>
+        </Field>
       </Section>
       <Section title="Cover Story">
         <Field label="Headline"><Input value={data.headline} onChange={(v) => set({ headline: v })} /></Field>
