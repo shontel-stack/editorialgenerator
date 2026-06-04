@@ -152,19 +152,34 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
           color: pal.fg,
         }}
       >
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 400,
-            fontSize: 360,
-            lineHeight: 0.95,
-            margin: 0,
-            letterSpacing: -4,
-            color: data.logoColor,
-          }}
-        >
-          {data.masthead}
-        </h1>
+        {data.mastheadLogoUrl ? (
+          <img
+            src={data.mastheadLogoUrl}
+            alt={data.masthead}
+            crossOrigin="anonymous"
+            style={{
+              display: "block",
+              margin: "0 auto",
+              maxHeight: 420,
+              maxWidth: "70%",
+              objectFit: "contain",
+            }}
+          />
+        ) : (
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 400,
+              fontSize: 360,
+              lineHeight: 0.95,
+              margin: 0,
+              letterSpacing: -4,
+              color: data.logoColor,
+            }}
+          >
+            {data.masthead}
+          </h1>
+        )}
         <div
           style={{
             marginTop: 24,
