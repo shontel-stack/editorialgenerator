@@ -926,6 +926,10 @@ function Index() {
                 scale={scale}
                 overrides={spread.left.positionOverrides ?? {}}
                 setOverride={(k, v) => setOverride(spread.left.id, k, v)}
+                textScales={spread.left.textScales ?? {}}
+                setTextScale={(k, v) => setTextScale(spread.left.id, k, v)}
+                blockLinks={spread.left.blockLinks ?? {}}
+                setBlockLink={(k, v) => setBlockLink(spread.left.id, k, v)}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
               </LayoutEditProvider>
@@ -940,6 +944,10 @@ function Index() {
                   scale={scale}
                   overrides={spread.right.positionOverrides ?? {}}
                   setOverride={(k, v) => setOverride(spread.right!.id, k, v)}
+                  textScales={spread.right.textScales ?? {}}
+                  setTextScale={(k, v) => setTextScale(spread.right!.id, k, v)}
+                  blockLinks={spread.right.blockLinks ?? {}}
+                  setBlockLink={(k, v) => setBlockLink(spread.right!.id, k, v)}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
                 </LayoutEditProvider>
@@ -962,6 +970,10 @@ function Index() {
             scale={1}
             overrides={p.positionOverrides ?? {}}
             setOverride={() => {}}
+            textScales={p.textScales ?? {}}
+            setTextScale={() => {}}
+            blockLinks={p.blockLinks ?? {}}
+            setBlockLink={() => {}}
           >
             <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
           </LayoutEditProvider>
