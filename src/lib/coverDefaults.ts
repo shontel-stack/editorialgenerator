@@ -36,6 +36,7 @@ export type CoverData = {
   logoColor: string;
   qrUrl: string;       // URL the QR encodes (empty = hide QR)
   qrCaption: string;   // small caption below the QR
+  mastheadLogoUrl?: string | null; // if set, replaces the text masthead title
 };
 
 export type ArticleLayout =
@@ -156,6 +157,10 @@ export type IssuePageNode = AnyPageData & {
   includeInContents: boolean;
   /** Per-block pixel offsets (intrinsic 3200x4267 space). Set by drag-to-reposition. */
   positionOverrides?: Record<string, { dx: number; dy: number }>;
+  /** Per-block CSS transform scale applied to the block's contents (1 = default). */
+  textScales?: Record<string, number>;
+  /** Per-block link URL — block becomes an anchor in preview / export. */
+  blockLinks?: Record<string, string>;
 };
 
 /* --- Master pages — issue-wide folio / page-number defaults --- */
