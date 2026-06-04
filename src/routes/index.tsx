@@ -259,10 +259,38 @@ function Index() {
       }),
     }));
 
+  const setTextScale = (id: string, key: string, value: number | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = { ...(p.textScales ?? {}) };
+        if (value === null) delete cur[key];
+        else cur[key] = value;
+        return { ...p, textScales: cur } as IssuePageNode;
+      }),
+    }));
+
+  const setBlockLink = (id: string, key: string, value: string | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = { ...(p.blockLinks ?? {}) };
+        if (value === null) delete cur[key];
+        else cur[key] = value;
+        return { ...p, blockLinks: cur } as IssuePageNode;
+      }),
+    }));
+
   const resetOverrides = (id: string) =>
     setIssue((d) => ({
       ...d,
-      pages: d.pages.map((p) => (p.id === id ? ({ ...p, positionOverrides: {} } as IssuePageNode) : p)),
+      pages: d.pages.map((p) =>
+        p.id === id
+          ? ({ ...p, positionOverrides: {}, textScales: {}, blockLinks: {} } as IssuePageNode)
+          : p,
+      ),
     }));
 
   const movePage = (id: string, dir: -1 | 1) =>
