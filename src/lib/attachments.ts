@@ -81,6 +81,9 @@ export async function uploadAttachment(opts: {
   file: File;
 }): Promise<AttachmentRow> {
   const { issueId, pageId, kind, file } = opts;
+  if (!issueId || issueId.length < 8) {
+    throw new Error("Issue is still initializing. Reload the page and try again.");
+  }
   if (file.size > MAX_ATTACHMENT_BYTES) {
     throw new Error(`File too large (max ${Math.floor(MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB).`);
   }
@@ -108,9 +111,14 @@ export async function uploadAttachment(opts: {
   const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80);
   const path = `${issueId}/${kind}/${pageId ?? "_issue"}/${Date.now()}-${safe}`;
 
+  // NOTE: do NOT pass `upsert: true`. With upsert, Postgres evaluates both the
+  // INSERT and UPDATE policies on storage.objects; our UPDATE policy requires
+  // a matching row in issue_attachments which doesn't exist yet on first upload,
+  // causing "new row violates row-level security policy". The path is already
+  // unique (Date.now()), so plain INSERT is correct.
   const up = await supabase.storage
     .from(ATTACHMENT_BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: true });
+    .upload(path, file, { contentType: file.type });
   if (up.error) throw up.error;
 
   const extracted = isWordDoc(file.type) ? await extractDocxText(file) : null;
