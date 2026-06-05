@@ -15,13 +15,17 @@ export type LinkMap = Record<string, string>;
 
 type Ctx = {
   editing: boolean;
-  scale: number; // CSS px per intrinsic px
+  scale: number;
   overrides: Overrides;
   setOverride: (key: string, value: { dx: number; dy: number } | null) => void;
   textScales: ScaleMap;
   setTextScale: (key: string, value: number | null) => void;
   blockLinks: LinkMap;
   setBlockLink: (key: string, value: string | null) => void;
+  /** Pending (un-applied) assistant move proposals for this page. */
+  previewOverrides?: Overrides;
+  /** Pending scale proposals. */
+  previewScales?: ScaleMap;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
@@ -35,6 +39,8 @@ export function LayoutEditProvider({
   setTextScale,
   blockLinks,
   setBlockLink,
+  previewOverrides,
+  previewScales,
   children,
 }: Ctx & { children: ReactNode }) {
   return (
@@ -48,6 +54,8 @@ export function LayoutEditProvider({
         setTextScale,
         blockLinks,
         setBlockLink,
+        previewOverrides,
+        previewScales,
       }}
     >
       {children}
