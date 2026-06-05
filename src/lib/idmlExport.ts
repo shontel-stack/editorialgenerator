@@ -513,14 +513,18 @@ export function buildIdml(issue: IssueDoc): Uint8Array {
 }
 
 export function downloadIdml(issue: IssueDoc, filename: string): void {
-  const bytes = buildIdml(issue);
-  const blob = new Blob([new Uint8Array(bytes)], {
-    type: "application/vnd.adobe.indesign-idml-package",
-  });
+  const idmlBytes = buildIdml(issue);
+  const base = filename.replace(/\.(idml|zip)$/i, "") || "issue";
+  const idmlName = `${base}.idml`;
+  // Wrap the .idml inside a single .zip for easier sharing (some chat/email
+  // clients strip or mis-handle the .idml extension). InDesign users unzip
+  // and open the .idml inside.
+  const zipBytes = zipSync({ [idmlName]: idmlBytes }, { level: 6 });
+  const blob = new Blob([new Uint8Array(zipBytes)], { type: "application/zip" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename.endsWith(".idml") ? filename : `${filename}.idml`;
+  a.download = `${base}.zip`;
   document.body.appendChild(a);
   a.click();
   a.remove();
