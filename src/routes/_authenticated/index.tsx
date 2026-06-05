@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { AttachmentControl } from "@/components/AttachmentControl";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
+import { StaffPanel } from "@/components/StaffPanel";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
