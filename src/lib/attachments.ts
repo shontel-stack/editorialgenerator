@@ -53,12 +53,25 @@ async function extractDocxText(file: File): Promise<string | null> {
   }
 }
 
-export async function listAttachments(issueId: string): Promise<AttachmentRow[]> {
-  const { data, error } = await supabase
+function applyPublicationFilter<T extends { eq: (...a: unknown[]) => T; is: (...a: unknown[]) => T }>(
+  q: T,
+  publicationId: string | null,
+): T {
+  return publicationId === null
+    ? q.is("publication_id", null)
+    : q.eq("publication_id", publicationId);
+}
+
+export async function listAttachments(
+  issueId: string,
+  publicationId: string | null,
+): Promise<AttachmentRow[]> {
+  let q = supabase
     .from("issue_attachments")
     .select("*")
-    .eq("issue_id", issueId)
-    .order("created_at", { ascending: true });
+    .eq("issue_id", issueId);
+  q = applyPublicationFilter(q as never, publicationId) as typeof q;
+  const { data, error } = await q.order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as AttachmentRow[];
 }
