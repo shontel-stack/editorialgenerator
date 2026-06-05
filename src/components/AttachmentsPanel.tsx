@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { X, Upload, FileText, Image as ImageIcon, FileType2, Paperclip, Trash2, ExternalLink, Loader2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { X, Upload, FileText, Image as ImageIcon, FileType2, Paperclip, Trash2, ExternalLink, Loader2, Search } from "lucide-react";
 import {
   ACCEPT_ATTR,
   isImage,
