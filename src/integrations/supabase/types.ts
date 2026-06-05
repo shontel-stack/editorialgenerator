@@ -83,6 +83,107 @@ export type Database = {
         }
         Relationships: []
       }
+      page_status: {
+        Row: {
+          assignee_role: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          issue_id: string
+          notes: string | null
+          page_id: string
+          page_label: string | null
+          position: number
+          publication_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assignee_role?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          issue_id: string
+          notes?: string | null
+          page_id: string
+          page_label?: string | null
+          position?: number
+          publication_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assignee_role?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          issue_id?: string
+          notes?: string | null
+          page_id?: string
+          page_label?: string | null
+          position?: number
+          publication_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_status_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publications: {
+        Row: {
+          body_font: string | null
+          brand_voice: string | null
+          created_at: string
+          display_font: string | null
+          id: string
+          masthead: string | null
+          name: string
+          palette_key: string | null
+          slug: string
+          tagline: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body_font?: string | null
+          brand_voice?: string | null
+          created_at?: string
+          display_font?: string | null
+          id?: string
+          masthead?: string | null
+          name: string
+          palette_key?: string | null
+          slug: string
+          tagline?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body_font?: string | null
+          brand_voice?: string | null
+          created_at?: string
+          display_font?: string | null
+          id?: string
+          masthead?: string | null
+          name?: string
+          palette_key?: string | null
+          slug?: string
+          tagline?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       staff_messages: {
         Row: {
           created_at: string
@@ -201,6 +302,32 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_settings: {
+        Row: {
+          active_publication_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_publication_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_publication_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_active_publication_id_fkey"
+            columns: ["active_publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
