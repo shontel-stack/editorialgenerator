@@ -1035,6 +1035,35 @@ function Index() {
         setIssue={setIssue}
         attachments={attachments.rows}
         selectedPageId={selected.id}
+        onSelectPage={(pid) => setSelectedId(pid)}
+        pendingSpatial={pendingSpatial}
+        onProposeSpatial={(p) =>
+          setPendingSpatial((prev) =>
+            prev.some((x) => x.toolCallId === p.toolCallId) ? prev : [...prev, p],
+          )
+        }
+        onResolvePending={(toolCallId, action) => {
+          setPendingSpatial((prev) => {
+            const target = prev.find((p) => p.toolCallId === toolCallId);
+            if (!target) return prev;
+            if (action === "apply") {
+              if (target.kind === "move_block") {
+                setOverride(
+                  target.pageId,
+                  target.blockKey,
+                  target.reset ? null : { dx: target.dx ?? 0, dy: target.dy ?? 0 },
+                );
+              } else {
+                setTextScale(
+                  target.pageId,
+                  target.blockKey,
+                  target.reset || target.scale === 1 ? null : (target.scale ?? 1),
+                );
+              }
+            }
+            return prev.filter((p) => p.toolCallId !== toolCallId);
+          });
+        }}
       />
     </main>
   );
