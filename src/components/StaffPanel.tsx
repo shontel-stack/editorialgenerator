@@ -741,7 +741,7 @@ function StaffChat({
         if (noteErr) console.warn("[staff-chat] file note failed:", noteErr.message);
       }
     })();
-  }, [status, messages, initial, threadId, issueId, role.id]);
+  }, [status, messages, initial, threadId, issueId, publicationId, role.id]);
 
   const [input, setInput] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
