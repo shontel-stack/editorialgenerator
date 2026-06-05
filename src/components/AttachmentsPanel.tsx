@@ -49,6 +49,41 @@ export function AttachmentsPanel({
   const [err, setErr] = useState<string | null>(null);
   const [scope, setScope] = useState<"issue" | "page">("issue");
   const [kind, setKind] = useState<"reference" | "template">("reference");
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc" | "kind" | "page" | "size_desc" | "size_asc">("date_desc");
+
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let rows = attachments.rows;
+    if (q) rows = rows.filter((r) => r.file_name.toLowerCase().includes(q));
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "date_desc":
+          return +new Date(b.created_at) - +new Date(a.created_at);
+        case "date_asc":
+          return +new Date(a.created_at) - +new Date(b.created_at);
+        case "name_asc":
+          return a.file_name.localeCompare(b.file_name);
+        case "name_desc":
+          return b.file_name.localeCompare(a.file_name);
+        case "kind":
+          return a.kind.localeCompare(b.kind) || a.file_name.localeCompare(b.file_name);
+        case "page": {
+          const ap = a.page_id ?? "";
+          const bp = b.page_id ?? "";
+          return ap.localeCompare(bp) || a.file_name.localeCompare(b.file_name);
+        }
+        case "size_desc":
+          return b.size_bytes - a.size_bytes;
+        case "size_asc":
+          return a.size_bytes - b.size_bytes;
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [attachments.rows, query, sortBy]);
 
   if (!open) return null;
 
