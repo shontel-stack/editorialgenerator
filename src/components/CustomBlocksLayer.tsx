@@ -520,7 +520,7 @@ function QrPreview({ url, color, bg }: { url: string; color: string; bg: string 
 
 /* --------------------- floating toolbars --------------------- */
 
-function AddElementPalette({ onAdd }: { onAdd: (kind: CustomBlock["kind"]) => void }) {
+function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"]) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   return (
@@ -548,8 +548,129 @@ function AddElementPalette({ onAdd }: { onAdd: (kind: CustomBlock["kind"]) => vo
       </span>
       <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
       <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
+      <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
       <PaletteBtn label="Shape" icon={<Square size={14} />} onClick={() => onAdd("shape")} />
       <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
+      <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
+      <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
+    </div>
+  );
+}
+
+function TemplatePicker({ onPick, onClose }: { onPick: (tpl: LayoutTemplate) => void; onClose: () => void }) {
+  const ctx = useLayoutEdit();
+  const inv = 1 / (ctx?.scale ?? 1);
+  const [cat, setCat] = useState<LayoutTemplate["category"]>("Collage");
+  const visible = LAYOUT_TEMPLATES.filter((t) => t.category === cat);
+  return (
+    <div
+      onPointerDown={(e) => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        top: 90,
+        right: 24,
+        transform: `scale(${inv})`,
+        transformOrigin: "top right",
+        background: "white",
+        border: "2px solid #0a0a0a",
+        borderRadius: 8,
+        padding: 16,
+        width: 560,
+        boxShadow: "0 12px 36px rgba(0,0,0,0.25)",
+        zIndex: 350,
+        fontFamily: "system-ui, sans-serif",
+        color: "#0a0a0a",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <strong style={{ fontSize: 12, letterSpacing: 2, textTransform: "uppercase" }}>Layout templates</strong>
+        <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#666" }}>
+          <X size={16} />
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {TEMPLATE_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCat(c)}
+            style={{
+              ...btnStyle(cat === c ? "active" : "normal"),
+              fontSize: 11,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+        {visible.map((tpl) => (
+          <button
+            key={tpl.id}
+            type="button"
+            onClick={() => onPick(tpl)}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "stretch",
+              gap: 6,
+              padding: 8,
+              border: "1px solid #ddd",
+              borderRadius: 6,
+              background: "white",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <TemplateThumb tpl={tpl} />
+            <span style={{ fontSize: 11, color: "#0a0a0a" }}>{tpl.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TemplateThumb({ tpl }: { tpl: LayoutTemplate }) {
+  const blocks = tpl.build();
+  const PW = 3200;
+  const PH = 4267;
+  const TW = 160;
+  const TH = (TW * PH) / PW;
+  return (
+    <div style={{ position: "relative", width: TW, height: TH, background: "#f4efe7", border: "1px solid #e5e5e5", overflow: "hidden" }}>
+      {blocks.map((b) => {
+        const fill =
+          b.kind === "image" ? "#cbd2d9" :
+          b.kind === "video" ? "#0a0a0a" :
+          b.kind === "embed" ? "#6b1320" :
+          b.kind === "shape" ? (b.shape === "line" ? "transparent" : "rgba(10,10,10,0.4)") :
+          "transparent";
+        const border =
+          b.kind === "text" ? "1px dashed #999" :
+          b.kind === "shape" && b.shape === "line" ? `2px solid ${b.stroke ?? "#0a0a0a"}` :
+          "none";
+        const rot = (b.kind === "image" || b.kind === "video") ? (b.rotate ?? 0) : 0;
+        return (
+          <div
+            key={b.id}
+            style={{
+              position: "absolute",
+              left: (b.x / PW) * TW,
+              top: (b.y / PH) * TH,
+              width: (b.w / PW) * TW,
+              height: (b.h / PH) * TH,
+              background: fill,
+              border,
+              transform: rot ? `rotate(${rot}deg)` : undefined,
+              transformOrigin: "center center",
+              boxSizing: "border-box",
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
