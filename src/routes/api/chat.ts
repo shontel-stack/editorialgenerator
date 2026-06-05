@@ -4,8 +4,10 @@ import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import {
   addPageSchema,
   addSpreadSchema,
+  moveBlockSchema,
   removePageSchema,
   reorderPagesSchema,
+  scaleBlockSchema,
   setArticleLayoutSchema,
   setFontsSchema,
   updateMasterSchema,
@@ -38,7 +40,7 @@ function buildSystem(
 
 Your job:
 - Critique drafts, suggest pacing across spreads, propose headlines/deks/pull quotes, tighten copy.
-- When the user gives you raw layout / article information, integrate it into the publication by CALLING TOOLS to update page fields, change article layouts, adjust master pages, set fonts, add/remove/reorder pages.
+- When the user gives you raw layout / article information, integrate it into the publication by CALLING TOOLS to update page fields, change article layouts, adjust master pages, set fonts, add/remove/reorder pages, and reposition or resize individual blocks (move_block / scale_block) when asked to rearrange items like "move the QR to the left" or "shift the headline up".
 - Reference pages by their id from the snapshot below. Do not invent ids.
 - Keep edits surgical. Make one tool call per logical change; you can chain calls.
 - Write copy in the magazine's voice: precise, quiet, sensory, no exclamation marks, no marketing fluff.
@@ -181,6 +183,18 @@ export const Route = createFileRoute("/api/chat")({
             description: "Reorder the middle pages. Provide the full list of page ids in desired order.",
             inputSchema: reorderPagesSchema,
             execute: async (args) => ({ kind: "reorder_pages", ...args }),
+          }),
+          move_block: tool({
+            description:
+              "Reposition a single block (text, image, QR, etc.) on a page by offsetting it from its default position. Use this when the user asks to move things like 'put the QR on the left' or 'shift the headline up'. Offsets are in intrinsic pixels (page is 3200x4267); typical nudges are 200–1200px. Snaps to 40px grid.",
+            inputSchema: moveBlockSchema,
+            execute: async (args) => ({ kind: "move_block", ...args }),
+          }),
+          scale_block: tool({
+            description:
+              "Resize the contents of a block (make text bigger/smaller, scale an image block). 1 = default; 0.5 = half size; 2 = double.",
+            inputSchema: scaleBlockSchema,
+            execute: async (args) => ({ kind: "scale_block", ...args }),
           }),
         };
 

@@ -135,3 +135,37 @@ export const reorderPagesSchema = z.object({
     "Full list of page ids in the desired order. Cover and back will be locked at the ends automatically.",
   ),
 });
+
+/** Block keys available per page type for move_block / scale_block. */
+export const BLOCK_KEYS = {
+  cover: ["hero", "masthead-bar", "masthead-title", "title-block", "bottom-rule", "credit", "qr"],
+  article: ["section", "headline", "dek", "byline", "body", "pull-quote", "image", "caption", "article-footer"],
+  photo: ["image", "photo-header", "copy", "caption", "page-number"],
+  contents: ["section", "title", "intro", "entries", "contents-footer"],
+  ad: ["image", "eyebrow", "copy", "ad-footer"],
+  back: ["masthead", "quote", "back-footer"],
+} as const;
+
+const blockKeysHelp =
+  Object.entries(BLOCK_KEYS)
+    .map(([t, keys]) => `${t}=${(keys as readonly string[]).join("|")}`)
+    .join("; ");
+
+export const moveBlockSchema = z.object({
+  pageId: z.string().describe("Target page id from the snapshot."),
+  blockKey: z.string().describe(`Block to move. Valid keys per pageType: ${blockKeysHelp}.`),
+  dx: z.number().describe(
+    "Horizontal offset in intrinsic pixels (page is 3200px wide). Positive = right, negative = left. Snaps to 40px. Use 0 with reset=true to clear.",
+  ),
+  dy: z.number().describe(
+    "Vertical offset in intrinsic pixels (page is 4267px tall). Positive = down, negative = up. Snaps to 40px.",
+  ),
+  reset: z.boolean().optional().describe("If true, clears any existing offset and returns the block to its default position."),
+});
+
+export const scaleBlockSchema = z.object({
+  pageId: z.string(),
+  blockKey: z.string().describe(`Block to scale. Same keys as move_block: ${blockKeysHelp}.`),
+  scale: z.number().min(0.25).max(3).describe("CSS scale factor for the block contents (1 = default)."),
+  reset: z.boolean().optional(),
+});
