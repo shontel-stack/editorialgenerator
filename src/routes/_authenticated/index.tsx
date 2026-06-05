@@ -599,6 +599,14 @@ function Index() {
               Files
             </button>
             <button
+              onClick={() => setStaffOpen((v) => !v)}
+              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
+              title="Editorial &amp; marketing staff"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Staff
+            </button>
+            <button
               onClick={() => setAssistantOpen((v) => !v)}
               className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
               title="Editorial assistant"
