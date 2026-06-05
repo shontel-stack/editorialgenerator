@@ -7,8 +7,9 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
+import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
 
 const SNAP = 20;
@@ -33,6 +34,8 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
       return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
     case "embed":
       return { ...base, kind: "embed", w: 480, h: 160, embed: "button", url: "https://", label: "Read more", color: "#ffffff", bg: "#6b1320" };
+    case "video":
+      return { ...base, kind: "video", w: 1600, h: 900, url: "", muted: true };
   }
 }
 
