@@ -593,19 +593,28 @@ function StaffChat({
         return;
       }
 
-      const { data: existing } = await supabase
+      let existingQ = supabase
         .from("staff_threads")
         .select("id")
         .eq("user_id", uid)
         .eq("issue_id", issueId)
-        .eq("role", role.id)
-        .maybeSingle();
+        .eq("role", role.id);
+      existingQ = publicationId === null
+        ? existingQ.is("publication_id", null)
+        : existingQ.eq("publication_id", publicationId);
+      const { data: existing } = await existingQ.maybeSingle();
 
       let tid = existing?.id as string | undefined;
       if (!tid) {
         const { data: created, error: createErr } = await supabase
           .from("staff_threads")
-          .insert({ user_id: uid, issue_id: issueId, role: role.id, title: role.title })
+          .insert({
+            user_id: uid,
+            issue_id: issueId,
+            role: role.id,
+            title: role.title,
+            publication_id: publicationId,
+          })
           .select("id")
           .single();
         if (createErr || !created) {
@@ -642,7 +651,7 @@ function StaffChat({
     return () => {
       cancelled = true;
     };
-  }, [issueId, role.id, role.title]);
+  }, [issueId, publicationId, role.id, role.title]);
 
   const transport = useMemo(
     () =>
