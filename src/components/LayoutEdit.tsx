@@ -8,6 +8,7 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import { Link2, Type } from "lucide-react";
+import type { CustomBlock } from "@/lib/coverDefaults";
 
 export type Overrides = Record<string, { dx: number; dy: number }>;
 export type ScaleMap = Record<string, number>;
@@ -26,9 +27,16 @@ type Ctx = {
   previewOverrides?: Overrides;
   /** Pending scale proposals. */
   previewScales?: ScaleMap;
+  /** Custom (user-added) blocks for this page. */
+  customBlocks?: CustomBlock[];
+  setCustomBlocks?: (next: CustomBlock[]) => void;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
+
+export function useLayoutEdit() {
+  return useContext(LayoutEditContext);
+}
 
 export function LayoutEditProvider({
   editing,
@@ -41,6 +49,8 @@ export function LayoutEditProvider({
   setBlockLink,
   previewOverrides,
   previewScales,
+  customBlocks,
+  setCustomBlocks,
   children,
 }: Ctx & { children: ReactNode }) {
   return (
@@ -56,6 +66,8 @@ export function LayoutEditProvider({
         setBlockLink,
         previewOverrides,
         previewScales,
+        customBlocks,
+        setCustomBlocks,
       }}
     >
       {children}
