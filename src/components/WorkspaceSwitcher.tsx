@@ -1,0 +1,176 @@
+/**
+ * Workspace switcher — dropdown in the editor header that lists the user's
+ * publications and lets them switch or create one.
+ */
+
+import { useState } from "react";
+import { Building2, Check, ChevronDown, Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useActivePublication } from "@/hooks/useActivePublication";
+
+export function WorkspaceSwitcher() {
+  const { publications, active, select, create, loading } = useActivePublication();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [voice, setVoice] = useState("");
+  const [masthead, setMasthead] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleCreate = async () => {
+    if (!name.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      await create({
+        name: name.trim(),
+        tagline: tagline.trim() || undefined,
+        brand_voice: voice.trim() || undefined,
+        masthead: masthead.trim() || undefined,
+      });
+      setOpen(false);
+      setName("");
+      setTagline("");
+      setVoice("");
+      setMasthead("");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition max-w-[260px]"
+          title="Switch publication"
+        >
+          <Building2 className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate normal-case tracking-normal text-xs font-medium">
+            {loading ? "Loading…" : active?.name ?? "No publication"}
+          </span>
+          <ChevronDown className="h-3 w-3 opacity-70 shrink-0" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-72">
+          <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+            Publications
+          </DropdownMenuLabel>
+          {publications.length === 0 ? (
+            <div className="px-2 py-3 text-xs text-muted-foreground">
+              No publications yet. Create one to scope issues, staff threads, and the board.
+            </div>
+          ) : (
+            publications.map((p) => (
+              <DropdownMenuItem
+                key={p.id}
+                onClick={() => select(p.id)}
+                className="flex items-start gap-2"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{p.name}</div>
+                  {p.tagline ? (
+                    <div className="text-[11px] text-muted-foreground truncate">{p.tagline}</div>
+                  ) : null}
+                </div>
+                {p.id === active?.id ? <Check className="h-3.5 w-3.5 mt-1" /> : null}
+              </DropdownMenuItem>
+            ))
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-2" /> New publication
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New publication</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Field label="Name" value={name} onChange={setName} placeholder="The Arts Today" />
+            <Field
+              label="Tagline"
+              value={tagline}
+              onChange={setTagline}
+              placeholder="A quiet monthly on contemporary art"
+            />
+            <Field
+              label="Masthead"
+              value={masthead}
+              onChange={setMasthead}
+              placeholder="Editor-in-Chief, Margaux Hadid"
+            />
+            <div>
+              <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                House voice
+              </label>
+              <textarea
+                value={voice}
+                onChange={(e) => setVoice(e.target.value)}
+                rows={4}
+                placeholder="Describe the voice your staff should write in. e.g. precise, slow, sensory; no exclamation marks; never marketing."
+                className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-xs px-3 py-2 rounded-sm hover:bg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={!name.trim() || submitting}
+              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
+            >
+              {submitting ? "Creating…" : "Create"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+        {label}
+      </label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    </div>
+  );
+}
