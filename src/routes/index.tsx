@@ -986,6 +986,8 @@ function Index() {
                   setTextScale={(k, v) => setTextScale(spread.right!.id, k, v)}
                   blockLinks={spread.right.blockLinks ?? {}}
                   setBlockLink={(k, v) => setBlockLink(spread.right!.id, k, v)}
+                  previewOverrides={pendingByPage[spread.right.id]?.overrides}
+                  previewScales={pendingByPage[spread.right.id]?.scales}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
                 </LayoutEditProvider>
