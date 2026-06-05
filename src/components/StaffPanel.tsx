@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -18,8 +18,38 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { supabase } from "@/integrations/supabase/client";
 import { snapshotIssue } from "@/lib/issue-snapshot";
 import type { IssueDoc } from "@/lib/coverDefaults";
-import { STAFF_ROLES, type StaffRole } from "@/lib/staffRoles";
-import { ChevronLeft, X, Users } from "lucide-react";
+import { STAFF_ROLES, STAFF_BY_ID, type StaffRole } from "@/lib/staffRoles";
+import { ChevronLeft, X, Users, Inbox, Check, Trash2, Flag, FileEdit, MessageSquare, GitBranch } from "lucide-react";
+
+/* ------------------------------------------------------------------ */
+/*                              Types                                   */
+/* ------------------------------------------------------------------ */
+
+type NoteType = "comment" | "edit_suggestion" | "status_change" | "flag";
+type NoteStatus = "open" | "resolved" | "dismissed";
+
+type StaffNote = {
+  id: string;
+  issue_id: string;
+  page_id: string | null;
+  thread_id: string | null;
+  role: string;
+  type: NoteType;
+  title: string;
+  body: string | null;
+  payload: Record<string, unknown>;
+  status: NoteStatus;
+  created_at: string;
+};
+
+type NoteToolOutput = {
+  kind: "note";
+  type: NoteType;
+  title: string;
+  body?: string;
+  page_id?: string;
+  severity?: "low" | "med" | "high";
+};
 
 /* ------------------------------------------------------------------ */
 /*                              Drawer shell                            */
@@ -37,11 +67,15 @@ export function StaffPanel({
   selectedPageId: string;
 }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
+  const [view, setView] = useState<"masthead" | "inbox">("masthead");
   const activeRole = activeRoleId ? STAFF_ROLES.find((r) => r.id === activeRoleId) ?? null : null;
 
-  // Reset to roster when the panel closes.
+  // Reset when the panel closes.
   useEffect(() => {
-    if (!open) setActiveRoleId(null);
+    if (!open) {
+      setActiveRoleId(null);
+      setView("masthead");
+    }
   }, [open]);
 
   if (!open) return null;
@@ -73,12 +107,18 @@ export function StaffPanel({
             </>
           ) : (
             <>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              {view === "inbox" ? (
+                <Inbox className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Users className="h-4 w-4 text-muted-foreground" />
+              )}
               <div>
                 <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
                   Editorial &amp; Marketing
                 </div>
-                <div className="text-sm font-medium">Masthead</div>
+                <div className="text-sm font-medium">
+                  {view === "inbox" ? "Shared Inbox" : "Masthead"}
+                </div>
               </div>
             </>
           )}
@@ -93,6 +133,17 @@ export function StaffPanel({
         </button>
       </header>
 
+      {!activeRole && (
+        <div className="flex border-b border-border text-[10px] tracking-[0.3em] uppercase">
+          <TabButton active={view === "masthead"} onClick={() => setView("masthead")}>
+            Masthead
+          </TabButton>
+          <TabButton active={view === "inbox"} onClick={() => setView("inbox")}>
+            Inbox
+          </TabButton>
+        </div>
+      )}
+
       {activeRole ? (
         <StaffChat
           key={`${issue.meta.issueId}:${activeRole.id}`}
@@ -100,13 +151,36 @@ export function StaffPanel({
           issue={issue}
           selectedPageId={selectedPageId}
         />
+      ) : view === "inbox" ? (
+        <InboxView issueId={issue.meta.issueId} />
       ) : (
-        <StaffRoster
-          issueId={issue.meta.issueId}
-          onPick={(id) => setActiveRoleId(id)}
-        />
+        <StaffRoster issueId={issue.meta.issueId} onPick={(id) => setActiveRoleId(id)} />
       )}
     </aside>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 px-4 py-3 transition border-b-2 ${
+        active
+          ? "text-foreground border-foreground"
+          : "text-muted-foreground border-transparent hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -123,7 +197,6 @@ function StaffRoster({
 }) {
   const [counts, setCounts] = useState<Record<string, number>>({});
 
-  // Load per-role message counts for this issue (lightweight, no realtime).
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -240,6 +313,219 @@ function RoleAvatar({ role }: { role: StaffRole }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*                              Inbox view                              */
+/* ------------------------------------------------------------------ */
+
+const NOTE_ICONS: Record<NoteType, typeof Flag> = {
+  comment: MessageSquare,
+  edit_suggestion: FileEdit,
+  status_change: GitBranch,
+  flag: Flag,
+};
+
+const NOTE_LABELS: Record<NoteType, string> = {
+  comment: "Comment",
+  edit_suggestion: "Edit",
+  status_change: "Status",
+  flag: "Flag",
+};
+
+function InboxView({ issueId }: { issueId: string }) {
+  const [notes, setNotes] = useState<StaffNote[] | null>(null);
+  const [filter, setFilter] = useState<NoteStatus>("open");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) {
+      setNotes([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("staff_notes")
+      .select("*")
+      .eq("user_id", uid)
+      .eq("issue_id", issueId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.warn("[inbox] load failed", error.message);
+      setNotes([]);
+      return;
+    }
+    setNotes((data ?? []) as StaffNote[]);
+  }, [issueId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Realtime: refresh on any change to staff_notes for this issue.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`staff_notes:${issueId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "staff_notes" },
+        () => void load(),
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [issueId, load]);
+
+  const setStatus = async (id: string, status: NoteStatus) => {
+    setBusy(id);
+    const { error } = await supabase.from("staff_notes").update({ status }).eq("id", id);
+    setBusy(null);
+    if (error) console.warn("[inbox] update failed", error.message);
+    else void load();
+  };
+
+  const remove = async (id: string) => {
+    setBusy(id);
+    const { error } = await supabase.from("staff_notes").delete().eq("id", id);
+    setBusy(null);
+    if (error) console.warn("[inbox] delete failed", error.message);
+    else void load();
+  };
+
+  const filtered = (notes ?? []).filter((n) => n.status === filter);
+  const counts = (notes ?? []).reduce<Record<NoteStatus, number>>(
+    (acc, n) => {
+      acc[n.status] = (acc[n.status] ?? 0) + 1;
+      return acc;
+    },
+    { open: 0, resolved: 0, dismissed: 0 },
+  );
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex gap-2 px-5 pt-4 pb-2 text-[10px] tracking-[0.25em] uppercase">
+        {(["open", "resolved", "dismissed"] as NoteStatus[]).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setFilter(s)}
+            className={`px-2 py-1 rounded-sm transition ${
+              filter === s
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {s} · {counts[s] ?? 0}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pb-5 pt-2">
+        {notes === null ? (
+          <p className="text-xs tracking-[0.25em] uppercase text-muted-foreground py-8 text-center">
+            Loading…
+          </p>
+        ) : filtered.length === 0 ? (
+          <p className="text-xs tracking-[0.25em] uppercase text-muted-foreground py-8 text-center">
+            No {filter} notes yet.
+            {filter === "open" && (
+              <span className="block normal-case tracking-normal text-[11px] mt-2 text-muted-foreground/70">
+                Ask a staff member for a critique or edit — they'll file actionable items here.
+              </span>
+            )}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {filtered.map((n) => {
+              const role = STAFF_BY_ID[n.role];
+              const Icon = NOTE_ICONS[n.type] ?? MessageSquare;
+              return (
+                <li
+                  key={n.id}
+                  className="rounded-sm border border-border bg-card px-4 py-3 group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted-foreground">
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
+                        <span>{NOTE_LABELS[n.type]}</span>
+                        {role && (
+                          <>
+                            <span>·</span>
+                            <span>{role.title}</span>
+                          </>
+                        )}
+                        {n.page_id && (
+                          <>
+                            <span>·</span>
+                            <span className="font-mono normal-case tracking-normal">{n.page_id}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium mt-1">{n.title}</div>
+                      {n.body && (
+                        <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
+                          {n.body}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                      {n.status === "open" && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy === n.id}
+                            onClick={() => void setStatus(n.id, "resolved")}
+                            className="p-1.5 text-muted-foreground hover:text-foreground"
+                            title="Resolve"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy === n.id}
+                            onClick={() => void setStatus(n.id, "dismissed")}
+                            className="p-1.5 text-muted-foreground hover:text-foreground"
+                            title="Dismiss"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
+                      {n.status !== "open" && (
+                        <button
+                          type="button"
+                          disabled={busy === n.id}
+                          onClick={() => void setStatus(n.id, "open")}
+                          className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground hover:text-foreground px-1.5"
+                          title="Reopen"
+                        >
+                          Reopen
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={busy === n.id}
+                        onClick={() => void remove(n.id)}
+                        className="p-1.5 text-muted-foreground hover:text-destructive"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*                          Per-role chat panel                         */
 /* ------------------------------------------------------------------ */
 
@@ -257,7 +543,6 @@ function StaffChat({
   const [threadId, setThreadId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Latest snapshot lives in a ref so transport doesn't rebuild every render.
   const issueRef = useRef(issue);
   useEffect(() => {
     issueRef.current = issue;
@@ -267,7 +552,6 @@ function StaffChat({
     selectedPageIdRef.current = selectedPageId;
   }, [selectedPageId]);
 
-  // Ensure a thread exists and load its history.
   useEffect(() => {
     let cancelled = false;
     setInitial(null);
@@ -285,7 +569,6 @@ function StaffChat({
         return;
       }
 
-      // Upsert the (user, issue, role) thread.
       const { data: existing } = await supabase
         .from("staff_threads")
         .select("id")
@@ -361,41 +644,75 @@ function StaffChat({
     transport,
   });
 
-  // Persist new messages (skip restored history).
+  // Persist new messages + file any tool-created notes.
   const persistedRef = useRef<Set<string>>(new Set());
+  const filedNotesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!threadId) return;
     if (status !== "ready") return;
-    const toSave: Array<{ id: string; role: string; parts: UIMessage["parts"] }> = [];
-    for (const m of messages) {
-      if (persistedRef.current.has(m.id)) continue;
-      persistedRef.current.add(m.id);
-      if (initial?.some((h) => h.id === m.id)) continue;
-      toSave.push({ id: m.id, role: m.role, parts: m.parts });
-    }
-    if (!toSave.length) return;
     void (async () => {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
       if (!uid) return;
-      const { error: insErr } = await supabase.from("staff_messages").insert(
-        toSave.map((m) => ({
-          thread_id: threadId,
-          user_id: uid,
-          role: m.role,
-          parts: m.parts as unknown as never,
-          message_id: m.id,
-        })),
-      );
-      if (insErr) console.warn("[staff-chat] persist failed:", insErr.message);
+
+      const toSaveMsgs: Array<{ id: string; role: string; parts: UIMessage["parts"] }> = [];
+      const toFileNotes: Array<NoteToolOutput & { toolCallId: string }> = [];
+
+      for (const m of messages) {
+        if (!persistedRef.current.has(m.id) && !initial?.some((h) => h.id === m.id)) {
+          persistedRef.current.add(m.id);
+          toSaveMsgs.push({ id: m.id, role: m.role, parts: m.parts });
+        }
+        if (m.role !== "assistant") continue;
+        for (const part of m.parts as Array<Record<string, unknown>>) {
+          if (part.type !== "tool-create_note") continue;
+          if (part.state !== "output-available") continue;
+          const callId = String(part.toolCallId ?? "");
+          if (!callId || filedNotesRef.current.has(callId)) continue;
+          const output = part.output as NoteToolOutput | undefined;
+          if (!output || output.kind !== "note") continue;
+          filedNotesRef.current.add(callId);
+          toFileNotes.push({ ...output, toolCallId: callId });
+        }
+      }
+
+      if (toSaveMsgs.length) {
+        const { error: insErr } = await supabase.from("staff_messages").insert(
+          toSaveMsgs.map((m) => ({
+            thread_id: threadId,
+            user_id: uid,
+            role: m.role,
+            parts: m.parts as unknown as never,
+            message_id: m.id,
+          })),
+        );
+        if (insErr) console.warn("[staff-chat] persist failed:", insErr.message);
+      }
+
+      if (toFileNotes.length) {
+        const { error: noteErr } = await supabase.from("staff_notes").insert(
+          toFileNotes.map((n) => ({
+            user_id: uid,
+            issue_id: issueId,
+            page_id: n.page_id ?? null,
+            thread_id: threadId,
+            role: role.id,
+            type: n.type,
+            title: n.title,
+            body: n.body ?? null,
+            payload: { severity: n.severity ?? null, toolCallId: n.toolCallId },
+            status: "open",
+          })),
+        );
+        if (noteErr) console.warn("[staff-chat] file note failed:", noteErr.message);
+      }
     })();
-  }, [status, messages, initial, threadId]);
+  }, [status, messages, initial, threadId, issueId, role.id]);
 
   const [input, setInput] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Keep textarea focused on mount, after send, and after stream completion.
   useEffect(() => {
     if (status === "ready") taRef.current?.focus();
   }, [status]);
@@ -442,6 +759,29 @@ function StaffChat({
                       </p>
                     );
                   }
+                  if (
+                    part.type === "tool-create_note" &&
+                    (part as { state?: string }).state === "output-available"
+                  ) {
+                    const out = (part as { output?: NoteToolOutput }).output;
+                    if (!out) return null;
+                    const Icon = NOTE_ICONS[out.type] ?? MessageSquare;
+                    return (
+                      <div
+                        key={idx}
+                        className="mt-2 rounded-sm border border-border bg-secondary/40 px-3 py-2 text-xs flex items-start gap-2"
+                      >
+                        <Icon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
+                            Filed to inbox · {NOTE_LABELS[out.type]}
+                            {out.page_id ? ` · ${out.page_id}` : ""}
+                          </div>
+                          <div className="font-medium">{out.title}</div>
+                        </div>
+                      </div>
+                    );
+                  }
                   return null;
                 })}
               </MessageContent>
@@ -454,12 +794,8 @@ function StaffChat({
               </MessageContent>
             </Message>
           )}
-          {error && (
-            <p className="text-xs text-destructive px-2">{error.message}</p>
-          )}
-          {loadError && (
-            <p className="text-xs text-destructive px-2">{loadError}</p>
-          )}
+          {error && <p className="text-xs text-destructive px-2">{error.message}</p>}
+          {loadError && <p className="text-xs text-destructive px-2">{loadError}</p>}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -473,10 +809,7 @@ function StaffChat({
             placeholder={`Message ${role.name.split(" ")[0]}…`}
           />
           <PromptInputFooter className="justify-end">
-            <PromptInputSubmit
-              status={status}
-              disabled={!input.trim() || isLoading}
-            />
+            <PromptInputSubmit status={status} disabled={!input.trim() || isLoading} />
           </PromptInputFooter>
         </PromptInput>
       </div>

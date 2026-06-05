@@ -121,6 +121,57 @@ export type Database = {
           },
         ]
       }
+      staff_notes: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          issue_id: string
+          page_id: string | null
+          payload: Json
+          resolved_at: string | null
+          role: string
+          status: string
+          thread_id: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          issue_id: string
+          page_id?: string | null
+          payload?: Json
+          resolved_at?: string | null
+          role: string
+          status?: string
+          thread_id?: string | null
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          issue_id?: string
+          page_id?: string | null
+          payload?: Json
+          resolved_at?: string | null
+          role?: string
+          status?: string
+          thread_id?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       staff_threads: {
         Row: {
           created_at: string
