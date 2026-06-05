@@ -998,6 +998,8 @@ function Index() {
                   setBlockLink={(k, v) => setBlockLink(spread.right!.id, k, v)}
                   previewOverrides={pendingByPage[spread.right.id]?.overrides}
                   previewScales={pendingByPage[spread.right.id]?.scales}
+                  customBlocks={spread.right.customBlocks ?? []}
+                  setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
                 </LayoutEditProvider>
