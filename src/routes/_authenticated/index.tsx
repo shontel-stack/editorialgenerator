@@ -1082,6 +1082,7 @@ function Index() {
         onClose={() => setAttachmentsOpen(false)}
         issueId={issue.meta.issueId}
         publicationId={activePublication?.id ?? null}
+        publicationName={activePublication?.name ?? null}
         selectedPageId={selected.id}
         selectedPageLabel={selected.pageType}
         attachments={attachments}
@@ -1092,6 +1093,7 @@ function Index() {
         onClose={() => setStaffOpen(false)}
         issue={issue}
         publicationId={activePublication?.id ?? null}
+        publicationName={activePublication?.name ?? null}
         selectedPageId={selected.id}
       />
 
