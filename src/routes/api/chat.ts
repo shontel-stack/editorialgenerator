@@ -184,6 +184,18 @@ export const Route = createFileRoute("/api/chat")({
             inputSchema: reorderPagesSchema,
             execute: async (args) => ({ kind: "reorder_pages", ...args }),
           }),
+          move_block: tool({
+            description:
+              "Reposition a single block (text, image, QR, etc.) on a page by offsetting it from its default position. Use this when the user asks to move things like 'put the QR on the left' or 'shift the headline up'. Offsets are in intrinsic pixels (page is 3200x4267); typical nudges are 200–1200px. Snaps to 40px grid.",
+            inputSchema: moveBlockSchema,
+            execute: async (args) => ({ kind: "move_block", ...args }),
+          }),
+          scale_block: tool({
+            description:
+              "Resize the contents of a block (make text bigger/smaller, scale an image block). 1 = default; 0.5 = half size; 2 = double.",
+            inputSchema: scaleBlockSchema,
+            execute: async (args) => ({ kind: "scale_block", ...args }),
+          }),
         };
 
         const result = streamText({
