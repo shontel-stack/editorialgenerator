@@ -59,11 +59,13 @@ export function StaffPanel({
   open,
   onClose,
   issue,
+  publicationId,
   selectedPageId,
 }: {
   open: boolean;
   onClose: () => void;
   issue: IssueDoc;
+  publicationId: string | null;
   selectedPageId: string;
 }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
