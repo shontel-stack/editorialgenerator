@@ -13,7 +13,7 @@ import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
-import { downloadIdml } from "@/lib/idmlExport";
+import { downloadIdml, downloadIdmlPackage } from "@/lib/idmlExport";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -912,10 +912,38 @@ function Index() {
             >
               <FileText className="h-3 w-3" /> Export to InDesign (IDML)
             </button>
+            <button
+              onClick={async () => {
+                if (busy) return;
+                setBusy("IDML_PKG");
+                try {
+                  const { fetched, skipped } = await downloadIdmlPackage(
+                    issue,
+                    issueSlug || "issue",
+                  );
+                  if (skipped.length) {
+                    alert(
+                      `Package ready: ${fetched} image(s) bundled, ${skipped.length} skipped (likely CORS-blocked). See relink-manifest.txt — relink those in InDesign manually.`,
+                    );
+                  }
+                } catch (e) {
+                  alert(`Could not build package: ${(e as Error).message}`);
+                } finally {
+                  setBusy(null);
+                }
+              }}
+              disabled={busy === "IDML_PKG"}
+              className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5 disabled:opacity-60"
+              title="Download a ZIP containing the IDML plus a Links/ folder of all referenced images"
+            >
+              <Download className="h-3 w-3" />
+              {busy === "IDML_PKG" ? "Fetching images…" : "InDesign package (IDML + Links)"}
+            </button>
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               Save JSON = your monthly source of truth. Reload it next issue, edit, re-export.
-              IDML opens in Adobe InDesign for finishing — images export as placeholder frames
-              with the source URL stored as the frame label.
+              IDML opens in Adobe InDesign for finishing. The package version also bundles every
+              image into a <code>Links/</code> folder so you can relink with one click
+              (Links panel → Relink to Folder).
             </p>
           </Section>
         </aside>
