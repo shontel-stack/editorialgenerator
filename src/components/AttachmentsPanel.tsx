@@ -202,21 +202,24 @@ export function AttachmentsPanel({
       className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-background border-l border-border shadow-2xl flex flex-col"
       aria-label="Attachments"
     >
-      <header className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <div>
+      <header className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-sm font-semibold text-foreground">Attachments</h2>
-          <p className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground mt-0.5">
+          <p className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground mt-0.5 truncate">
             Issue · {issueId.slice(0, 8)}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close attachments panel"
-          className="text-muted-foreground hover:text-foreground p-1 rounded-sm"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <PublicationBadge name={publicationName} />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close attachments panel"
+            className="text-muted-foreground hover:text-foreground p-1 rounded-sm"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <div className="px-4 py-3 border-b border-border space-y-3">
