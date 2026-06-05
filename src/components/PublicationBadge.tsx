@@ -85,9 +85,9 @@ export function PublicationBadge({ name, maxWidthClass = "max-w-[160px]" }: Publ
             publications.map((p) => (
               <DropdownMenuItem
                 key={p.id}
-                onClick={() => {
+                onClick={async () => {
                   if (p.id === active?.id) return;
-                  if (!confirmDiscardUnsaved("switch publication")) return;
+                  if (!(await confirmDiscardUnsaved("switch publication"))) return;
                   select(p.id);
                 }}
                 className="flex items-start gap-2"

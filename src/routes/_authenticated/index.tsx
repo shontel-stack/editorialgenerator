@@ -103,11 +103,16 @@ export const Route = createFileRoute("/_authenticated/")({
 function Index() {
   const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
-  useUnsavedGuard(() =>
-    JSON.stringify(issue) !== lastSavedRef.current
-      ? `Issue "${issue.meta?.issue ?? "Untitled"}" has unsaved edits`
-      : null,
+  useUnsavedGuard(
+    () =>
+      JSON.stringify(issue) !== lastSavedRef.current
+        ? `Issue "${issue.meta?.issue ?? "Untitled"}" has unsaved edits`
+        : null,
+    () => {
+      saveIssueRef.current?.();
+    },
   );
+  const saveIssueRef = useRef<(() => void) | null>(null);
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
@@ -525,6 +530,7 @@ function Index() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     lastSavedRef.current = JSON.stringify(issue);
   };
+  saveIssueRef.current = saveIssue;
 
   const loadIssue = (file: File | undefined) => {
     if (!file) return;
