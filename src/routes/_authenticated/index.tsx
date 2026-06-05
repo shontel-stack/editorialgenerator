@@ -523,6 +523,7 @@ function Index() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    lastSavedRef.current = JSON.stringify(issue);
   };
 
   const loadIssue = (file: File | undefined) => {
@@ -549,6 +550,7 @@ function Index() {
         };
         setIssue(hydrated);
         setSelectedId(hydrated.pages[0].id);
+        lastSavedRef.current = JSON.stringify(hydrated);
       } catch (e) {
         alert(`Could not load issue: ${(e as Error).message}`);
       }
