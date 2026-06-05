@@ -315,6 +315,14 @@ function Index() {
       }),
     }));
 
+  const setCustomBlocks = (id: string, next: import("@/lib/coverDefaults").CustomBlock[]) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id ? ({ ...p, customBlocks: next } as IssuePageNode) : p,
+      ),
+    }));
+
   const resetOverrides = (id: string) =>
     setIssue((d) => ({
       ...d,
