@@ -105,3 +105,8 @@
     background: linear-gradient(90deg, var(--ruby) 0%, var(--ruby-deep) 100%);
   }
 }
+
+@keyframes lovable-pending-pulse {
+  0%, 100% { box-shadow: 0 0 0 12px rgba(245,158,11,0.18); }
+  50%      { box-shadow: 0 0 0 20px rgba(245,158,11,0.05); }
+}

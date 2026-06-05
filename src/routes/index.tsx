@@ -101,6 +101,38 @@ function Index() {
   const [spreadView, setSpreadView] = useState(false);
   const [editLayout, setEditLayout] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+
+  /** Pending spatial proposals from the assistant (move_block / scale_block).
+   *  Keyed by toolCallId so the chat card can resolve them. */
+  type PendingSpatial = {
+    toolCallId: string;
+    pageId: string;
+    blockKey: string;
+    kind: "move_block" | "scale_block";
+    dx?: number;
+    dy?: number;
+    scale?: number;
+    reset?: boolean;
+  };
+  const [pendingSpatial, setPendingSpatial] = useState<PendingSpatial[]>([]);
+
+  /** Per-page maps consumed by LayoutEditProvider. */
+  const pendingByPage = useMemo(() => {
+    const out: Record<string, { overrides: Record<string, { dx: number; dy: number }>; scales: Record<string, number> }> = {};
+    for (const p of pendingSpatial) {
+      const slot = (out[p.pageId] ??= { overrides: {}, scales: {} });
+      if (p.kind === "move_block" && !p.reset) {
+        slot.overrides[p.blockKey] = { dx: p.dx ?? 0, dy: p.dy ?? 0 };
+      } else if (p.kind === "scale_block" && !p.reset && typeof p.scale === "number") {
+        slot.scales[p.blockKey] = p.scale;
+      } else if (p.reset) {
+        // visualize a reset as origin / scale 1
+        if (p.kind === "move_block") slot.overrides[p.blockKey] = { dx: 0, dy: 0 };
+        else slot.scales[p.blockKey] = 1;
+      }
+    }
+    return out;
+  }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId);
 
   // Hidden off-screen render stage holds a div ref for every page node.
@@ -934,6 +966,8 @@ function Index() {
                 setTextScale={(k, v) => setTextScale(spread.left.id, k, v)}
                 blockLinks={spread.left.blockLinks ?? {}}
                 setBlockLink={(k, v) => setBlockLink(spread.left.id, k, v)}
+                previewOverrides={pendingByPage[spread.left.id]?.overrides}
+                previewScales={pendingByPage[spread.left.id]?.scales}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
               </LayoutEditProvider>
@@ -952,6 +986,8 @@ function Index() {
                   setTextScale={(k, v) => setTextScale(spread.right!.id, k, v)}
                   blockLinks={spread.right.blockLinks ?? {}}
                   setBlockLink={(k, v) => setBlockLink(spread.right!.id, k, v)}
+                  previewOverrides={pendingByPage[spread.right.id]?.overrides}
+                  previewScales={pendingByPage[spread.right.id]?.scales}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
                 </LayoutEditProvider>
@@ -999,6 +1035,35 @@ function Index() {
         setIssue={setIssue}
         attachments={attachments.rows}
         selectedPageId={selected.id}
+        onSelectPage={(pid) => setSelectedId(pid)}
+        pendingSpatial={pendingSpatial}
+        onProposeSpatial={(p) =>
+          setPendingSpatial((prev) =>
+            prev.some((x) => x.toolCallId === p.toolCallId) ? prev : [...prev, p],
+          )
+        }
+        onResolvePending={(toolCallId, action) => {
+          setPendingSpatial((prev) => {
+            const target = prev.find((p) => p.toolCallId === toolCallId);
+            if (!target) return prev;
+            if (action === "apply") {
+              if (target.kind === "move_block") {
+                setOverride(
+                  target.pageId,
+                  target.blockKey,
+                  target.reset ? null : { dx: target.dx ?? 0, dy: target.dy ?? 0 },
+                );
+              } else {
+                setTextScale(
+                  target.pageId,
+                  target.blockKey,
+                  target.reset || target.scale === 1 ? null : (target.scale ?? 1),
+                );
+              }
+            }
+            return prev.filter((p) => p.toolCallId !== toolCallId);
+          });
+        }}
       />
     </main>
   );

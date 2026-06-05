@@ -15,13 +15,17 @@ export type LinkMap = Record<string, string>;
 
 type Ctx = {
   editing: boolean;
-  scale: number; // CSS px per intrinsic px
+  scale: number;
   overrides: Overrides;
   setOverride: (key: string, value: { dx: number; dy: number } | null) => void;
   textScales: ScaleMap;
   setTextScale: (key: string, value: number | null) => void;
   blockLinks: LinkMap;
   setBlockLink: (key: string, value: string | null) => void;
+  /** Pending (un-applied) assistant move proposals for this page. */
+  previewOverrides?: Overrides;
+  /** Pending scale proposals. */
+  previewScales?: ScaleMap;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
@@ -35,6 +39,8 @@ export function LayoutEditProvider({
   setTextScale,
   blockLinks,
   setBlockLink,
+  previewOverrides,
+  previewScales,
   children,
 }: Ctx & { children: ReactNode }) {
   return (
@@ -48,6 +54,8 @@ export function LayoutEditProvider({
         setTextScale,
         blockLinks,
         setBlockLink,
+        previewOverrides,
+        previewScales,
       }}
     >
       {children}
@@ -73,12 +81,18 @@ export function Draggable({
   const textScale = ctx?.textScales?.[blockKey] ?? 1;
   const link = ctx?.blockLinks?.[blockKey] ?? "";
 
+  const preview = ctx?.previewOverrides?.[blockKey];
+  const previewScale = ctx?.previewScales?.[blockKey];
+  const hasPreview = Boolean(preview) || typeof previewScale === "number";
+
   const [local, setLocal] = useState<{ dx: number; dy: number } | null>(null);
   const drag = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
   const [showSize, setShowSize] = useState(false);
 
-  const dx = local?.dx ?? saved?.dx ?? 0;
-  const dy = local?.dy ?? saved?.dy ?? 0;
+  // Preview position wins over saved/local while a pending proposal exists.
+  const dx = preview?.dx ?? local?.dx ?? saved?.dx ?? 0;
+  const dy = preview?.dy ?? local?.dy ?? saved?.dy ?? 0;
+  const effectiveScale = previewScale ?? textScale;
 
   const onPointerDown = (e: RPointerEvent<HTMLDivElement>) => {
     if (!editing || !ctx) return;
@@ -113,24 +127,31 @@ export function Draggable({
   const combined: CSSProperties = {
     ...style,
     transform: [existingTransform, moveTransform].filter(Boolean).join(" ") || undefined,
-    ...(editing
+    ...(hasPreview
       ? {
-          outline: link
-            ? "3px solid rgba(37,99,235,0.7)"
-            : "3px dashed rgba(107,19,32,0.7)",
+          outline: "6px solid rgba(245,158,11,0.95)",
           outlineOffset: 4,
-          cursor: drag.current ? "grabbing" : "grab",
+          boxShadow: "0 0 0 12px rgba(245,158,11,0.18)",
+          animation: "lovable-pending-pulse 1.4s ease-in-out infinite",
         }
-      : link
-        ? { cursor: "pointer" }
-        : {}),
+      : editing
+        ? {
+            outline: link
+              ? "3px solid rgba(37,99,235,0.7)"
+              : "3px dashed rgba(107,19,32,0.7)",
+            outlineOffset: 4,
+            cursor: drag.current ? "grabbing" : "grab",
+          }
+        : link
+          ? { cursor: "pointer" }
+          : {}),
   };
 
   const scaledContent =
-    textScale !== 1 ? (
+    effectiveScale !== 1 ? (
       <div
         style={{
-          transform: `scale(${textScale})`,
+          transform: `scale(${effectiveScale})`,
           transformOrigin: "top left",
           width: "100%",
           height: "100%",
@@ -173,6 +194,35 @@ export function Draggable({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
+      {hasPreview && ctx && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            transform: `scale(${inv}) translate(0, -110%)`,
+            transformOrigin: "top left",
+            background: "rgb(245,158,11)",
+            color: "#1a1200",
+            border: "1px solid rgba(0,0,0,0.2)",
+            borderRadius: 4,
+            padding: "3px 8px",
+            fontSize: 11,
+            fontWeight: 600,
+            fontFamily: "system-ui, sans-serif",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+            zIndex: 60,
+            pointerEvents: "none",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          }}
+        >
+          Pending · {blockKey}
+          {preview ? ` · ${preview.dx >= 0 ? "+" : ""}${preview.dx}, ${preview.dy >= 0 ? "+" : ""}${preview.dy}` : ""}
+          {typeof previewScale === "number" ? ` · ${Math.round(previewScale * 100)}%` : ""}
+        </div>
+      )}
       {editing && ctx && (
         <div
           onPointerDown={(e) => e.stopPropagation()}
