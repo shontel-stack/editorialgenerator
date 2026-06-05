@@ -686,8 +686,69 @@ export async function buildIdmlPackage(
   files[idmlName] = idmlBytes;
   for (const f of fetched) files[`Links/${f.filename}`] = f.bytes;
   files["relink-manifest.txt"] = strToU8(manifestLines.join("\n"));
+  files["README.txt"] = strToU8(buildReadme(issue, idmlName, fetched.length, skipped));
 
   return { bytes: zipSync(files, { level: 6 }), fetched: fetched.length, skipped };
+}
+
+function buildReadme(
+  issue: IssueDoc,
+  idmlName: string,
+  fetchedCount: number,
+  skipped: SkippedImage[],
+): string {
+  const lines: string[] = [
+    `${issue.master.publication} — ${issue.meta.issue}`,
+    `InDesign package`,
+    "=".repeat(48),
+    "",
+    "WHAT'S IN THIS ZIP",
+    `  ${idmlName}            The editable InDesign document (IDML).`,
+    `  Links/                 ${fetchedCount} image file(s) referenced by the layout.`,
+    `  relink-manifest.txt    Map of original image URLs → local filenames.`,
+    `  README.txt             This file.`,
+    "",
+    "HOW TO OPEN",
+    `  1. Unzip this archive so ${idmlName} and the Links/ folder sit side by side.`,
+    `  2. In InDesign: File → Open → choose ${idmlName}.`,
+    `     (InDesign converts IDML into a new .indd on first save.)`,
+    "",
+    "RELINKING IMAGES (one click for the whole issue)",
+    `  1. Open the Links panel:  Window → Links  (or  Cmd/Ctrl + Shift + D).`,
+    `  2. Open the panel menu (top-right ☰) → "Relink to Folder…".`,
+    `  3. Select the Links/ folder from this zip and click Choose.`,
+    `  4. InDesign matches every missing image by filename and relinks them all.`,
+    "",
+    "IF AN IMAGE IS MISSING OR SHOWS A RED/YELLOW WARNING",
+    `  Some images can't be auto-bundled — usually because the source server`,
+    `  blocks cross-origin downloads (CORS). Those are listed in`,
+    `  relink-manifest.txt under "Skipped (relink manually in InDesign)".`,
+    "",
+    `  To fix each one:`,
+    `    1. Open relink-manifest.txt and copy the original URL.`,
+    `    2. Download the image manually (browser → Save Image As…) into the`,
+    `       Links/ folder, keeping the filename from the URL when possible.`,
+    `    3. In the Links panel, select the missing item, then click the`,
+    `       Relink icon (chain) at the bottom and pick the file you saved.`,
+    `    4. Alternatively, every placeholder frame has the original URL stored`,
+    `       as its Script Label (Window → Output → Script Label) so you can`,
+    `       recover the source even without the manifest.`,
+    "",
+  ];
+  if (skipped.length) {
+    lines.push(
+      `SKIPPED THIS EXPORT (${skipped.length})`,
+      ...skipped.map((s) => `  • ${s.url}   — ${s.reason}`),
+      "",
+    );
+  }
+  lines.push(
+    "TIP",
+    `  Keep this zip as the handoff artifact. Re-export from the web editor`,
+    `  any time the content changes — the Links/ folder will refresh too.`,
+    "",
+  );
+  return lines.join("\n");
 }
 
 export async function downloadIdmlPackage(
