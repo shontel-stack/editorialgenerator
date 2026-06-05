@@ -20,6 +20,7 @@ import { snapshotIssue } from "@/lib/issue-snapshot";
 import type { IssueDoc } from "@/lib/coverDefaults";
 import { STAFF_ROLES, STAFF_BY_ID, type StaffRole } from "@/lib/staffRoles";
 import { ChevronLeft, X, Users, Inbox, Check, Trash2, Flag, FileEdit, MessageSquare, GitBranch } from "lucide-react";
+import { PublicationBadge } from "@/components/PublicationBadge";
 
 /* ------------------------------------------------------------------ */
 /*                              Types                                   */
@@ -438,9 +439,7 @@ function InboxView({
       <div className="px-5 pt-4 pb-1 flex items-center gap-2 text-[10px] tracking-[0.25em] uppercase text-muted-foreground">
         <Inbox className="h-3 w-3" />
         <span>Inbox for</span>
-        <span className="normal-case tracking-normal font-medium text-foreground truncate">
-          {publicationName ?? "No publication"}
-        </span>
+        <PublicationBadge name={publicationName} />
       </div>
       <div className="flex gap-2 px-5 pt-2 pb-2 text-[10px] tracking-[0.25em] uppercase">
         {(["open", "resolved", "dismissed"] as NoteStatus[]).map((s) => (
@@ -869,16 +868,3 @@ function StaffChat({
   );
 }
 
-function PublicationBadge({ name }: { name?: string | null }) {
-  return (
-    <span
-      title={name ? `Publication: ${name}` : "No publication selected"}
-      className="inline-flex max-w-[160px] items-center gap-1.5 rounded-sm border border-border bg-secondary/60 px-2 py-1 text-[10px] tracking-[0.2em] uppercase text-muted-foreground"
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--ruby)]" />
-      <span className="truncate normal-case tracking-normal text-foreground">
-        {name ?? "No publication"}
-      </span>
-    </span>
-  );
-}
