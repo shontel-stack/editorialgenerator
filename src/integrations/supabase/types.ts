@@ -26,6 +26,7 @@ export type Database = {
           mime_type: string
           page_id: string | null
           size_bytes: number
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -38,6 +39,7 @@ export type Database = {
           mime_type: string
           page_id?: string | null
           size_bytes: number
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -50,6 +52,7 @@ export type Database = {
           mime_type?: string
           page_id?: string | null
           size_bytes?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -60,6 +63,7 @@ export type Database = {
           issue_id: string
           parts: Json
           role: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -67,6 +71,7 @@ export type Database = {
           issue_id: string
           parts: Json
           role: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -74,6 +79,7 @@ export type Database = {
           issue_id?: string
           parts?: Json
           role?: string
+          user_id?: string
         }
         Relationships: []
       }
