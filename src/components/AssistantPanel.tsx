@@ -36,6 +36,17 @@ function isToolPart(part: UIMessage["parts"][number]): part is ToolPart {
   return typeof part.type === "string" && part.type.startsWith("tool-");
 }
 
+export type PendingSpatialProposal = {
+  toolCallId: string;
+  pageId: string;
+  blockKey: string;
+  kind: "move_block" | "scale_block";
+  dx?: number;
+  dy?: number;
+  scale?: number;
+  reset?: boolean;
+};
+
 export function AssistantPanel({
   open,
   onClose,
@@ -43,6 +54,10 @@ export function AssistantPanel({
   setIssue,
   attachments,
   selectedPageId,
+  onSelectPage,
+  pendingSpatial,
+  onProposeSpatial,
+  onResolvePending,
 }: {
   open: boolean;
   onClose: () => void;
@@ -50,6 +65,10 @@ export function AssistantPanel({
   setIssue: (next: IssueDoc | ((prev: IssueDoc) => IssueDoc)) => void;
   attachments: AttachmentWithUrl[];
   selectedPageId: string;
+  onSelectPage?: (pageId: string) => void;
+  pendingSpatial: PendingSpatialProposal[];
+  onProposeSpatial: (proposal: PendingSpatialProposal) => void;
+  onResolvePending: (toolCallId: string, action: "apply" | "cancel") => void;
 }) {
   const issueId = issue.meta.issueId;
   const [initial, setInitial] = useState<UIMessage[] | null>(null);
