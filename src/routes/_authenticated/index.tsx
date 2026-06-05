@@ -12,6 +12,7 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useActivePublication } from "@/hooks/useActivePublication";
+import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -101,6 +102,12 @@ export const Route = createFileRoute("/_authenticated/")({
 
 function Index() {
   const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
+  const lastSavedRef = useRef<string>(JSON.stringify(issue));
+  useUnsavedGuard(() =>
+    JSON.stringify(issue) !== lastSavedRef.current
+      ? `Issue "${issue.meta?.title ?? "Untitled"}" has unsaved edits`
+      : null,
+  );
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
