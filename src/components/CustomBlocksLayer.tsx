@@ -166,6 +166,7 @@ function CustomBlockView({
     dragRef.current = null;
   };
 
+  const rotate = (block.kind === "image" || block.kind === "video") ? (block.rotate ?? 0) : 0;
   const wrapper: CSSProperties = {
     position: "absolute",
     left: block.x,
@@ -174,6 +175,8 @@ function CustomBlockView({
     height: block.h,
     zIndex: block.z ?? 50,
     boxSizing: "border-box",
+    transform: rotate ? `rotate(${rotate}deg)` : undefined,
+    transformOrigin: "center center",
     cursor: editing ? (editingText ? "text" : "move") : block.link ? "pointer" : "default",
     outline: editing
       ? selected
