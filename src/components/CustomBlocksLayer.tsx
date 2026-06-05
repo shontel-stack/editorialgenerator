@@ -7,8 +7,9 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
+import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
 
 const SNAP = 20;
@@ -33,6 +34,8 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
       return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
     case "embed":
       return { ...base, kind: "embed", w: 480, h: 160, embed: "button", url: "https://", label: "Read more", color: "#ffffff", bg: "#6b1320" };
+    case "video":
+      return { ...base, kind: "video", w: 1600, h: 900, url: "", muted: true };
   }
 }
 
@@ -74,6 +77,17 @@ export function CustomBlocksLayer() {
     },
     [blocks, setBlocks],
   );
+  const insertTemplate = useCallback(
+    (tpl: LayoutTemplate) => {
+      if (!setBlocks) return;
+      const baseZ = blocks.reduce((m, b) => Math.max(m, b.z ?? 50), 50);
+      const fresh = tpl.build().map((b, i) => ({ ...b, z: baseZ + 1 + i } as CustomBlock));
+      setBlocks([...blocks, ...fresh]);
+      setSelectedId(fresh[0]?.id ?? null);
+    },
+    [blocks, setBlocks],
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <>
@@ -88,9 +102,12 @@ export function CustomBlocksLayer() {
           onRemove={() => remove(b.id)}
         />
       ))}
-      {editing && setBlocks && <AddElementPalette onAdd={add} />}
+      {editing && setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => setPickerOpen(true)} />}
       {editing && selected && setBlocks && (
         <BlockToolbar block={selected} onChange={(p) => update(selected.id, p)} onRemove={() => remove(selected.id)} />
+      )}
+      {editing && pickerOpen && setBlocks && (
+        <TemplatePicker onPick={(t) => { insertTemplate(t); setPickerOpen(false); }} onClose={() => setPickerOpen(false)} />
       )}
     </>
   );
@@ -163,6 +180,7 @@ function CustomBlockView({
     dragRef.current = null;
   };
 
+  const rotate = (block.kind === "image" || block.kind === "video") ? (block.rotate ?? 0) : 0;
   const wrapper: CSSProperties = {
     position: "absolute",
     left: block.x,
@@ -171,6 +189,8 @@ function CustomBlockView({
     height: block.h,
     zIndex: block.z ?? 50,
     boxSizing: "border-box",
+    transform: rotate ? `rotate(${rotate}deg)` : undefined,
+    transformOrigin: "center center",
     cursor: editing ? (editingText ? "text" : "move") : block.link ? "pointer" : "default",
     outline: editing
       ? selected
@@ -317,6 +337,9 @@ function BlockContent({
     return <div style={style}>{block.text}</div>;
   }
   if (block.kind === "image") {
+    const borderStyle = block.borderWidth
+      ? { border: `${block.borderWidth}px solid ${block.borderColor ?? "#ffffff"}`, background: block.bg ?? "#ffffff" }
+      : {};
     if (!block.imageUrl) {
       return (
         <div
@@ -332,13 +355,19 @@ function BlockContent({
             fontSize: 18,
             letterSpacing: 2,
             textTransform: "uppercase",
+            boxSizing: "border-box",
+            ...borderStyle,
           }}
         >
           Select element → upload
         </div>
       );
     }
-    return <img src={block.imageUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />;
+    return (
+      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", ...borderStyle }}>
+        <img src={block.imageUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />
+      </div>
+    );
   }
   if (block.kind === "shape") {
     if (block.shape === "line") {
@@ -362,6 +391,9 @@ function BlockContent({
         }}
       />
     );
+  }
+  if (block.kind === "video") {
+    return <VideoPreview block={block} />;
   }
   // embed
   if (block.embed === "qr") return <QrPreview url={block.url} color={block.color ?? "#0a0a0a"} bg={block.bg ?? "#ffffff"} />;
@@ -390,6 +422,81 @@ function BlockContent({
   );
 }
 
+function VideoPreview({ block }: { block: Extract<CustomBlock, { kind: "video" }> }) {
+  const url = (block.url ?? "").trim();
+  if (!url) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0a0a0a",
+          color: "#bbb",
+          fontFamily: "var(--font-sans)",
+          fontSize: 18,
+          letterSpacing: 2,
+          textTransform: "uppercase",
+        }}
+      >
+        Select element → paste URL
+      </div>
+    );
+  }
+  const embed = toEmbedUrl(url);
+  if (embed) {
+    return (
+      <iframe
+        src={embed}
+        title="Video"
+        style={{ width: "100%", height: "100%", border: 0, display: "block", background: "#000" }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+  return (
+    <video
+      src={url}
+      controls
+      muted={block.muted}
+      autoPlay={block.autoplay}
+      loop={block.loop}
+      playsInline
+      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", background: "#000" }}
+    />
+  );
+}
+
+function toEmbedUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      const id = u.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (host === "youtu.be") {
+      const id = u.pathname.slice(1);
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (host === "youtube.com" && u.pathname.startsWith("/shorts/")) {
+      return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
+    }
+    if (host === "vimeo.com") {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      if (id && /^\d+$/.test(id)) return `https://player.vimeo.com/video/${id}`;
+    }
+    if (host === "player.vimeo.com") return raw;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+
 function QrPreview({ url, color, bg }: { url: string; color: string; bg: string }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
@@ -413,7 +520,7 @@ function QrPreview({ url, color, bg }: { url: string; color: string; bg: string 
 
 /* --------------------- floating toolbars --------------------- */
 
-function AddElementPalette({ onAdd }: { onAdd: (kind: CustomBlock["kind"]) => void }) {
+function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"]) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   return (
@@ -441,8 +548,129 @@ function AddElementPalette({ onAdd }: { onAdd: (kind: CustomBlock["kind"]) => vo
       </span>
       <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
       <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
+      <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
       <PaletteBtn label="Shape" icon={<Square size={14} />} onClick={() => onAdd("shape")} />
       <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
+      <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
+      <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
+    </div>
+  );
+}
+
+function TemplatePicker({ onPick, onClose }: { onPick: (tpl: LayoutTemplate) => void; onClose: () => void }) {
+  const ctx = useLayoutEdit();
+  const inv = 1 / (ctx?.scale ?? 1);
+  const [cat, setCat] = useState<LayoutTemplate["category"]>("Collage");
+  const visible = LAYOUT_TEMPLATES.filter((t) => t.category === cat);
+  return (
+    <div
+      onPointerDown={(e) => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        top: 90,
+        right: 24,
+        transform: `scale(${inv})`,
+        transformOrigin: "top right",
+        background: "white",
+        border: "2px solid #0a0a0a",
+        borderRadius: 8,
+        padding: 16,
+        width: 560,
+        boxShadow: "0 12px 36px rgba(0,0,0,0.25)",
+        zIndex: 350,
+        fontFamily: "system-ui, sans-serif",
+        color: "#0a0a0a",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <strong style={{ fontSize: 12, letterSpacing: 2, textTransform: "uppercase" }}>Layout templates</strong>
+        <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#666" }}>
+          <X size={16} />
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {TEMPLATE_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCat(c)}
+            style={{
+              ...btnStyle(cat === c ? "active" : "normal"),
+              fontSize: 11,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+        {visible.map((tpl) => (
+          <button
+            key={tpl.id}
+            type="button"
+            onClick={() => onPick(tpl)}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "stretch",
+              gap: 6,
+              padding: 8,
+              border: "1px solid #ddd",
+              borderRadius: 6,
+              background: "white",
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <TemplateThumb tpl={tpl} />
+            <span style={{ fontSize: 11, color: "#0a0a0a" }}>{tpl.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TemplateThumb({ tpl }: { tpl: LayoutTemplate }) {
+  const blocks = tpl.build();
+  const PW = 3200;
+  const PH = 4267;
+  const TW = 160;
+  const TH = (TW * PH) / PW;
+  return (
+    <div style={{ position: "relative", width: TW, height: TH, background: "#f4efe7", border: "1px solid #e5e5e5", overflow: "hidden" }}>
+      {blocks.map((b) => {
+        const fill =
+          b.kind === "image" ? "#cbd2d9" :
+          b.kind === "video" ? "#0a0a0a" :
+          b.kind === "embed" ? "#6b1320" :
+          b.kind === "shape" ? (b.shape === "line" ? "transparent" : "rgba(10,10,10,0.4)") :
+          "transparent";
+        const border =
+          b.kind === "text" ? "1px dashed #999" :
+          b.kind === "shape" && b.shape === "line" ? `2px solid ${b.stroke ?? "#0a0a0a"}` :
+          "none";
+        const rot = (b.kind === "image" || b.kind === "video") ? (b.rotate ?? 0) : 0;
+        return (
+          <div
+            key={b.id}
+            style={{
+              position: "absolute",
+              left: (b.x / PW) * TW,
+              top: (b.y / PH) * TH,
+              width: (b.w / PW) * TW,
+              height: (b.h / PH) * TH,
+              background: fill,
+              border,
+              transform: rot ? `rotate(${rot}deg)` : undefined,
+              transformOrigin: "center center",
+              boxSizing: "border-box",
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -512,6 +740,7 @@ function BlockToolbar({
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
+      {block.kind === "video" && <VideoControls block={block} onChange={onChange} />}
       <LinkControl link={(block as { link?: string }).link} onChange={(v) => onChange({ link: v } as Partial<CustomBlock>)} />
       <button type="button" onClick={onRemove} style={btnStyle("danger")}>
         <Trash2 size={12} /> Delete
@@ -573,11 +802,55 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
         <option value="cover">Cover</option>
         <option value="contain">Contain</option>
       </select>
+      <label style={labelStyle}>
+        Rotate
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      <label style={labelStyle}>
+        Border
+        <input type="number" min={0} max={200} value={block.borderWidth ?? 0} onChange={(e) => onChange({ borderWidth: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      {(block.borderWidth ?? 0) > 0 && (
+        <label style={labelStyle}>
+          Color
+          <input type="color" value={block.borderColor ?? "#ffffff"} onChange={(e) => onChange({ borderColor: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+        </label>
+      )}
       {block.imageUrl && (
         <button type="button" onClick={() => onChange({ imageUrl: "" })} style={btnStyle("normal")}>
           Clear
         </button>
       )}
+    </>
+  );
+}
+
+function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "video" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+  return (
+    <>
+      <label style={labelStyle}>
+        URL
+        <input
+          type="text"
+          placeholder="YouTube, Vimeo, or .mp4 link"
+          value={block.url}
+          onChange={(e) => onChange({ url: e.target.value })}
+          style={{ ...inputStyle, width: 280 }}
+        />
+      </label>
+      <button type="button" onClick={() => onChange({ muted: !block.muted })} style={btnStyle(block.muted ? "active" : "normal")}>
+        {block.muted ? "Muted" : "Sound"}
+      </button>
+      <button type="button" onClick={() => onChange({ autoplay: !block.autoplay })} style={btnStyle(block.autoplay ? "active" : "normal")}>
+        Autoplay
+      </button>
+      <button type="button" onClick={() => onChange({ loop: !block.loop })} style={btnStyle(block.loop ? "active" : "normal")}>
+        Loop
+      </button>
+      <label style={labelStyle}>
+        Rotate
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
     </>
   );
 }

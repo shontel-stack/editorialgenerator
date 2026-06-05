@@ -173,6 +173,10 @@ export type CustomBlock =
       x: number; y: number; w: number; h: number; z?: number;
       imageUrl: string;
       imageFit?: "cover" | "contain";
+      rotate?: number;
+      borderWidth?: number;
+      borderColor?: string;
+      bg?: string;
       link?: string;
     }
   | {
@@ -194,6 +198,17 @@ export type CustomBlock =
       label?: string;
       color?: string;
       bg?: string;
+      link?: string;
+    }
+  | {
+      id: string;
+      kind: "video";
+      x: number; y: number; w: number; h: number; z?: number;
+      url: string;
+      autoplay?: boolean;
+      muted?: boolean;
+      loop?: boolean;
+      rotate?: number;
       link?: string;
     };
 
