@@ -8,7 +8,7 @@ import {
   type AttachmentWithUrl,
 } from "@/lib/attachments";
 
-export function useIssueAttachments(issueId: string) {
+export function useIssueAttachments(issueId: string, publicationId: string | null) {
   const [rows, setRows] = useState<AttachmentWithUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function useIssueAttachments(issueId: string) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const raw = await listAttachments(issueId);
+      const raw = await listAttachments(issueId, publicationId);
       await hydrate(raw);
       setError(null);
     } catch (e) {
@@ -31,7 +31,7 @@ export function useIssueAttachments(issueId: string) {
     } finally {
       setLoading(false);
     }
-  }, [issueId, hydrate]);
+  }, [issueId, publicationId, hydrate]);
 
   useEffect(() => {
     void refresh();
@@ -40,14 +40,14 @@ export function useIssueAttachments(issueId: string) {
   const upload = useCallback(
     async (args: { pageId: string | null; kind: "template" | "reference"; file: File }) => {
       try {
-        await uploadAttachment({ issueId, ...args });
+        await uploadAttachment({ issueId, publicationId, ...args });
         await refresh();
       } catch (e) {
         setError((e as Error).message);
         throw e;
       }
     },
-    [issueId, refresh],
+    [issueId, publicationId, refresh],
   );
 
   const remove = useCallback(
