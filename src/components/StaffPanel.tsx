@@ -870,16 +870,3 @@ function StaffChat({
   );
 }
 
-function PublicationBadge({ name }: { name?: string | null }) {
-  return (
-    <span
-      title={name ? `Publication: ${name}` : "No publication selected"}
-      className="inline-flex max-w-[160px] items-center gap-1.5 rounded-sm border border-border bg-secondary/60 px-2 py-1 text-[10px] tracking-[0.2em] uppercase text-muted-foreground"
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--ruby)]" />
-      <span className="truncate normal-case tracking-normal text-foreground">
-        {name ?? "No publication"}
-      </span>
-    </span>
-  );
-}
