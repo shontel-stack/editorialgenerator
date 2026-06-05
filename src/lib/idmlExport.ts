@@ -526,3 +526,180 @@ export function downloadIdml(issue: IssueDoc, filename: string): void {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// --- companion package: IDML + Links/ folder of fetched images -------------
+
+/** All unique image URLs referenced by an issue (page hero images + custom image blocks). */
+function collectImageUrls(issue: IssueDoc): string[] {
+  const urls = new Set<string>();
+  for (const page of issue.pages) {
+    const anyData = page.data as { imageUrl?: string | null };
+    if (anyData.imageUrl) urls.add(anyData.imageUrl);
+    for (const b of page.customBlocks ?? []) {
+      if (b.kind === "image" && b.imageUrl) urls.add(b.imageUrl);
+    }
+  }
+  return Array.from(urls);
+}
+
+const SAFE_NAME_RE = /[^A-Za-z0-9._-]+/g;
+
+function sanitizeFilename(name: string): string {
+  const cleaned = name.replace(SAFE_NAME_RE, "_").replace(/^_+|_+$/g, "");
+  return cleaned || "image";
+}
+
+function extFromContentType(ct: string | null): string | null {
+  if (!ct) return null;
+  const base = ct.split(";")[0].trim().toLowerCase();
+  switch (base) {
+    case "image/jpeg":
+    case "image/jpg":
+      return ".jpg";
+    case "image/png":
+      return ".png";
+    case "image/gif":
+      return ".gif";
+    case "image/webp":
+      return ".webp";
+    case "image/avif":
+      return ".avif";
+    case "image/tiff":
+      return ".tif";
+    case "image/svg+xml":
+      return ".svg";
+    default:
+      return null;
+  }
+}
+
+function deriveFilename(url: string, contentType: string | null, fallbackIndex: number): string {
+  try {
+    const u = new URL(url, window.location.href);
+    const last = u.pathname.split("/").filter(Boolean).pop() ?? "";
+    const decoded = decodeURIComponent(last);
+    const base = sanitizeFilename(decoded);
+    const hasExt = /\.[A-Za-z0-9]{2,5}$/.test(base);
+    if (base && hasExt) return base;
+    const ext = extFromContentType(contentType) ?? ".img";
+    const stem = base || `image-${fallbackIndex + 1}`;
+    return `${stem}${ext}`;
+  } catch {
+    const ext = extFromContentType(contentType) ?? ".img";
+    return `image-${fallbackIndex + 1}${ext}`;
+  }
+}
+
+interface FetchedImage {
+  url: string;
+  filename: string;
+  bytes: Uint8Array;
+}
+
+interface SkippedImage {
+  url: string;
+  reason: string;
+}
+
+async function fetchImage(url: string, index: number): Promise<FetchedImage | SkippedImage> {
+  try {
+    // data: URLs — decode without a network round-trip.
+    if (url.startsWith("data:")) {
+      const comma = url.indexOf(",");
+      if (comma < 0) return { url, reason: "Malformed data URL" };
+      const header = url.slice(5, comma);
+      const payload = url.slice(comma + 1);
+      const ct = header.split(";")[0] || null;
+      const isB64 = /;base64/i.test(header);
+      const binary = isB64 ? atob(payload) : decodeURIComponent(payload);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return { url, filename: deriveFilename(url, ct, index), bytes };
+    }
+
+    const res = await fetch(url, { mode: "cors", credentials: "omit" });
+    if (!res.ok) return { url, reason: `HTTP ${res.status}` };
+    const buf = await res.arrayBuffer();
+    return {
+      url,
+      filename: deriveFilename(url, res.headers.get("content-type"), index),
+      bytes: new Uint8Array(buf),
+    };
+  } catch (e) {
+    return { url, reason: (e as Error).message || "Fetch blocked (CORS or network)" };
+  }
+}
+
+/** Build a ZIP containing `<slug>.idml`, `Links/<files>`, and `relink-manifest.txt`. */
+export async function buildIdmlPackage(
+  issue: IssueDoc,
+  slug: string,
+): Promise<{ bytes: Uint8Array; fetched: number; skipped: SkippedImage[] }> {
+  const idmlBytes = buildIdml(issue);
+  const urls = collectImageUrls(issue);
+  const results = await Promise.all(urls.map((u, i) => fetchImage(u, i)));
+
+  const fetched: FetchedImage[] = [];
+  const skipped: SkippedImage[] = [];
+  const usedNames = new Set<string>();
+
+  for (const r of results) {
+    if ("bytes" in r) {
+      let name = r.filename;
+      if (usedNames.has(name)) {
+        const dot = name.lastIndexOf(".");
+        const stem = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : "";
+        let i = 2;
+        while (usedNames.has(`${stem}-${i}${ext}`)) i++;
+        name = `${stem}-${i}${ext}`;
+      }
+      usedNames.add(name);
+      fetched.push({ ...r, filename: name });
+    } else {
+      skipped.push(r);
+    }
+  }
+
+  const manifestLines: string[] = [
+    `# ${issue.master.publication} — ${issue.meta.issue}`,
+    `# Place this folder next to the .idml file, then in InDesign use Links panel → Relink to Folder → select Links/.`,
+    `# Frame Label on each placeholder = original source URL.`,
+    "",
+    "## Fetched images (frame-label URL → Links/ filename)",
+    ...fetched.map((f) => `${f.url}\t->\tLinks/${f.filename}`),
+  ];
+  if (skipped.length) {
+    manifestLines.push(
+      "",
+      "## Skipped (relink manually in InDesign)",
+      ...skipped.map((s) => `${s.url}\t!!\t${s.reason}`),
+    );
+  }
+
+  const files: Record<string, Uint8Array> = {};
+  const idmlName = `${slug || "issue"}.idml`;
+  files[idmlName] = idmlBytes;
+  for (const f of fetched) files[`Links/${f.filename}`] = f.bytes;
+  files["relink-manifest.txt"] = strToU8(manifestLines.join("\n"));
+
+  return { bytes: zipSync(files, { level: 6 }), fetched: fetched.length, skipped };
+}
+
+export async function downloadIdmlPackage(
+  issue: IssueDoc,
+  slug: string,
+): Promise<{ fetched: number; skipped: SkippedImage[] }> {
+  const { bytes, fetched, skipped } = await buildIdmlPackage(issue, slug);
+  const blob = new Blob([new Uint8Array(bytes)], { type: "application/zip" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${slug || "issue"}-indesign-package.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return { fetched, skipped };
+}
+
