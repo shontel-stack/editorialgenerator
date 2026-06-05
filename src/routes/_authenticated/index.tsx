@@ -1071,6 +1071,14 @@ function Index() {
         attachments={attachments}
       />
 
+      <StaffPanel
+        open={staffOpen}
+        onClose={() => setStaffOpen(false)}
+        issue={issue}
+        selectedPageId={selected.id}
+      />
+
+
       <AssistantPanel
         open={assistantOpen}
         onClose={() => setAssistantOpen(false)}
