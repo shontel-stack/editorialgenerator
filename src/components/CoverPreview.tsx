@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { COVER_PX, PALETTES, type CoverData } from "@/lib/coverDefaults";
 import { Draggable } from "./LayoutEdit";
+import { CustomBlocksLayer } from "./CustomBlocksLayer";
 
 type Props = { data: CoverData };
 
