@@ -74,7 +74,7 @@ import {
   type IssuePage,
 } from "@/lib/exportCover";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "The Arts Today — Issue Builder" },
