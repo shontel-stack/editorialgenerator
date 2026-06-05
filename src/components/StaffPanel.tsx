@@ -20,6 +20,7 @@ import { snapshotIssue } from "@/lib/issue-snapshot";
 import type { IssueDoc } from "@/lib/coverDefaults";
 import { STAFF_ROLES, STAFF_BY_ID, type StaffRole } from "@/lib/staffRoles";
 import { ChevronLeft, X, Users, Inbox, Check, Trash2, Flag, FileEdit, MessageSquare, GitBranch } from "lucide-react";
+import { PublicationBadge } from "@/components/PublicationBadge";
 
 /* ------------------------------------------------------------------ */
 /*                              Types                                   */
