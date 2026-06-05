@@ -68,6 +68,7 @@ function Page({
       }}
     >
       {children}
+      <CustomBlocksLayer />
     </div>
   );
 }
