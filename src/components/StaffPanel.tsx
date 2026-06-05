@@ -197,9 +197,11 @@ function TabButton({
 
 function StaffRoster({
   issueId,
+  publicationId,
   onPick,
 }: {
   issueId: string;
+  publicationId: string | null;
   onPick: (roleId: string) => void;
 }) {
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -210,11 +212,15 @@ function StaffRoster({
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
       if (!uid) return;
-      const { data, error } = await supabase
+      let q = supabase
         .from("staff_threads")
         .select("role, id")
         .eq("issue_id", issueId)
         .eq("user_id", uid);
+      q = publicationId === null
+        ? q.is("publication_id", null)
+        : q.eq("publication_id", publicationId);
+      const { data, error } = await q;
       if (error || cancelled || !data) return;
       const threadIds = data.map((t) => t.id);
       const roleById = Object.fromEntries(data.map((t) => [t.id, t.role]));
@@ -238,7 +244,7 @@ function StaffRoster({
     return () => {
       cancelled = true;
     };
-  }, [issueId]);
+  }, [issueId, publicationId]);
 
   const editorial = STAFF_ROLES.filter((r) => r.department === "Editorial");
   const marketing = STAFF_ROLES.filter((r) => r.department === "Marketing");
