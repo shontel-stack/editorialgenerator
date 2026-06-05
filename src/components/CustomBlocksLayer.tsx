@@ -320,6 +320,9 @@ function BlockContent({
     return <div style={style}>{block.text}</div>;
   }
   if (block.kind === "image") {
+    const borderStyle = block.borderWidth
+      ? { border: `${block.borderWidth}px solid ${block.borderColor ?? "#ffffff"}`, background: block.bg ?? "#ffffff" }
+      : {};
     if (!block.imageUrl) {
       return (
         <div
@@ -335,13 +338,19 @@ function BlockContent({
             fontSize: 18,
             letterSpacing: 2,
             textTransform: "uppercase",
+            boxSizing: "border-box",
+            ...borderStyle,
           }}
         >
           Select element → upload
         </div>
       );
     }
-    return <img src={block.imageUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />;
+    return (
+      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", ...borderStyle }}>
+        <img src={block.imageUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />
+      </div>
+    );
   }
   if (block.kind === "shape") {
     if (block.shape === "line") {
@@ -365,6 +374,9 @@ function BlockContent({
         }}
       />
     );
+  }
+  if (block.kind === "video") {
+    return <VideoPreview block={block} />;
   }
   // embed
   if (block.embed === "qr") return <QrPreview url={block.url} color={block.color ?? "#0a0a0a"} bg={block.bg ?? "#ffffff"} />;
@@ -392,6 +404,81 @@ function BlockContent({
     </div>
   );
 }
+
+function VideoPreview({ block }: { block: Extract<CustomBlock, { kind: "video" }> }) {
+  const url = (block.url ?? "").trim();
+  if (!url) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0a0a0a",
+          color: "#bbb",
+          fontFamily: "var(--font-sans)",
+          fontSize: 18,
+          letterSpacing: 2,
+          textTransform: "uppercase",
+        }}
+      >
+        Select element → paste URL
+      </div>
+    );
+  }
+  const embed = toEmbedUrl(url);
+  if (embed) {
+    return (
+      <iframe
+        src={embed}
+        title="Video"
+        style={{ width: "100%", height: "100%", border: 0, display: "block", background: "#000" }}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    );
+  }
+  return (
+    <video
+      src={url}
+      controls
+      muted={block.muted}
+      autoPlay={block.autoplay}
+      loop={block.loop}
+      playsInline
+      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", background: "#000" }}
+    />
+  );
+}
+
+function toEmbedUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      const id = u.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (host === "youtu.be") {
+      const id = u.pathname.slice(1);
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (host === "youtube.com" && u.pathname.startsWith("/shorts/")) {
+      return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
+    }
+    if (host === "vimeo.com") {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      if (id && /^\d+$/.test(id)) return `https://player.vimeo.com/video/${id}`;
+    }
+    if (host === "player.vimeo.com") return raw;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 
 function QrPreview({ url, color, bg }: { url: string; color: string; bg: string }) {
   const [src, setSrc] = useState("");
