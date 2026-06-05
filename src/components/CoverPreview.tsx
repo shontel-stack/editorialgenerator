@@ -352,6 +352,7 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
           )}
         </Draggable>
       )}
+      <CustomBlocksLayer />
     </div>
   );
 });
