@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
@@ -1057,7 +1057,7 @@ function Index() {
         onClose={() => setAttachmentsOpen(false)}
         issueId={issue.meta.issueId}
         selectedPageId={selected.id}
-        selectedPageLabel={selected.data.folio ?? selected.type}
+        selectedPageLabel={selected.pageType}
         attachments={attachments}
       />
 
