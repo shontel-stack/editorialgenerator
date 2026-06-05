@@ -166,11 +166,12 @@ export async function signAttachmentUrl(path: string): Promise<string | null> {
 
 export async function uploadAttachment(opts: {
   issueId: string;
+  publicationId: string | null;
   pageId: string | null;
   kind: "template" | "reference";
   file: File;
 }): Promise<AttachmentRow> {
-  const { issueId, pageId, kind, file } = opts;
+  const { issueId, publicationId, pageId, kind, file } = opts;
   if (!issueId || issueId.length < 8) {
     throw new Error("Issue is still initializing. Reload the page and try again.");
   }
@@ -181,13 +182,15 @@ export async function uploadAttachment(opts: {
     throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
   }
 
-  // Remove any existing attachment with the same unique scope.
-  const existing = await supabase
+  // Remove any existing attachment with the same unique scope (publication-aware).
+  let existingQ = supabase
     .from("issue_attachments")
     .select("id, file_path")
     .eq("issue_id", issueId)
     .eq("kind", kind)
     .filter("page_id", pageId === null ? "is" : "eq", pageId === null ? null : pageId);
+  existingQ = applyPublicationFilter(existingQ as never, publicationId) as typeof existingQ;
+  const existing = await existingQ;
   if (existing.data?.length) {
     const paths = existing.data.map((r) => r.file_path);
     await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
@@ -218,6 +221,7 @@ export async function uploadAttachment(opts: {
     .insert({
       issue_id: issueId,
       user_id: uid,
+      publication_id: publicationId,
       page_id: pageId,
       kind,
       file_path: path,
