@@ -60,12 +60,14 @@ export function StaffPanel({
   onClose,
   issue,
   publicationId,
+  publicationName,
   selectedPageId,
 }: {
   open: boolean;
   onClose: () => void;
   issue: IssueDoc;
   publicationId: string | null;
+  publicationName?: string | null;
   selectedPageId: string;
 }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
@@ -125,14 +127,17 @@ export function StaffPanel({
             </>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-muted-foreground hover:text-foreground"
-          title="Close"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <PublicationBadge name={publicationName} />
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            title="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       {!activeRole && (
@@ -155,7 +160,11 @@ export function StaffPanel({
           selectedPageId={selectedPageId}
         />
       ) : view === "inbox" ? (
-        <InboxView issueId={issue.meta.issueId} publicationId={publicationId} />
+        <InboxView
+          issueId={issue.meta.issueId}
+          publicationId={publicationId}
+          publicationName={publicationName}
+        />
       ) : (
         <StaffRoster
           issueId={issue.meta.issueId}
@@ -346,9 +355,11 @@ const NOTE_LABELS: Record<NoteType, string> = {
 function InboxView({
   issueId,
   publicationId,
+  publicationName,
 }: {
   issueId: string;
   publicationId: string | null;
+  publicationName?: string | null;
 }) {
   const [notes, setNotes] = useState<StaffNote[] | null>(null);
   const [filter, setFilter] = useState<NoteStatus>("open");
@@ -424,7 +435,14 @@ function InboxView({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="flex gap-2 px-5 pt-4 pb-2 text-[10px] tracking-[0.25em] uppercase">
+      <div className="px-5 pt-4 pb-1 flex items-center gap-2 text-[10px] tracking-[0.25em] uppercase text-muted-foreground">
+        <Inbox className="h-3 w-3" />
+        <span>Inbox for</span>
+        <span className="normal-case tracking-normal font-medium text-foreground truncate">
+          {publicationName ?? "No publication"}
+        </span>
+      </div>
+      <div className="flex gap-2 px-5 pt-2 pb-2 text-[10px] tracking-[0.25em] uppercase">
         {(["open", "resolved", "dismissed"] as NoteStatus[]).map((s) => (
           <button
             key={s}
@@ -848,5 +866,19 @@ function StaffChat({
         </PromptInput>
       </div>
     </div>
+  );
+}
+
+function PublicationBadge({ name }: { name?: string | null }) {
+  return (
+    <span
+      title={name ? `Publication: ${name}` : "No publication selected"}
+      className="inline-flex max-w-[160px] items-center gap-1.5 rounded-sm border border-border bg-secondary/60 px-2 py-1 text-[10px] tracking-[0.2em] uppercase text-muted-foreground"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--ruby)]" />
+      <span className="truncate normal-case tracking-normal text-foreground">
+        {name ?? "No publication"}
+      </span>
+    </span>
   );
 }
