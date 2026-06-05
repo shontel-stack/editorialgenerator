@@ -148,15 +148,20 @@ export function StaffPanel({
 
       {activeRole ? (
         <StaffChat
-          key={`${issue.meta.issueId}:${activeRole.id}`}
+          key={`${issue.meta.issueId}:${publicationId ?? "_none"}:${activeRole.id}`}
           role={activeRole}
           issue={issue}
+          publicationId={publicationId}
           selectedPageId={selectedPageId}
         />
       ) : view === "inbox" ? (
-        <InboxView issueId={issue.meta.issueId} />
+        <InboxView issueId={issue.meta.issueId} publicationId={publicationId} />
       ) : (
-        <StaffRoster issueId={issue.meta.issueId} onPick={(id) => setActiveRoleId(id)} />
+        <StaffRoster
+          issueId={issue.meta.issueId}
+          publicationId={publicationId}
+          onPick={(id) => setActiveRoleId(id)}
+        />
       )}
     </aside>
   );
