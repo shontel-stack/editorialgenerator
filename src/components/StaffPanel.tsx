@@ -343,7 +343,13 @@ const NOTE_LABELS: Record<NoteType, string> = {
   flag: "Flag",
 };
 
-function InboxView({ issueId }: { issueId: string }) {
+function InboxView({
+  issueId,
+  publicationId,
+}: {
+  issueId: string;
+  publicationId: string | null;
+}) {
   const [notes, setNotes] = useState<StaffNote[] | null>(null);
   const [filter, setFilter] = useState<NoteStatus>("open");
   const [busy, setBusy] = useState<string | null>(null);
@@ -355,28 +361,31 @@ function InboxView({ issueId }: { issueId: string }) {
       setNotes([]);
       return;
     }
-    const { data, error } = await supabase
+    let q = supabase
       .from("staff_notes")
       .select("*")
       .eq("user_id", uid)
-      .eq("issue_id", issueId)
-      .order("created_at", { ascending: false });
+      .eq("issue_id", issueId);
+    q = publicationId === null
+      ? q.is("publication_id", null)
+      : q.eq("publication_id", publicationId);
+    const { data, error } = await q.order("created_at", { ascending: false });
     if (error) {
       console.warn("[inbox] load failed", error.message);
       setNotes([]);
       return;
     }
     setNotes((data ?? []) as StaffNote[]);
-  }, [issueId]);
+  }, [issueId, publicationId]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  // Realtime: refresh on any change to staff_notes for this issue.
+  // Realtime: refresh on any change to staff_notes for this issue/publication.
   useEffect(() => {
     const channel = supabase
-      .channel(`staff_notes:${issueId}`)
+      .channel(`staff_notes:${issueId}:${publicationId ?? "_none"}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "staff_notes" },
@@ -386,7 +395,7 @@ function InboxView({ issueId }: { issueId: string }) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [issueId, load]);
+  }, [issueId, publicationId, load]);
 
   const setStatus = async (id: string, status: NoteStatus) => {
     setBusy(id);
