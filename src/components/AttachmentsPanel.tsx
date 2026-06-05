@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { X, Upload, FileText, Image as ImageIcon, FileType2, Paperclip, Trash2, ExternalLink, Loader2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { X, Upload, FileText, Image as ImageIcon, FileType2, Paperclip, Trash2, ExternalLink, Loader2, Search } from "lucide-react";
 import {
   ACCEPT_ATTR,
   isImage,
@@ -49,6 +49,41 @@ export function AttachmentsPanel({
   const [err, setErr] = useState<string | null>(null);
   const [scope, setScope] = useState<"issue" | "page">("issue");
   const [kind, setKind] = useState<"reference" | "template">("reference");
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc" | "kind" | "page" | "size_desc" | "size_asc">("date_desc");
+
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let rows = attachments.rows;
+    if (q) rows = rows.filter((r) => r.file_name.toLowerCase().includes(q));
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "date_desc":
+          return +new Date(b.created_at) - +new Date(a.created_at);
+        case "date_asc":
+          return +new Date(a.created_at) - +new Date(b.created_at);
+        case "name_asc":
+          return a.file_name.localeCompare(b.file_name);
+        case "name_desc":
+          return b.file_name.localeCompare(a.file_name);
+        case "kind":
+          return a.kind.localeCompare(b.kind) || a.file_name.localeCompare(b.file_name);
+        case "page": {
+          const ap = a.page_id ?? "";
+          const bp = b.page_id ?? "";
+          return ap.localeCompare(bp) || a.file_name.localeCompare(b.file_name);
+        }
+        case "size_desc":
+          return b.size_bytes - a.size_bytes;
+        case "size_asc":
+          return a.size_bytes - b.size_bytes;
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [attachments.rows, query, sortBy]);
 
   if (!open) return null;
 
@@ -143,18 +178,48 @@ export function AttachmentsPanel({
         </p>
       </div>
 
+      <div className="px-4 py-2 border-b border-border flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search files…"
+            className="w-full border border-input bg-background pl-7 pr-2 py-1.5 text-xs rounded-sm text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          aria-label="Sort attachments"
+          className="border border-input bg-background px-2 py-1.5 text-xs rounded-sm text-foreground"
+        >
+          <option value="date_desc">Newest</option>
+          <option value="date_asc">Oldest</option>
+          <option value="name_asc">Name A–Z</option>
+          <option value="name_desc">Name Z–A</option>
+          <option value="kind">Kind</option>
+          <option value="page">Page</option>
+          <option value="size_desc">Largest</option>
+          <option value="size_asc">Smallest</option>
+        </select>
+      </div>
+
       <div className="flex-1 overflow-y-auto">
         {attachments.loading ? (
           <div className="p-6 text-center text-xs text-muted-foreground">Loading…</div>
         ) : attachments.error ? (
           <div className="p-4 text-xs text-destructive">{attachments.error}</div>
-        ) : attachments.rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <div className="p-6 text-center text-xs text-muted-foreground">
-            No attachments yet. Upload a file to get started.
+            {attachments.rows.length === 0
+              ? "No attachments yet. Upload a file to get started."
+              : "No files match your search."}
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {attachments.rows.map((row) => {
+            {visibleRows.map((row) => {
               const Icon = iconFor(row.mime_type);
               return (
                 <li key={row.id} className="px-4 py-3 flex items-start gap-3">
