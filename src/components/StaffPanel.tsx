@@ -727,6 +727,7 @@ function StaffChat({
           toFileNotes.map((n) => ({
             user_id: uid,
             issue_id: issueId,
+            publication_id: publicationId,
             page_id: n.page_id ?? null,
             thread_id: threadId,
             role: role.id,
