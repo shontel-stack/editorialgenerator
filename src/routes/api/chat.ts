@@ -4,8 +4,10 @@ import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import {
   addPageSchema,
   addSpreadSchema,
+  moveBlockSchema,
   removePageSchema,
   reorderPagesSchema,
+  scaleBlockSchema,
   setArticleLayoutSchema,
   setFontsSchema,
   updateMasterSchema,
