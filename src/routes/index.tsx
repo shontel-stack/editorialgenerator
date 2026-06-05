@@ -743,7 +743,7 @@ function Index() {
           </div>
           {editLayout && (
             <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2 px-1">
-              Drag any outlined block on the page. Positions snap to a 40-px grid and are saved with the issue.
+              Drag any outlined block on the page. Use the <strong>+ Add</strong> palette in the top-right of the page to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
             </p>
           )}
 
