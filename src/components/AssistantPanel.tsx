@@ -264,8 +264,11 @@ export function AssistantPanel({
                       };
                       const name = (part.type as string).replace(/^tool-/, "");
                       const patch = tc.output as IssuePatch | undefined;
+                      const tcId = tc.toolCallId ?? `${m.id}:${part.type}`;
+                      const isSpatial = patch?.kind === "move_block" || patch?.kind === "scale_block";
+                      const stillPending = isSpatial && pendingSpatial.some((p) => p.toolCallId === tcId);
                       return (
-                        <Tool key={tc.toolCallId ?? i} defaultOpen={false}>
+                        <Tool key={tc.toolCallId ?? i} defaultOpen={isSpatial}>
                           <ToolHeader
                             type={`tool-${name}` as `tool-${string}`}
                             state={(tc.state ?? "input-available") as never}
@@ -275,9 +278,32 @@ export function AssistantPanel({
                             <ToolOutput
                               output={
                                 patch?.kind ? (
-                                  <div className="text-xs">
-                                    <span className="text-muted-foreground">Applied: </span>
-                                    {describePatch(patch)}
+                                  <div className="text-xs space-y-2">
+                                    <div>
+                                      <span className="text-muted-foreground">
+                                        {isSpatial ? (stillPending ? "Proposed: " : "Resolved: ") : "Applied: "}
+                                      </span>
+                                      {describePatch(patch)}
+                                    </div>
+                                    {isSpatial && stillPending && (
+                                      <div className="flex items-center gap-2 pt-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => onResolvePending(tcId, "apply")}
+                                          className="px-3 py-1 text-[11px] tracking-[0.2em] uppercase bg-foreground text-background hover:opacity-90"
+                                        >
+                                          Apply
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => onResolvePending(tcId, "cancel")}
+                                          className="px-3 py-1 text-[11px] tracking-[0.2em] uppercase border border-border hover:bg-secondary"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <span className="text-[10px] text-muted-foreground">Preview highlighted on the page</span>
+                                      </div>
+                                    )}
                                   </div>
                                 ) : tc.output ? (
                                   <pre className="text-xs">{JSON.stringify(tc.output, null, 2)}</pre>
