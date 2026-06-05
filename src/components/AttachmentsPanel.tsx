@@ -70,6 +70,7 @@ export function AttachmentsPanel({
   onClose,
   issueId,
   publicationId,
+  publicationName,
   selectedPageId,
   selectedPageLabel,
   attachments,
