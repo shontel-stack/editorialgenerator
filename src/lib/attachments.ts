@@ -107,15 +107,15 @@ export async function uploadAttachment(opts: {
       .in("id", existing.data.map((r) => r.id));
   }
 
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error("You must be signed in to upload attachments.");
+
   const ext = file.name.split(".").pop() || "bin";
   const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80);
-  const path = `${issueId}/${kind}/${pageId ?? "_issue"}/${Date.now()}-${safe}`;
+  // Path is namespaced under the owner so storage RLS can verify ownership.
+  const path = `${uid}/${issueId}/${kind}/${pageId ?? "_issue"}/${Date.now()}-${safe}`;
 
-  // NOTE: do NOT pass `upsert: true`. With upsert, Postgres evaluates both the
-  // INSERT and UPDATE policies on storage.objects; our UPDATE policy requires
-  // a matching row in issue_attachments which doesn't exist yet on first upload,
-  // causing "new row violates row-level security policy". The path is already
-  // unique (Date.now()), so plain INSERT is correct.
   const up = await supabase.storage
     .from(ATTACHMENT_BUCKET)
     .upload(path, file, { contentType: file.type });
@@ -127,6 +127,7 @@ export async function uploadAttachment(opts: {
     .from("issue_attachments")
     .insert({
       issue_id: issueId,
+      user_id: uid,
       page_id: pageId,
       kind,
       file_path: path,
