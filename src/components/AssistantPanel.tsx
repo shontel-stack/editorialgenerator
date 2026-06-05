@@ -177,16 +177,20 @@ export function AssistantPanel({
       toSave.push({ id: m.id, role: m.role, parts: m.parts });
     }
     if (!toSave.length) return;
-    void supabase
-      .from("issue_chats")
-      .insert(
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) return;
+      const { error } = await supabase.from("issue_chats").insert(
         toSave.map((m) => ({
           issue_id: issueId,
+          user_id: uid,
           role: m.role,
           parts: m.parts as unknown as never,
         })),
-      )
-      .then(({ error }) => { if (error) console.warn("[chat] persist failed:", error.message); });
+      );
+      if (error) console.warn("[chat] persist failed:", error.message);
+    })();
   }, [status, messages, initial, issueId]);
 
   const [input, setInput] = useState("");
