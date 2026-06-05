@@ -105,7 +105,7 @@ function Index() {
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
   useUnsavedGuard(() =>
     JSON.stringify(issue) !== lastSavedRef.current
-      ? `Issue "${issue.meta?.title ?? "Untitled"}" has unsaved edits`
+      ? `Issue "${issue.meta?.issue ?? "Untitled"}" has unsaved edits`
       : null,
   );
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
