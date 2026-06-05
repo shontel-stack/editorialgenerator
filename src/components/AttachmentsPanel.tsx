@@ -68,6 +68,7 @@ export function AttachmentsPanel({
   open,
   onClose,
   issueId,
+  publicationId,
   selectedPageId,
   selectedPageLabel,
   attachments,
