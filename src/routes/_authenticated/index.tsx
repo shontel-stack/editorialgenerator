@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
@@ -8,7 +8,10 @@ import { AssistantPanel } from "@/components/AssistantPanel";
 import { AttachmentControl } from "@/components/AttachmentControl";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
+import { useActivePublication } from "@/hooks/useActivePublication";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -105,6 +108,8 @@ function Index() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const { userId, active: activePublication } = useActivePublication();
 
   /** Pending spatial proposals from the assistant (move_block / scale_block).
    *  Keyed by toolCallId so the chat card can resolve them. */
@@ -560,6 +565,8 @@ function Index() {
               </div>
             </div>
             <div className="h-8 w-px bg-border mx-2" />
+            <WorkspaceSwitcher />
+            <div className="h-8 w-px bg-border mx-2" />
             <div className="flex items-center gap-3">
               <div className="flex flex-col">
                 <label className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
@@ -605,6 +612,14 @@ function Index() {
             >
               <Users className="h-3.5 w-3.5" />
               Staff
+            </button>
+            <button
+              onClick={() => setChecklistOpen((v) => !v)}
+              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
+              title="Production checklist, board, and calendar"
+            >
+              <ClipboardList className="h-3.5 w-3.5" />
+              Production
             </button>
             <button
               onClick={() => setAssistantOpen((v) => !v)}
@@ -1076,6 +1091,23 @@ function Index() {
         onClose={() => setStaffOpen(false)}
         issue={issue}
         selectedPageId={selected.id}
+      />
+
+      <ProductionChecklist
+        open={checklistOpen}
+        onClose={() => setChecklistOpen(false)}
+        userId={userId}
+        issueId={issue.meta.issueId}
+        publicationId={activePublication?.id ?? null}
+        pages={issue.pages.map((p) => ({
+          id: p.id,
+          label:
+            (p.data as { title?: string; headline?: string })?.title ??
+            (p.data as { headline?: string })?.headline ??
+            p.pageType,
+          pageType: p.pageType,
+        }))}
+        onSelectPage={(pid) => setSelectedId(pid)}
       />
 
 
