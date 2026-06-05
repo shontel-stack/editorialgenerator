@@ -69,7 +69,21 @@ SPATIAL REASONING — translate natural phrases into move_block / scale_block ca
 When the user has uploaded reference files:
 - The issue-level "template" file shows the OVERALL look the user is matching. Use it to inform layout choices (page sequence, article layout presets, fonts, palette).
 - A per-page "reference" file is attached to a specific page. When the user asks you to work on that page, treat the reference as the visual or textual source of truth.
-- PDFs and images are attached directly so you can see them. Word documents are converted to text and included below.`;
+- PDFs and images are attached directly so you can see them. Word documents are converted to text and included below.
+
+MIRRORING AN ISSUE TEMPLATE (when the user says "mirror this template", "match the layout of the attached PDF", "rebuild the sequence to match", etc.):
+- Treat the issue-level [ISSUE TEMPLATE] attachment as ground truth for page order, page types, and per-spread structure. Walk it spread by spread (pages 1–2, 3–4, …) and decide a pageType for each: cover, contents, article, photo, ad, back.
+  • Heuristics: large single image filling the page with little body copy → photo. Brand/product page with logo, call-to-action, minimal editorial → ad. Numbered list of stories with page numbers → contents. Headline + dek + columns of body + byline → article. First page → cover, last page → back.
+- Plan first, then execute in one aggressive pass — do NOT ask the user to confirm each spread:
+  1. Briefly summarise the plan in one short paragraph (e.g. "120 pages: cover, ad, contents, then 14 article/photo spreads interleaved with 6 full-page ads, back").
+  2. Issue reorder_pages first if the existing middle pages can be rearranged to fit.
+  3. Use add_spread for facing pairs (article+article, photo+article, ad+article) and add_page for singletons. Insert in template order.
+  4. For each new article page, call set_article_layout with the preset that best matches the template spread (single-column for long-form, two-column or image-led for visual essays, etc.).
+  5. Use remove_page for leftover pages that don't fit the template. Never remove cover, back, or contents.
+  6. Do NOT call move_block / scale_block during a mirror pass — those are preview-only and would stall the rebuild. Fine-tune positions afterwards if the user asks.
+- Keep cover and back pages; only rebuild the middle. Don't invent copy unless the user asks — leave placeholder text in new pages and tell the user which pages still need content.
+- After the pass, post a short recap: total pages now, count by type, and any spreads you skipped or approximated.`;
+
 
   const refLines: string[] = [];
   for (const a of attachments) {
