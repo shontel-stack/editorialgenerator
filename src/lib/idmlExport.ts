@@ -686,6 +686,7 @@ export async function buildIdmlPackage(
   files[idmlName] = idmlBytes;
   for (const f of fetched) files[`Links/${f.filename}`] = f.bytes;
   files["relink-manifest.txt"] = strToU8(manifestLines.join("\n"));
+  files["relink-images.jsx"] = strToU8(buildRelinkScript());
   files["README.txt"] = strToU8(buildReadme(issue, idmlName, fetched.length, skipped));
 
   return { bytes: zipSync(files, { level: 6 }), fetched: fetched.length, skipped };
@@ -706,6 +707,7 @@ function buildReadme(
     `  ${idmlName}            The editable InDesign document (IDML).`,
     `  Links/                 ${fetchedCount} image file(s) referenced by the layout.`,
     `  relink-manifest.txt    Map of original image URLs → local filenames.`,
+    `  relink-images.jsx      Optional InDesign script — auto-relinks everything in one click.`,
     `  README.txt             This file.`,
     "",
     "HOW TO OPEN",
@@ -713,7 +715,15 @@ function buildReadme(
     `  2. In InDesign: File → Open → choose ${idmlName}.`,
     `     (InDesign converts IDML into a new .indd on first save.)`,
     "",
-    "RELINKING IMAGES (one click for the whole issue)",
+    "RELINKING IMAGES — OPTION A (one-click, recommended)",
+    `  1. Save the open document once (Cmd/Ctrl + S) into this same folder so`,
+    `     InDesign knows where Links/ lives.`,
+    `  2. Window → Utilities → Scripts.`,
+    `  3. Drag relink-images.jsx into the "User" folder of the Scripts panel,`,
+    `     then double-click it. The script reads relink-manifest.txt, relinks`,
+    `     every placeholder frame to its file in Links/, and reports a summary.`,
+    "",
+    "RELINKING IMAGES — OPTION B (manual, no script)",
     `  1. Open the Links panel:  Window → Links  (or  Cmd/Ctrl + Shift + D).`,
     `  2. Open the panel menu (top-right ☰) → "Relink to Folder…".`,
     `  3. Select the Links/ folder from this zip and click Choose.`,
@@ -767,4 +777,97 @@ export async function downloadIdmlPackage(
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return { fetched, skipped };
 }
+
+/**
+ * InDesign ExtendScript (.jsx) that reads relink-manifest.txt sitting next to
+ * the open document and relinks every placeholder frame to its bundled image
+ * in Links/. Frames are matched by their Script Label (which the exporter
+ * sets to the original source URL).
+ */
+function buildRelinkScript(): string {
+  return [
+    "// Auto-relink packaged images for this InDesign document.",
+    "// Usage: open the .idml in this folder, then File → Scripts → Scripts panel →",
+    "// double-click relink-images.jsx (or drag this file into the Scripts panel).",
+    "#target indesign",
+    "(function () {",
+    "  if (app.documents.length === 0) {",
+    "    alert('Open the .idml from this folder first, then run relink-images.jsx.');",
+    "    return;",
+    "  }",
+    "  var doc = app.activeDocument;",
+    "  if (!doc.saved && !doc.fullName) {",
+    "    alert('Save the document once so InDesign knows its folder, then run again.');",
+    "    return;",
+    "  }",
+    "  var folder = doc.fullName.parent;",
+    "  var manifest = File(folder.fsName + '/relink-manifest.txt');",
+    "  if (!manifest.exists) {",
+    "    alert('relink-manifest.txt not found next to the document.');",
+    "    return;",
+    "  }",
+    "  manifest.encoding = 'UTF-8';",
+    "  manifest.open('r');",
+    "  var text = manifest.read();",
+    "  manifest.close();",
+    "",
+    "  var urlToRel = {};",
+    "  var lines = text.split(/\\r?\\n/);",
+    "  for (var i = 0; i < lines.length; i++) {",
+    "    var line = lines[i];",
+    "    if (!line || line.charAt(0) === '#') continue;",
+    "    if (line.indexOf('->') === -1) continue;",
+    "    var parts = line.split(/\\t->\\t|\\s+->\\s+/);",
+    "    if (parts.length < 2) continue;",
+    "    var url = parts[0].replace(/^\\s+|\\s+$/g, '');",
+    "    var rel = parts[1].replace(/^\\s+|\\s+$/g, '');",
+    "    if (url && rel) urlToRel[url] = rel;",
+    "  }",
+    "",
+    "  var relinked = 0, placed = 0, failed = 0, notFound = 0;",
+    "  var items = doc.allPageItems;",
+    "  app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;",
+    "  for (var j = 0; j < items.length; j++) {",
+    "    var it = items[j];",
+    "    var label;",
+    "    try { label = it.label; } catch (e) { continue; }",
+    "    if (!label) continue;",
+    "    var rel = urlToRel[label];",
+    "    if (!rel) continue;",
+    "    var target = File(folder.fsName + '/' + rel);",
+    "    if (!target.exists) { notFound++; continue; }",
+    "    try {",
+    "      if (it.graphics && it.graphics.length > 0) {",
+    "        it.graphics[0].itemLink.relink(target);",
+    "        it.graphics[0].itemLink.update();",
+    "        relinked++;",
+    "      } else if (it.hasOwnProperty('place')) {",
+    "        it.place(target);",
+    "        placed++;",
+    "      } else { failed++; continue; }",
+    "      try { it.fit(FitOptions.PROPORTIONALLY); } catch (e2) {}",
+    "      try { it.fit(FitOptions.CENTER_CONTENT); } catch (e3) {}",
+    "    } catch (e1) { failed++; }",
+    "  }",
+    "  app.scriptPreferences.userInteractionLevel = UserInteractionLevels.INTERACT_WITH_ALL;",
+    "",
+    "  for (var k = 0; k < doc.links.length; k++) {",
+    "    try {",
+    "      if (doc.links[k].status === LinkStatus.LINK_OUT_OF_DATE) doc.links[k].update();",
+    "    } catch (e4) {}",
+    "  }",
+    "",
+    "  alert(",
+    "    'Relink complete.\\n' +",
+    "    'Relinked: ' + relinked + '\\n' +",
+    "    'Placed into empty frames: ' + placed + '\\n' +",
+    "    'File missing in Links/: ' + notFound + '\\n' +",
+    "    'Failed: ' + failed + '\\n\\n' +",
+    "    'Anything still missing is listed in relink-manifest.txt under Skipped — relink those manually.'",
+    "  );",
+    "})();",
+    "",
+  ].join("\n");
+}
+
 
