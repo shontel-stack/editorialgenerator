@@ -194,6 +194,35 @@ export function Draggable({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
+      {hasPreview && ctx && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            transform: `scale(${inv}) translate(0, -110%)`,
+            transformOrigin: "top left",
+            background: "rgb(245,158,11)",
+            color: "#1a1200",
+            border: "1px solid rgba(0,0,0,0.2)",
+            borderRadius: 4,
+            padding: "3px 8px",
+            fontSize: 11,
+            fontWeight: 600,
+            fontFamily: "system-ui, sans-serif",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+            zIndex: 60,
+            pointerEvents: "none",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          }}
+        >
+          Pending · {blockKey}
+          {preview ? ` · ${preview.dx >= 0 ? "+" : ""}${preview.dx}, ${preview.dy >= 0 ? "+" : ""}${preview.dy}` : ""}
+          {typeof previewScale === "number" ? ` · ${Math.round(previewScale * 100)}%` : ""}
+        </div>
+      )}
       {editing && ctx && (
         <div
           onPointerDown={(e) => e.stopPropagation()}
