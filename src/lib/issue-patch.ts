@@ -132,6 +132,33 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
       }
       return { ...issue, pages: rebuilt };
     }
+    case "move_block": {
+      return {
+        ...issue,
+        pages: issue.pages.map((p) => {
+          if (p.id !== patch.pageId) return p;
+          const cur = { ...(p.positionOverrides ?? {}) };
+          if (patch.reset) delete cur[patch.blockKey];
+          else {
+            const snap = (n: number) => Math.round(n / 40) * 40;
+            cur[patch.blockKey] = { dx: snap(patch.dx), dy: snap(patch.dy) };
+          }
+          return { ...p, positionOverrides: cur } as IssuePageNode;
+        }),
+      };
+    }
+    case "scale_block": {
+      return {
+        ...issue,
+        pages: issue.pages.map((p) => {
+          if (p.id !== patch.pageId) return p;
+          const cur = { ...(p.textScales ?? {}) };
+          if (patch.reset || patch.scale === 1) delete cur[patch.blockKey];
+          else cur[patch.blockKey] = patch.scale;
+          return { ...p, textScales: cur } as IssuePageNode;
+        }),
+      };
+    }
   }
 }
 
@@ -145,5 +172,7 @@ export function describePatch(patch: IssuePatch): string {
     case "add_spread":          return `Added ${patch.left}+${patch.right} spread`;
     case "remove_page":         return patch.removeSpread ? `Removed spread` : `Removed page`;
     case "reorder_pages":       return `Reordered pages`;
+    case "move_block":          return patch.reset ? `Reset ${patch.blockKey} position` : `Moved ${patch.blockKey} (${patch.dx >= 0 ? "+" : ""}${patch.dx}, ${patch.dy >= 0 ? "+" : ""}${patch.dy})`;
+    case "scale_block":         return patch.reset ? `Reset ${patch.blockKey} size` : `Scaled ${patch.blockKey} to ${Math.round(patch.scale * 100)}%`;
   }
 }
