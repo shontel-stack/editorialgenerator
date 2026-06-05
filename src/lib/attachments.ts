@@ -95,16 +95,18 @@ export type AttachmentPage = {
 
 export async function fetchAttachmentsPage(opts: {
   issueId: string;
+  publicationId: string | null;
   search?: string;
   sort?: AttachmentSortKey;
   from: number;
   to: number;
 }): Promise<AttachmentPage> {
-  const { issueId, search, sort = "date_desc", from, to } = opts;
+  const { issueId, publicationId, search, sort = "date_desc", from, to } = opts;
   let q = supabase
     .from("issue_attachments")
     .select("*", { count: "exact" })
     .eq("issue_id", issueId);
+  q = applyPublicationFilter(q as never, publicationId) as typeof q;
 
   if (search && search.trim().length > 0) {
     // Escape % and _ to keep them literal in ILIKE.
