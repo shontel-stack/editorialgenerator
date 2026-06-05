@@ -102,8 +102,8 @@ export function AttachmentsPanel({
   // The list resets whenever any of these inputs change, including after
   // an upload/delete (we use attachments.rows.length as a version signal).
   const resetKey = useMemo(
-    () => `${issueId}|${debouncedQuery}|${sortBy}|${attachments.rows.length}`,
-    [issueId, debouncedQuery, sortBy, attachments.rows.length],
+    () => `${issueId}|${publicationId ?? "_none"}|${debouncedQuery}|${sortBy}|${attachments.rows.length}`,
+    [issueId, publicationId, debouncedQuery, sortBy, attachments.rows.length],
   );
 
   const loadPage = useCallback(
@@ -114,6 +114,7 @@ export function AttachmentsPanel({
       try {
         const page = await fetchAttachmentsPage({
           issueId,
+          publicationId,
           search: debouncedQuery,
           sort: sortBy,
           from,
@@ -134,7 +135,7 @@ export function AttachmentsPanel({
         }
       }
     },
-    [issueId, debouncedQuery, sortBy],
+    [issueId, publicationId, debouncedQuery, sortBy],
   );
 
   // Initial / reset fetch.
