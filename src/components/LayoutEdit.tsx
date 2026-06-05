@@ -81,12 +81,18 @@ export function Draggable({
   const textScale = ctx?.textScales?.[blockKey] ?? 1;
   const link = ctx?.blockLinks?.[blockKey] ?? "";
 
+  const preview = ctx?.previewOverrides?.[blockKey];
+  const previewScale = ctx?.previewScales?.[blockKey];
+  const hasPreview = Boolean(preview) || typeof previewScale === "number";
+
   const [local, setLocal] = useState<{ dx: number; dy: number } | null>(null);
   const drag = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
   const [showSize, setShowSize] = useState(false);
 
-  const dx = local?.dx ?? saved?.dx ?? 0;
-  const dy = local?.dy ?? saved?.dy ?? 0;
+  // Preview position wins over saved/local while a pending proposal exists.
+  const dx = preview?.dx ?? local?.dx ?? saved?.dx ?? 0;
+  const dy = preview?.dy ?? local?.dy ?? saved?.dy ?? 0;
+  const effectiveScale = previewScale ?? textScale;
 
   const onPointerDown = (e: RPointerEvent<HTMLDivElement>) => {
     if (!editing || !ctx) return;
@@ -121,17 +127,24 @@ export function Draggable({
   const combined: CSSProperties = {
     ...style,
     transform: [existingTransform, moveTransform].filter(Boolean).join(" ") || undefined,
-    ...(editing
+    ...(hasPreview
       ? {
-          outline: link
-            ? "3px solid rgba(37,99,235,0.7)"
-            : "3px dashed rgba(107,19,32,0.7)",
+          outline: "6px solid rgba(245,158,11,0.95)",
           outlineOffset: 4,
-          cursor: drag.current ? "grabbing" : "grab",
+          boxShadow: "0 0 0 12px rgba(245,158,11,0.18)",
+          animation: "lovable-pending-pulse 1.4s ease-in-out infinite",
         }
-      : link
-        ? { cursor: "pointer" }
-        : {}),
+      : editing
+        ? {
+            outline: link
+              ? "3px solid rgba(37,99,235,0.7)"
+              : "3px dashed rgba(107,19,32,0.7)",
+            outlineOffset: 4,
+            cursor: drag.current ? "grabbing" : "grab",
+          }
+        : link
+          ? { cursor: "pointer" }
+          : {}),
   };
 
   const scaledContent =
