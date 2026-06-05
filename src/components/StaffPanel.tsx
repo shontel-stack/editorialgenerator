@@ -435,7 +435,14 @@ function InboxView({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="flex gap-2 px-5 pt-4 pb-2 text-[10px] tracking-[0.25em] uppercase">
+      <div className="px-5 pt-4 pb-1 flex items-center gap-2 text-[10px] tracking-[0.25em] uppercase text-muted-foreground">
+        <Inbox className="h-3 w-3" />
+        <span>Inbox for</span>
+        <span className="normal-case tracking-normal font-medium text-foreground truncate">
+          {publicationName ?? "No publication"}
+        </span>
+      </div>
+      <div className="flex gap-2 px-5 pt-2 pb-2 text-[10px] tracking-[0.25em] uppercase">
         {(["open", "resolved", "dismissed"] as NoteStatus[]).map((s) => (
           <button
             key={s}
