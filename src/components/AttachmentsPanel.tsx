@@ -178,18 +178,48 @@ export function AttachmentsPanel({
         </p>
       </div>
 
+      <div className="px-4 py-2 border-b border-border flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search files…"
+            className="w-full border border-input bg-background pl-7 pr-2 py-1.5 text-xs rounded-sm text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          aria-label="Sort attachments"
+          className="border border-input bg-background px-2 py-1.5 text-xs rounded-sm text-foreground"
+        >
+          <option value="date_desc">Newest</option>
+          <option value="date_asc">Oldest</option>
+          <option value="name_asc">Name A–Z</option>
+          <option value="name_desc">Name Z–A</option>
+          <option value="kind">Kind</option>
+          <option value="page">Page</option>
+          <option value="size_desc">Largest</option>
+          <option value="size_asc">Smallest</option>
+        </select>
+      </div>
+
       <div className="flex-1 overflow-y-auto">
         {attachments.loading ? (
           <div className="p-6 text-center text-xs text-muted-foreground">Loading…</div>
         ) : attachments.error ? (
           <div className="p-4 text-xs text-destructive">{attachments.error}</div>
-        ) : attachments.rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <div className="p-6 text-center text-xs text-muted-foreground">
-            No attachments yet. Upload a file to get started.
+            {attachments.rows.length === 0
+              ? "No attachments yet. Upload a file to get started."
+              : "No files match your search."}
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {attachments.rows.map((row) => {
+            {visibleRows.map((row) => {
               const Icon = iconFor(row.mime_type);
               return (
                 <li key={row.id} className="px-4 py-3 flex items-start gap-3">
