@@ -77,6 +77,17 @@ export function CustomBlocksLayer() {
     },
     [blocks, setBlocks],
   );
+  const insertTemplate = useCallback(
+    (tpl: LayoutTemplate) => {
+      if (!setBlocks) return;
+      const baseZ = blocks.reduce((m, b) => Math.max(m, b.z ?? 50), 50);
+      const fresh = tpl.build().map((b, i) => ({ ...b, z: baseZ + 1 + i } as CustomBlock));
+      setBlocks([...blocks, ...fresh]);
+      setSelectedId(fresh[0]?.id ?? null);
+    },
+    [blocks, setBlocks],
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <>
@@ -91,9 +102,12 @@ export function CustomBlocksLayer() {
           onRemove={() => remove(b.id)}
         />
       ))}
-      {editing && setBlocks && <AddElementPalette onAdd={add} />}
+      {editing && setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => setPickerOpen(true)} />}
       {editing && selected && setBlocks && (
         <BlockToolbar block={selected} onChange={(p) => update(selected.id, p)} onRemove={() => remove(selected.id)} />
+      )}
+      {editing && pickerOpen && setBlocks && (
+        <TemplatePicker onPick={(t) => { insertTemplate(t); setPickerOpen(false); }} onClose={() => setPickerOpen(false)} />
       )}
     </>
   );
