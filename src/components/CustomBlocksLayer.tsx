@@ -740,6 +740,7 @@ function BlockToolbar({
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
+      {block.kind === "video" && <VideoControls block={block} onChange={onChange} />}
       <LinkControl link={(block as { link?: string }).link} onChange={(v) => onChange({ link: v } as Partial<CustomBlock>)} />
       <button type="button" onClick={onRemove} style={btnStyle("danger")}>
         <Trash2 size={12} /> Delete
