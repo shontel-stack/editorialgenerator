@@ -60,11 +60,7 @@ const collectPageText = (
   pageIndex: number,
 ): PageText => {
   const totalPages = issue.pages.length;
-  const pn = formatPageNumber(
-    issue.master.pageNumberFormat,
-    pageIndex + 1,
-    totalPages,
-  );
+  const pn = formatPageNumber(issue.master, pageIndex + 1, totalPages);
   const folio = renderFolio(issue.master, issue.meta);
 
   switch (page.pageType) {
