@@ -142,7 +142,7 @@ function Index() {
     }
     return out;
   }, [pendingSpatial]);
-  const attachments = useIssueAttachments(issue.meta.issueId);
+  const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
