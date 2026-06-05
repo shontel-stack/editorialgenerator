@@ -131,6 +131,7 @@ export function AssistantPanel({
   });
 
   // Apply tool-output patches to the issue exactly once per tool call.
+  // For move_block / scale_block, we PROPOSE a pending preview instead of applying directly.
   const appliedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     for (const m of messages) {
@@ -144,10 +145,24 @@ export function AssistantPanel({
         const patch = tc.output as IssuePatch;
         if (!patch?.kind) continue;
         appliedRef.current.add(key);
-        setIssue((prev) => applyPatch(prev, patch));
+        if (patch.kind === "move_block" || patch.kind === "scale_block") {
+          onProposeSpatial({
+            toolCallId: key,
+            pageId: patch.pageId,
+            blockKey: patch.blockKey,
+            kind: patch.kind,
+            dx: patch.kind === "move_block" ? patch.dx : undefined,
+            dy: patch.kind === "move_block" ? patch.dy : undefined,
+            scale: patch.kind === "scale_block" ? patch.scale : undefined,
+            reset: patch.reset,
+          });
+          onSelectPage?.(patch.pageId);
+        } else {
+          setIssue((prev) => applyPatch(prev, patch));
+        }
       }
     }
-  }, [messages, setIssue]);
+  }, [messages, setIssue, onProposeSpatial, onSelectPage]);
 
   // Persist each completed assistant turn + the user message that triggered it.
   const persistedRef = useRef<Set<string>>(new Set());
