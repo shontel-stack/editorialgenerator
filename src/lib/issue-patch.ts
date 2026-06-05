@@ -25,7 +25,9 @@ export type IssuePatch =
   | { kind: "add_page"; pageType: "article" | "photo" | "ad" | "contents" }
   | { kind: "add_spread"; left: "article" | "photo" | "ad"; right: "article" | "photo" | "ad" }
   | { kind: "remove_page"; pageId: string; removeSpread?: boolean }
-  | { kind: "reorder_pages"; orderedPageIds: string[] };
+  | { kind: "reorder_pages"; orderedPageIds: string[] }
+  | { kind: "move_block"; pageId: string; blockKey: string; dx: number; dy: number; reset?: boolean }
+  | { kind: "scale_block"; pageId: string; blockKey: string; scale: number; reset?: boolean };
 
 function fontStack(label: string | undefined, kind: keyof IssueFonts): string | undefined {
   if (!label) return undefined;
