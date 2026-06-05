@@ -15,7 +15,7 @@ const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
 const newId = () => `cb_${Math.random().toString(36).slice(2, 10)}`;
 
-const FONT_VARS: Record<NonNullable<CustomBlock["kind"] extends "text" ? CustomBlock : never>["fontFamily"] & string, string> = {
+const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
   display: "var(--font-display)",
   serif: "var(--font-serif)",
   sans: "var(--font-sans)",
