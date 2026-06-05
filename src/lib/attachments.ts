@@ -63,6 +63,81 @@ export async function listAttachments(issueId: string): Promise<AttachmentRow[]>
   return (data ?? []) as AttachmentRow[];
 }
 
+export type AttachmentSortKey =
+  | "date_desc"
+  | "date_asc"
+  | "name_asc"
+  | "name_desc"
+  | "kind"
+  | "page"
+  | "size_desc"
+  | "size_asc";
+
+export type AttachmentPage = {
+  rows: AttachmentRow[];
+  total: number;
+  from: number;
+  to: number;
+};
+
+export async function fetchAttachmentsPage(opts: {
+  issueId: string;
+  search?: string;
+  sort?: AttachmentSortKey;
+  from: number;
+  to: number;
+}): Promise<AttachmentPage> {
+  const { issueId, search, sort = "date_desc", from, to } = opts;
+  let q = supabase
+    .from("issue_attachments")
+    .select("*", { count: "exact" })
+    .eq("issue_id", issueId);
+
+  if (search && search.trim().length > 0) {
+    // Escape % and _ to keep them literal in ILIKE.
+    const safe = search.trim().replace(/[\\%_]/g, (m) => `\\${m}`);
+    q = q.ilike("file_name", `%${safe}%`);
+  }
+
+  switch (sort) {
+    case "date_desc":
+      q = q.order("created_at", { ascending: false });
+      break;
+    case "date_asc":
+      q = q.order("created_at", { ascending: true });
+      break;
+    case "name_asc":
+      q = q.order("file_name", { ascending: true });
+      break;
+    case "name_desc":
+      q = q.order("file_name", { ascending: false });
+      break;
+    case "kind":
+      q = q.order("kind", { ascending: true }).order("file_name", { ascending: true });
+      break;
+    case "page":
+      q = q
+        .order("page_id", { ascending: true, nullsFirst: true })
+        .order("file_name", { ascending: true });
+      break;
+    case "size_desc":
+      q = q.order("size_bytes", { ascending: false });
+      break;
+    case "size_asc":
+      q = q.order("size_bytes", { ascending: true });
+      break;
+  }
+
+  const { data, error, count } = await q.range(from, to);
+  if (error) throw error;
+  return {
+    rows: (data ?? []) as AttachmentRow[],
+    total: count ?? 0,
+    from,
+    to,
+  };
+}
+
 export async function signAttachmentUrl(path: string): Promise<string | null> {
   const { data, error } = await supabase.storage
     .from(ATTACHMENT_BUCKET)
