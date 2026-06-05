@@ -160,7 +160,11 @@ export function StaffPanel({
           selectedPageId={selectedPageId}
         />
       ) : view === "inbox" ? (
-        <InboxView issueId={issue.meta.issueId} publicationId={publicationId} />
+        <InboxView
+          issueId={issue.meta.issueId}
+          publicationId={publicationId}
+          publicationName={publicationName}
+        />
       ) : (
         <StaffRoster
           issueId={issue.meta.issueId}
