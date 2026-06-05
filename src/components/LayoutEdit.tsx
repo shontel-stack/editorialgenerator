@@ -148,10 +148,10 @@ export function Draggable({
   };
 
   const scaledContent =
-    textScale !== 1 ? (
+    effectiveScale !== 1 ? (
       <div
         style={{
-          transform: `scale(${textScale})`,
+          transform: `scale(${effectiveScale})`,
           transformOrigin: "top left",
           width: "100%",
           height: "100%",
