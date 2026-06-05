@@ -152,6 +152,50 @@ export type AnyPageData =
   | { pageType: "ad"; data: AdData }
   | { pageType: "back"; data: BackCoverData };
 
+export type CustomBlock =
+  | {
+      id: string;
+      kind: "text";
+      x: number; y: number; w: number; h: number; z?: number;
+      text: string;
+      fontFamily?: "display" | "serif" | "sans";
+      fontSize?: number;
+      fontWeight?: number;
+      italic?: boolean;
+      align?: "left" | "center" | "right";
+      color?: string;
+      bg?: string;
+      link?: string;
+    }
+  | {
+      id: string;
+      kind: "image";
+      x: number; y: number; w: number; h: number; z?: number;
+      imageUrl: string;
+      imageFit?: "cover" | "contain";
+      link?: string;
+    }
+  | {
+      id: string;
+      kind: "shape";
+      x: number; y: number; w: number; h: number; z?: number;
+      shape: "rect" | "line";
+      fill?: string;
+      stroke?: string;
+      strokeWidth?: number;
+      link?: string;
+    }
+  | {
+      id: string;
+      kind: "embed";
+      x: number; y: number; w: number; h: number; z?: number;
+      embed: "qr" | "button";
+      url: string;
+      label?: string;
+      color?: string;
+      bg?: string;
+    };
+
 export type IssuePageNode = AnyPageData & {
   id: string;
   includeInContents: boolean;
@@ -161,7 +205,10 @@ export type IssuePageNode = AnyPageData & {
   textScales?: Record<string, number>;
   /** Per-block link URL — block becomes an anchor in preview / export. */
   blockLinks?: Record<string, string>;
+  /** Free-form blocks added on top of the template (text/image/shape/embed). */
+  customBlocks?: CustomBlock[];
 };
+
 
 /* --- Master pages — issue-wide folio / page-number defaults --- */
 
