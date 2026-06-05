@@ -104,6 +104,7 @@ function Index() {
   const [editLayout, setEditLayout] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [staffOpen, setStaffOpen] = useState(false);
 
   /** Pending spatial proposals from the assistant (move_block / scale_block).
    *  Keyed by toolCallId so the chat card can resolve them. */
