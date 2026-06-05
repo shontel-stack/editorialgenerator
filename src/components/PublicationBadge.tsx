@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useActivePublication } from "@/hooks/useActivePublication";
+import { confirmDiscardUnsaved } from "@/lib/unsavedGuards";
 
 interface PublicationBadgeProps {
   /** Optional override for the displayed name. Falls back to the active publication. */
@@ -84,7 +85,11 @@ export function PublicationBadge({ name, maxWidthClass = "max-w-[160px]" }: Publ
             publications.map((p) => (
               <DropdownMenuItem
                 key={p.id}
-                onClick={() => select(p.id)}
+                onClick={() => {
+                  if (p.id === active?.id) return;
+                  if (!confirmDiscardUnsaved("switch publication")) return;
+                  select(p.id);
+                }}
                 className="flex items-start gap-2"
               >
                 <div className="flex-1 min-w-0">
