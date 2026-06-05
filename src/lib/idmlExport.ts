@@ -686,6 +686,7 @@ export async function buildIdmlPackage(
   files[idmlName] = idmlBytes;
   for (const f of fetched) files[`Links/${f.filename}`] = f.bytes;
   files["relink-manifest.txt"] = strToU8(manifestLines.join("\n"));
+  files["relink-images.jsx"] = strToU8(buildRelinkScript());
   files["README.txt"] = strToU8(buildReadme(issue, idmlName, fetched.length, skipped));
 
   return { bytes: zipSync(files, { level: 6 }), fetched: fetched.length, skipped };
