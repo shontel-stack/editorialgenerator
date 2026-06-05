@@ -1,12 +1,29 @@
-import { useMemo, useRef, useState } from "react";
-import { X, Upload, FileText, Image as ImageIcon, FileType2, Paperclip, Trash2, ExternalLink, Loader2, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  X,
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  FileType2,
+  Paperclip,
+  Trash2,
+  ExternalLink,
+  Loader2,
+  Search,
+} from "lucide-react";
 import {
   ACCEPT_ATTR,
+  fetchAttachmentsPage,
   isImage,
   isPdf,
   isWordDoc,
+  signAttachmentUrl,
+  type AttachmentRow,
+  type AttachmentSortKey,
   type AttachmentWithUrl,
 } from "@/lib/attachments";
+
+const PAGE_SIZE = 20;
 
 type Props = {
   open: boolean;
@@ -18,7 +35,11 @@ type Props = {
     rows: AttachmentWithUrl[];
     loading: boolean;
     error: string | null;
-    upload: (args: { pageId: string | null; kind: "template" | "reference"; file: File }) => Promise<void>;
+    upload: (args: {
+      pageId: string | null;
+      kind: "template" | "reference";
+      file: File;
+    }) => Promise<void>;
     remove: (row: AttachmentWithUrl) => Promise<void>;
   };
 };
@@ -36,6 +57,12 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
+async function hydrateRows(raw: AttachmentRow[]): Promise<AttachmentWithUrl[]> {
+  return Promise.all(
+    raw.map(async (r) => ({ ...r, signedUrl: await signAttachmentUrl(r.file_path) })),
+  );
+}
+
 export function AttachmentsPanel({
   open,
   onClose,
@@ -49,41 +76,94 @@ export function AttachmentsPanel({
   const [err, setErr] = useState<string | null>(null);
   const [scope, setScope] = useState<"issue" | "page">("issue");
   const [kind, setKind] = useState<"reference" | "template">("reference");
-  const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "name_asc" | "name_desc" | "kind" | "page" | "size_desc" | "size_asc">("date_desc");
 
-  const visibleRows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let rows = attachments.rows;
-    if (q) rows = rows.filter((r) => r.file_name.toLowerCase().includes(q));
-    const sorted = [...rows];
-    sorted.sort((a, b) => {
-      switch (sortBy) {
-        case "date_desc":
-          return +new Date(b.created_at) - +new Date(a.created_at);
-        case "date_asc":
-          return +new Date(a.created_at) - +new Date(b.created_at);
-        case "name_asc":
-          return a.file_name.localeCompare(b.file_name);
-        case "name_desc":
-          return b.file_name.localeCompare(a.file_name);
-        case "kind":
-          return a.kind.localeCompare(b.kind) || a.file_name.localeCompare(b.file_name);
-        case "page": {
-          const ap = a.page_id ?? "";
-          const bp = b.page_id ?? "";
-          return ap.localeCompare(bp) || a.file_name.localeCompare(b.file_name);
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [sortBy, setSortBy] = useState<AttachmentSortKey>("date_desc");
+
+  const [items, setItems] = useState<AttachmentWithUrl[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const fetchSeq = useRef(0);
+
+  // Debounce search input.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // The list resets whenever any of these inputs change, including after
+  // an upload/delete (we use attachments.rows.length as a version signal).
+  const resetKey = useMemo(
+    () => `${issueId}|${debouncedQuery}|${sortBy}|${attachments.rows.length}`,
+    [issueId, debouncedQuery, sortBy, attachments.rows.length],
+  );
+
+  const loadPage = useCallback(
+    async (from: number, replace: boolean) => {
+      const seq = ++fetchSeq.current;
+      if (replace) setLoading(true);
+      else setLoadingMore(true);
+      try {
+        const page = await fetchAttachmentsPage({
+          issueId,
+          search: debouncedQuery,
+          sort: sortBy,
+          from,
+          to: from + PAGE_SIZE - 1,
+        });
+        const hydrated = await hydrateRows(page.rows);
+        if (seq !== fetchSeq.current) return; // stale
+        setTotal(page.total);
+        setItems((prev) => (replace ? hydrated : [...prev, ...hydrated]));
+        setPageError(null);
+      } catch (e) {
+        if (seq !== fetchSeq.current) return;
+        setPageError((e as Error).message);
+      } finally {
+        if (seq === fetchSeq.current) {
+          setLoading(false);
+          setLoadingMore(false);
         }
-        case "size_desc":
-          return b.size_bytes - a.size_bytes;
-        case "size_asc":
-          return a.size_bytes - b.size_bytes;
-        default:
-          return 0;
       }
-    });
-    return sorted;
-  }, [attachments.rows, query, sortBy]);
+    },
+    [issueId, debouncedQuery, sortBy],
+  );
+
+  // Initial / reset fetch.
+  useEffect(() => {
+    if (!open) return;
+    setItems([]);
+    setTotal(0);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    void loadPage(0, true);
+  }, [open, resetKey, loadPage]);
+
+  const hasMore = items.length < total;
+
+  // Infinite scroll via IntersectionObserver.
+  useEffect(() => {
+    if (!open) return;
+    const root = scrollRef.current;
+    const target = sentinelRef.current;
+    if (!root || !target) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && hasMore && !loading && !loadingMore) {
+          void loadPage(items.length, false);
+        }
+      },
+      { root, rootMargin: "120px" },
+    );
+    io.observe(target);
+    return () => io.disconnect();
+  }, [open, hasMore, loading, loadingMore, items.length, loadPage]);
 
   if (!open) return null;
 
@@ -103,6 +183,13 @@ export function AttachmentsPanel({
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
     }
+  };
+
+  const handleRemove = async (row: AttachmentWithUrl) => {
+    // Optimistically remove from the visible list, then sync via the hook.
+    setItems((prev) => prev.filter((r) => r.id !== row.id));
+    setTotal((t) => Math.max(0, t - 1));
+    await attachments.remove(row);
   };
 
   return (
@@ -191,7 +278,7 @@ export function AttachmentsPanel({
         </div>
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          onChange={(e) => setSortBy(e.target.value as AttachmentSortKey)}
           aria-label="Sort attachments"
           className="border border-input bg-background px-2 py-1.5 text-xs rounded-sm text-foreground"
         >
@@ -206,70 +293,96 @@ export function AttachmentsPanel({
         </select>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {attachments.loading ? (
+      <div className="px-4 py-1.5 border-b border-border flex items-center justify-between text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
+        <span>
+          {total === 0
+            ? "0 files"
+            : `Showing ${items.length} of ${total}${debouncedQuery ? " match" + (total === 1 ? "" : "es") : ""}`}
+        </span>
+        {(loading || loadingMore) && <Loader2 className="h-3 w-3 animate-spin" />}
+      </div>
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        {loading && items.length === 0 ? (
           <div className="p-6 text-center text-xs text-muted-foreground">Loading…</div>
-        ) : attachments.error ? (
-          <div className="p-4 text-xs text-destructive">{attachments.error}</div>
-        ) : visibleRows.length === 0 ? (
+        ) : pageError ? (
+          <div className="p-4 text-xs text-destructive">{pageError}</div>
+        ) : items.length === 0 ? (
           <div className="p-6 text-center text-xs text-muted-foreground">
-            {attachments.rows.length === 0
-              ? "No attachments yet. Upload a file to get started."
-              : "No files match your search."}
+            {debouncedQuery
+              ? "No files match your search."
+              : "No attachments yet. Upload a file to get started."}
           </div>
         ) : (
-          <ul className="divide-y divide-border">
-            {visibleRows.map((row) => {
-              const Icon = iconFor(row.mime_type);
-              return (
-                <li key={row.id} className="px-4 py-3 flex items-start gap-3">
-                  {row.signedUrl && isImage(row.mime_type) ? (
-                    <img
-                      src={row.signedUrl}
-                      alt=""
-                      className="h-10 w-10 object-cover rounded-sm border border-border flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 flex items-center justify-center border border-border rounded-sm flex-shrink-0">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-foreground truncate" title={row.file_name}>
-                      {row.file_name}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground tracking-wide">
-                      {row.kind === "template" ? "Template" : "Reference"}
-                      {row.page_id ? ` · page ${row.page_id.slice(-4)}` : " · issue"}
-                      {" · "}
-                      {formatSize(row.size_bytes)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {row.signedUrl && (
-                      <a
-                        href={row.signedUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-muted-foreground hover:text-foreground p-1.5 rounded-sm hover:bg-secondary"
-                        title="Open"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+          <>
+            <ul className="divide-y divide-border">
+              {items.map((row) => {
+                const Icon = iconFor(row.mime_type);
+                return (
+                  <li key={row.id} className="px-4 py-3 flex items-start gap-3">
+                    {row.signedUrl && isImage(row.mime_type) ? (
+                      <img
+                        src={row.signedUrl}
+                        alt=""
+                        loading="lazy"
+                        className="h-10 w-10 object-cover rounded-sm border border-border flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 flex items-center justify-center border border-border rounded-sm flex-shrink-0">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => void attachments.remove(row)}
-                      className="text-muted-foreground hover:text-destructive p-1.5 rounded-sm hover:bg-secondary"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="text-xs font-medium text-foreground truncate"
+                        title={row.file_name}
+                      >
+                        {row.file_name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground tracking-wide">
+                        {row.kind === "template" ? "Template" : "Reference"}
+                        {row.page_id ? ` · page ${row.page_id.slice(-4)}` : " · issue"}
+                        {" · "}
+                        {formatSize(row.size_bytes)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {row.signedUrl && (
+                        <a
+                          href={row.signedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:text-foreground p-1.5 rounded-sm hover:bg-secondary"
+                          title="Open"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleRemove(row)}
+                        className="text-muted-foreground hover:text-destructive p-1.5 rounded-sm hover:bg-secondary"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div ref={sentinelRef} className="h-8" aria-hidden />
+            {loadingMore && (
+              <div className="p-3 text-center text-[11px] text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin" /> Loading more…
+              </div>
+            )}
+            {!hasMore && items.length > 0 && (
+              <div className="p-3 text-center text-[10px] tracking-[0.25em] uppercase text-muted-foreground">
+                End of list
+              </div>
+            )}
+          </>
         )}
       </div>
     </aside>
