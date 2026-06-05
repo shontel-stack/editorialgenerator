@@ -315,6 +315,14 @@ function Index() {
       }),
     }));
 
+  const setCustomBlocks = (id: string, next: import("@/lib/coverDefaults").CustomBlock[]) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id ? ({ ...p, customBlocks: next } as IssuePageNode) : p,
+      ),
+    }));
+
   const resetOverrides = (id: string) =>
     setIssue((d) => ({
       ...d,
@@ -735,7 +743,7 @@ function Index() {
           </div>
           {editLayout && (
             <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2 px-1">
-              Drag any outlined block on the page. Positions snap to a 40-px grid and are saved with the issue.
+              Drag any outlined block on the page. Use the <strong>+ Add</strong> palette in the top-right of the page to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
             </p>
           )}
 
@@ -968,6 +976,8 @@ function Index() {
                 setBlockLink={(k, v) => setBlockLink(spread.left.id, k, v)}
                 previewOverrides={pendingByPage[spread.left.id]?.overrides}
                 previewScales={pendingByPage[spread.left.id]?.scales}
+                customBlocks={spread.left.customBlocks ?? []}
+                setCustomBlocks={(next) => setCustomBlocks(spread.left.id, next)}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
               </LayoutEditProvider>
@@ -988,6 +998,8 @@ function Index() {
                   setBlockLink={(k, v) => setBlockLink(spread.right!.id, k, v)}
                   previewOverrides={pendingByPage[spread.right.id]?.overrides}
                   previewScales={pendingByPage[spread.right.id]?.scales}
+                  customBlocks={spread.right.customBlocks ?? []}
+                  setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
                 </LayoutEditProvider>
@@ -1014,6 +1026,8 @@ function Index() {
             setTextScale={() => {}}
             blockLinks={p.blockLinks ?? {}}
             setBlockLink={() => {}}
+            customBlocks={p.customBlocks ?? []}
+            setCustomBlocks={() => {}}
           >
             <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
           </LayoutEditProvider>
