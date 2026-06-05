@@ -355,9 +355,11 @@ const NOTE_LABELS: Record<NoteType, string> = {
 function InboxView({
   issueId,
   publicationId,
+  publicationName,
 }: {
   issueId: string;
   publicationId: string | null;
+  publicationName?: string | null;
 }) {
   const [notes, setNotes] = useState<StaffNote[] | null>(null);
   const [filter, setFilter] = useState<NoteStatus>("open");
