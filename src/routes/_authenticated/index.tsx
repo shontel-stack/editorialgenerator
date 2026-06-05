@@ -906,11 +906,11 @@ function Index() {
               </label>
             </div>
             <button
-              onClick={() => downloadIdml(issue, `${issueSlug || "issue"}.idml`)}
+              onClick={() => downloadIdml(issue, issueSlug || "issue")}
               className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
-              title="Download an InDesign-editable IDML file"
+              title="Download a .zip containing the InDesign-editable IDML file"
             >
-              <FileText className="h-3 w-3" /> Export to InDesign (IDML)
+              <FileText className="h-3 w-3" /> Export to InDesign (IDML .zip)
             </button>
             <button
               onClick={async () => {
