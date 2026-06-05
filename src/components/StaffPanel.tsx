@@ -59,11 +59,13 @@ export function StaffPanel({
   open,
   onClose,
   issue,
+  publicationId,
   selectedPageId,
 }: {
   open: boolean;
   onClose: () => void;
   issue: IssueDoc;
+  publicationId: string | null;
   selectedPageId: string;
 }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
@@ -146,15 +148,20 @@ export function StaffPanel({
 
       {activeRole ? (
         <StaffChat
-          key={`${issue.meta.issueId}:${activeRole.id}`}
+          key={`${issue.meta.issueId}:${publicationId ?? "_none"}:${activeRole.id}`}
           role={activeRole}
           issue={issue}
+          publicationId={publicationId}
           selectedPageId={selectedPageId}
         />
       ) : view === "inbox" ? (
-        <InboxView issueId={issue.meta.issueId} />
+        <InboxView issueId={issue.meta.issueId} publicationId={publicationId} />
       ) : (
-        <StaffRoster issueId={issue.meta.issueId} onPick={(id) => setActiveRoleId(id)} />
+        <StaffRoster
+          issueId={issue.meta.issueId}
+          publicationId={publicationId}
+          onPick={(id) => setActiveRoleId(id)}
+        />
       )}
     </aside>
   );
@@ -190,9 +197,11 @@ function TabButton({
 
 function StaffRoster({
   issueId,
+  publicationId,
   onPick,
 }: {
   issueId: string;
+  publicationId: string | null;
   onPick: (roleId: string) => void;
 }) {
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -203,11 +212,15 @@ function StaffRoster({
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
       if (!uid) return;
-      const { data, error } = await supabase
+      let q = supabase
         .from("staff_threads")
         .select("role, id")
         .eq("issue_id", issueId)
         .eq("user_id", uid);
+      q = publicationId === null
+        ? q.is("publication_id", null)
+        : q.eq("publication_id", publicationId);
+      const { data, error } = await q;
       if (error || cancelled || !data) return;
       const threadIds = data.map((t) => t.id);
       const roleById = Object.fromEntries(data.map((t) => [t.id, t.role]));
@@ -231,7 +244,7 @@ function StaffRoster({
     return () => {
       cancelled = true;
     };
-  }, [issueId]);
+  }, [issueId, publicationId]);
 
   const editorial = STAFF_ROLES.filter((r) => r.department === "Editorial");
   const marketing = STAFF_ROLES.filter((r) => r.department === "Marketing");
@@ -330,7 +343,13 @@ const NOTE_LABELS: Record<NoteType, string> = {
   flag: "Flag",
 };
 
-function InboxView({ issueId }: { issueId: string }) {
+function InboxView({
+  issueId,
+  publicationId,
+}: {
+  issueId: string;
+  publicationId: string | null;
+}) {
   const [notes, setNotes] = useState<StaffNote[] | null>(null);
   const [filter, setFilter] = useState<NoteStatus>("open");
   const [busy, setBusy] = useState<string | null>(null);
@@ -342,28 +361,31 @@ function InboxView({ issueId }: { issueId: string }) {
       setNotes([]);
       return;
     }
-    const { data, error } = await supabase
+    let q = supabase
       .from("staff_notes")
       .select("*")
       .eq("user_id", uid)
-      .eq("issue_id", issueId)
-      .order("created_at", { ascending: false });
+      .eq("issue_id", issueId);
+    q = publicationId === null
+      ? q.is("publication_id", null)
+      : q.eq("publication_id", publicationId);
+    const { data, error } = await q.order("created_at", { ascending: false });
     if (error) {
       console.warn("[inbox] load failed", error.message);
       setNotes([]);
       return;
     }
     setNotes((data ?? []) as StaffNote[]);
-  }, [issueId]);
+  }, [issueId, publicationId]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  // Realtime: refresh on any change to staff_notes for this issue.
+  // Realtime: refresh on any change to staff_notes for this issue/publication.
   useEffect(() => {
     const channel = supabase
-      .channel(`staff_notes:${issueId}`)
+      .channel(`staff_notes:${issueId}:${publicationId ?? "_none"}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "staff_notes" },
@@ -373,7 +395,7 @@ function InboxView({ issueId }: { issueId: string }) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [issueId, load]);
+  }, [issueId, publicationId, load]);
 
   const setStatus = async (id: string, status: NoteStatus) => {
     setBusy(id);
@@ -532,10 +554,12 @@ function InboxView({ issueId }: { issueId: string }) {
 function StaffChat({
   role,
   issue,
+  publicationId,
   selectedPageId,
 }: {
   role: StaffRole;
   issue: IssueDoc;
+  publicationId: string | null;
   selectedPageId: string;
 }) {
   const issueId = issue.meta.issueId;
@@ -569,19 +593,28 @@ function StaffChat({
         return;
       }
 
-      const { data: existing } = await supabase
+      let existingQ = supabase
         .from("staff_threads")
         .select("id")
         .eq("user_id", uid)
         .eq("issue_id", issueId)
-        .eq("role", role.id)
-        .maybeSingle();
+        .eq("role", role.id);
+      existingQ = publicationId === null
+        ? existingQ.is("publication_id", null)
+        : existingQ.eq("publication_id", publicationId);
+      const { data: existing } = await existingQ.maybeSingle();
 
       let tid = existing?.id as string | undefined;
       if (!tid) {
         const { data: created, error: createErr } = await supabase
           .from("staff_threads")
-          .insert({ user_id: uid, issue_id: issueId, role: role.id, title: role.title })
+          .insert({
+            user_id: uid,
+            issue_id: issueId,
+            role: role.id,
+            title: role.title,
+            publication_id: publicationId,
+          })
           .select("id")
           .single();
         if (createErr || !created) {
@@ -618,7 +651,7 @@ function StaffChat({
     return () => {
       cancelled = true;
     };
-  }, [issueId, role.id, role.title]);
+  }, [issueId, publicationId, role.id, role.title]);
 
   const transport = useMemo(
     () =>
@@ -694,6 +727,7 @@ function StaffChat({
           toFileNotes.map((n) => ({
             user_id: uid,
             issue_id: issueId,
+            publication_id: publicationId,
             page_id: n.page_id ?? null,
             thread_id: threadId,
             role: role.id,
@@ -707,7 +741,7 @@ function StaffChat({
         if (noteErr) console.warn("[staff-chat] file note failed:", noteErr.message);
       }
     })();
-  }, [status, messages, initial, threadId, issueId, role.id]);
+  }, [status, messages, initial, threadId, issueId, publicationId, role.id]);
 
   const [input, setInput] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);

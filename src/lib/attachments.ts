@@ -53,12 +53,25 @@ async function extractDocxText(file: File): Promise<string | null> {
   }
 }
 
-export async function listAttachments(issueId: string): Promise<AttachmentRow[]> {
-  const { data, error } = await supabase
+function applyPublicationFilter<T extends { eq: (...a: unknown[]) => T; is: (...a: unknown[]) => T }>(
+  q: T,
+  publicationId: string | null,
+): T {
+  return publicationId === null
+    ? q.is("publication_id", null)
+    : q.eq("publication_id", publicationId);
+}
+
+export async function listAttachments(
+  issueId: string,
+  publicationId: string | null,
+): Promise<AttachmentRow[]> {
+  let q = supabase
     .from("issue_attachments")
     .select("*")
-    .eq("issue_id", issueId)
-    .order("created_at", { ascending: true });
+    .eq("issue_id", issueId);
+  q = applyPublicationFilter(q as never, publicationId) as typeof q;
+  const { data, error } = await q.order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as AttachmentRow[];
 }
@@ -82,16 +95,18 @@ export type AttachmentPage = {
 
 export async function fetchAttachmentsPage(opts: {
   issueId: string;
+  publicationId: string | null;
   search?: string;
   sort?: AttachmentSortKey;
   from: number;
   to: number;
 }): Promise<AttachmentPage> {
-  const { issueId, search, sort = "date_desc", from, to } = opts;
+  const { issueId, publicationId, search, sort = "date_desc", from, to } = opts;
   let q = supabase
     .from("issue_attachments")
     .select("*", { count: "exact" })
     .eq("issue_id", issueId);
+  q = applyPublicationFilter(q as never, publicationId) as typeof q;
 
   if (search && search.trim().length > 0) {
     // Escape % and _ to keep them literal in ILIKE.
@@ -151,11 +166,12 @@ export async function signAttachmentUrl(path: string): Promise<string | null> {
 
 export async function uploadAttachment(opts: {
   issueId: string;
+  publicationId: string | null;
   pageId: string | null;
   kind: "template" | "reference";
   file: File;
 }): Promise<AttachmentRow> {
-  const { issueId, pageId, kind, file } = opts;
+  const { issueId, publicationId, pageId, kind, file } = opts;
   if (!issueId || issueId.length < 8) {
     throw new Error("Issue is still initializing. Reload the page and try again.");
   }
@@ -166,13 +182,15 @@ export async function uploadAttachment(opts: {
     throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
   }
 
-  // Remove any existing attachment with the same unique scope.
-  const existing = await supabase
+  // Remove any existing attachment with the same unique scope (publication-aware).
+  let existingQ = supabase
     .from("issue_attachments")
     .select("id, file_path")
     .eq("issue_id", issueId)
     .eq("kind", kind)
     .filter("page_id", pageId === null ? "is" : "eq", pageId === null ? null : pageId);
+  existingQ = applyPublicationFilter(existingQ as never, publicationId) as typeof existingQ;
+  const existing = await existingQ;
   if (existing.data?.length) {
     const paths = existing.data.map((r) => r.file_path);
     await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
@@ -203,6 +221,7 @@ export async function uploadAttachment(opts: {
     .insert({
       issue_id: issueId,
       user_id: uid,
+      publication_id: publicationId,
       page_id: pageId,
       kind,
       file_path: path,

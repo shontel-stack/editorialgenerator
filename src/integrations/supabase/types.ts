@@ -25,6 +25,7 @@ export type Database = {
           kind: string
           mime_type: string
           page_id: string | null
+          publication_id: string | null
           size_bytes: number
           user_id: string
         }
@@ -38,6 +39,7 @@ export type Database = {
           kind: string
           mime_type: string
           page_id?: string | null
+          publication_id?: string | null
           size_bytes: number
           user_id: string
         }
@@ -51,10 +53,19 @@ export type Database = {
           kind?: string
           mime_type?: string
           page_id?: string | null
+          publication_id?: string | null
           size_bytes?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "issue_attachments_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       issue_chats: {
         Row: {
@@ -230,6 +241,7 @@ export type Database = {
           issue_id: string
           page_id: string | null
           payload: Json
+          publication_id: string | null
           resolved_at: string | null
           role: string
           status: string
@@ -246,6 +258,7 @@ export type Database = {
           issue_id: string
           page_id?: string | null
           payload?: Json
+          publication_id?: string | null
           resolved_at?: string | null
           role: string
           status?: string
@@ -262,6 +275,7 @@ export type Database = {
           issue_id?: string
           page_id?: string | null
           payload?: Json
+          publication_id?: string | null
           resolved_at?: string | null
           role?: string
           status?: string
@@ -271,13 +285,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staff_notes_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_threads: {
         Row: {
           created_at: string
           id: string
           issue_id: string
+          publication_id: string | null
           role: string
           title: string | null
           updated_at: string
@@ -287,6 +310,7 @@ export type Database = {
           created_at?: string
           id?: string
           issue_id: string
+          publication_id?: string | null
           role: string
           title?: string | null
           updated_at?: string
@@ -296,12 +320,21 @@ export type Database = {
           created_at?: string
           id?: string
           issue_id?: string
+          publication_id?: string | null
           role?: string
           title?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staff_threads_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_settings: {
         Row: {

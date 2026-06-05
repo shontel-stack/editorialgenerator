@@ -142,7 +142,7 @@ function Index() {
     }
     return out;
   }, [pendingSpatial]);
-  const attachments = useIssueAttachments(issue.meta.issueId);
+  const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -1081,6 +1081,7 @@ function Index() {
         open={attachmentsOpen}
         onClose={() => setAttachmentsOpen(false)}
         issueId={issue.meta.issueId}
+        publicationId={activePublication?.id ?? null}
         selectedPageId={selected.id}
         selectedPageLabel={selected.pageType}
         attachments={attachments}
@@ -1090,6 +1091,7 @@ function Index() {
         open={staffOpen}
         onClose={() => setStaffOpen(false)}
         issue={issue}
+        publicationId={activePublication?.id ?? null}
         selectedPageId={selected.id}
       />
 
