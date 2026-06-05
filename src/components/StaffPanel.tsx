@@ -554,10 +554,12 @@ function InboxView({
 function StaffChat({
   role,
   issue,
+  publicationId,
   selectedPageId,
 }: {
   role: StaffRole;
   issue: IssueDoc;
+  publicationId: string | null;
   selectedPageId: string;
 }) {
   const issueId = issue.meta.issueId;
