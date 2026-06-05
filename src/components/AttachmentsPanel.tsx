@@ -11,6 +11,7 @@ import {
   Loader2,
   Search,
 } from "lucide-react";
+import { PublicationBadge } from "@/components/PublicationBadge";
 import {
   ACCEPT_ATTR,
   fetchAttachmentsPage,
