@@ -530,6 +530,7 @@ function Index() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     lastSavedRef.current = JSON.stringify(issue);
   };
+  saveIssueRef.current = saveIssue;
 
   const loadIssue = (file: File | undefined) => {
     if (!file) return;
