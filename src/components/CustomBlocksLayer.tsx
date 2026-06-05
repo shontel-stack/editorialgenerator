@@ -802,11 +802,55 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
         <option value="cover">Cover</option>
         <option value="contain">Contain</option>
       </select>
+      <label style={labelStyle}>
+        Rotate
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      <label style={labelStyle}>
+        Border
+        <input type="number" min={0} max={200} value={block.borderWidth ?? 0} onChange={(e) => onChange({ borderWidth: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      {(block.borderWidth ?? 0) > 0 && (
+        <label style={labelStyle}>
+          Color
+          <input type="color" value={block.borderColor ?? "#ffffff"} onChange={(e) => onChange({ borderColor: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+        </label>
+      )}
       {block.imageUrl && (
         <button type="button" onClick={() => onChange({ imageUrl: "" })} style={btnStyle("normal")}>
           Clear
         </button>
       )}
+    </>
+  );
+}
+
+function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "video" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+  return (
+    <>
+      <label style={labelStyle}>
+        URL
+        <input
+          type="text"
+          placeholder="YouTube, Vimeo, or .mp4 link"
+          value={block.url}
+          onChange={(e) => onChange({ url: e.target.value })}
+          style={{ ...inputStyle, width: 280 }}
+        />
+      </label>
+      <button type="button" onClick={() => onChange({ muted: !block.muted })} style={btnStyle(block.muted ? "active" : "normal")}>
+        {block.muted ? "Muted" : "Sound"}
+      </button>
+      <button type="button" onClick={() => onChange({ autoplay: !block.autoplay })} style={btnStyle(block.autoplay ? "active" : "normal")}>
+        Autoplay
+      </button>
+      <button type="button" onClick={() => onChange({ loop: !block.loop })} style={btnStyle(block.loop ? "active" : "normal")}>
+        Loop
+      </button>
+      <label style={labelStyle}>
+        Rotate
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
     </>
   );
 }
