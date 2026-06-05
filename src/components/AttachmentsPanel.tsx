@@ -371,10 +371,23 @@ export function AttachmentsPanel({
                 );
               })}
             </ul>
-            <div ref={sentinelRef} className="h-8" aria-hidden />
-            {loadingMore && (
-              <div className="p-3 text-center text-[11px] text-muted-foreground flex items-center justify-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin" /> Loading more…
+            <div ref={sentinelRef} className="h-2" aria-hidden />
+            {hasMore && (
+              <div className="px-4 py-3 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => void loadPage(items.length, false)}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2 border border-border bg-secondary/40 hover:bg-secondary px-4 py-2 text-[11px] uppercase tracking-[0.25em] text-foreground rounded-sm disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+                    </>
+                  ) : (
+                    <>Load more ({total - items.length} left)</>
+                  )}
+                </button>
               </div>
             )}
             {!hasMore && items.length > 0 && (
@@ -382,6 +395,7 @@ export function AttachmentsPanel({
                 End of list
               </div>
             )}
+
           </>
         )}
       </div>
