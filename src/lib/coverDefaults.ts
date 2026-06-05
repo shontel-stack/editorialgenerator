@@ -194,6 +194,7 @@ export type CustomBlock =
       label?: string;
       color?: string;
       bg?: string;
+      link?: string;
     };
 
 export type IssuePageNode = AnyPageData & {
