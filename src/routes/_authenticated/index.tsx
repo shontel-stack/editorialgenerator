@@ -13,6 +13,7 @@ import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { downloadIdml } from "@/lib/idmlExport";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -904,8 +905,17 @@ function Index() {
                 />
               </label>
             </div>
+            <button
+              onClick={() => downloadIdml(issue, `${issueSlug || "issue"}.idml`)}
+              className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
+              title="Download an InDesign-editable IDML file"
+            >
+              <FileText className="h-3 w-3" /> Export to InDesign (IDML)
+            </button>
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               Save JSON = your monthly source of truth. Reload it next issue, edit, re-export.
+              IDML opens in Adobe InDesign for finishing — images export as placeholder frames
+              with the source URL stored as the frame label.
             </p>
           </Section>
         </aside>
