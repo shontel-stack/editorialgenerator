@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { AttachmentControl } from "@/components/AttachmentControl";
+import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -101,6 +102,7 @@ function Index() {
   const [spreadView, setSpreadView] = useState(false);
   const [editLayout, setEditLayout] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
 
   /** Pending spatial proposals from the assistant (move_block / scale_block).
    *  Keyed by toolCallId so the chat card can resolve them. */
@@ -587,6 +589,14 @@ function Index() {
               onRemove={() => attachments.template ? attachments.remove(attachments.template) : Promise.resolve()}
             />
             <button
+              onClick={() => setAttachmentsOpen((v) => !v)}
+              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
+              title="Open attachments panel"
+            >
+              <Paperclip className="h-3.5 w-3.5" />
+              Files
+            </button>
+            <button
               onClick={() => setAssistantOpen((v) => !v)}
               className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
               title="Editorial assistant"
@@ -1041,6 +1051,15 @@ function Index() {
           <span>Pageluxe Spec · 10.6667 × 14.2222 in</span>
         </div>
       </footer>
+
+      <AttachmentsPanel
+        open={attachmentsOpen}
+        onClose={() => setAttachmentsOpen(false)}
+        issueId={issue.meta.issueId}
+        selectedPageId={selected.id}
+        selectedPageLabel={selected.pageType}
+        attachments={attachments}
+      />
 
       <AssistantPanel
         open={assistantOpen}
