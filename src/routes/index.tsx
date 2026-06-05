@@ -1031,7 +1031,6 @@ function Index() {
           >
             <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
           </LayoutEditProvider>
-          </LayoutEditProvider>
         ))}
       </div>
 
