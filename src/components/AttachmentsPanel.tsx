@@ -29,6 +29,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   issueId: string;
+  publicationId: string | null;
   selectedPageId: string | null;
   selectedPageLabel?: string;
   attachments: {
