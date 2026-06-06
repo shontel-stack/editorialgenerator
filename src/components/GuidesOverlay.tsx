@@ -107,6 +107,29 @@ export function GuidesOverlay({ dim, margins, showLabels = true, columns = 1, gu
         }}
       />
 
+      {/* Column guides — translucent column fills + gutter dividers */}
+      {cols > 1 &&
+        Array.from({ length: cols }).map((_, i) => {
+          const colLeft = bleed + mLeft + i * (colW + gutter);
+          return (
+            <div
+              key={`col-${i}`}
+              style={{
+                position: "absolute",
+                top: bleed + mTop,
+                left: colLeft,
+                width: colW,
+                height: safeH,
+                background: "rgba(0, 174, 239, 0.06)",
+                borderLeft: i === 0 ? "none" : `1px dashed ${CYAN}`,
+                borderRight: i === cols - 1 ? "none" : `1px dashed ${CYAN}`,
+                boxSizing: "border-box",
+              }}
+            />
+          );
+        })}
+
+
       {showLabels && (
         <>
           {bleed > 0 && (
