@@ -1350,10 +1350,16 @@ function Index() {
               (Links panel → Relink to Folder).
             </p>
           </Section>
-        </aside>
-        </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="px-3 py-3">
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="min-h-[calc(100vh-180px)] gap-0 rounded-sm"
+      >
+
         <ResizablePanel
           panelRef={middlePanelRef}
           id="ws-middle"
