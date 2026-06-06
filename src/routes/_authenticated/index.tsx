@@ -844,6 +844,10 @@ function Index() {
             </p>
           )}
 
+          <SnapSettingsPanel />
+
+
+
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
