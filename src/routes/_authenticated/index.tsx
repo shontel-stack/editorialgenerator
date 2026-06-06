@@ -1141,9 +1141,15 @@ function Index() {
               />
             </div>
           </div>
-
-
-
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
+              <Settings2 className="h-3.5 w-3.5" /> Snap <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
 
           <SnapSettingsPanel
             pageLabel={selected.pageType}
