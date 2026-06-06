@@ -683,6 +683,7 @@ export function WorkspaceSwitcher() {
                 >
                   {issueDateError}
                 </p>
+              ) : null}
               <div className="pl-6 pt-1 flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>
                   Allowed: day {scheduleRules.minDay}–{scheduleRules.maxDay}, −
