@@ -112,6 +112,8 @@ export async function exportIssuePdf(
   const PAGE_W = dim.inches.w * PT_PER_IN;
   const PAGE_H = dim.inches.h * PT_PER_IN;
 
+  const pdfLib = await import("pdf-lib");
+  const { PDFDocument, PDFName } = pdfLib;
   const doc = await PDFDocument.create();
   doc.setTitle(meta.title);
   doc.setAuthor(meta.author);
@@ -153,11 +155,12 @@ export async function exportIssuePdf(
       const x2 = (r.right - nodeRect.left) * sx;
       const y2 = PAGE_H - (r.top - nodeRect.top) * sy;
       const y1 = PAGE_H - (r.bottom - nodeRect.top) * sy;
-      addInternalLink(doc, page.ref, targetPage.ref, [x1, y1, x2, y2]);
+      addInternalLink(pdfLib, doc, page.ref, targetPage.ref, [x1, y1, x2, y2]);
     });
   }
 
   buildOutline(
+    pdfLib,
     doc,
     pages.map((p, i) => ({ title: `${(i + 1).toString().padStart(2, "0")}  ${p.label}`, ref: pageRefs[i] })),
   );
@@ -177,11 +180,13 @@ function dataUrlToBytes(dataUrl: string): Uint8Array {
 }
 
 function addInternalLink(
+  pdfLib: PdfLib,
   doc: PDFDocument,
   hostPageRef: PDFRef,
   targetPageRef: PDFRef,
   rect: [number, number, number, number],
 ) {
+  const { PDFArray, PDFName } = pdfLib;
   const annot = doc.context.obj({
     Type: "Annot",
     Subtype: "Link",
@@ -201,10 +206,12 @@ function addInternalLink(
 }
 
 function buildOutline(
+  pdfLib: PdfLib,
   doc: PDFDocument,
   items: Array<{ title: string; ref: PDFRef }>,
 ) {
   if (items.length === 0) return;
+  const { PDFHexString, PDFName, PDFNumber } = pdfLib;
 
   const outlinesRef = doc.context.nextRef();
   const itemRefs = items.map(() => doc.context.nextRef());
@@ -230,5 +237,3 @@ function buildOutline(
   doc.context.assign(outlinesRef, outlinesDict);
   doc.catalog.set(PDFName.of("Outlines"), outlinesRef);
 }
-
-void PDFString;
