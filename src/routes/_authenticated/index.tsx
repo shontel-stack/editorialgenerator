@@ -692,6 +692,26 @@ function Index() {
     r.readAsText(file);
   };
 
+  // Resizable workspace panel refs + collapsed state
+  const leftPanelRef = usePanelRef();
+  const middlePanelRef = usePanelRef();
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [middleCollapsed, setMiddleCollapsed] = useState(false);
+  const toggleLeftPanel = () => {
+    const p = leftPanelRef.current;
+    if (!p) return;
+    p.isCollapsed() ? p.expand() : p.collapse();
+  };
+  const toggleMiddlePanel = () => {
+    const p = middlePanelRef.current;
+    if (!p) return;
+    p.isCollapsed() ? p.expand() : p.collapse();
+  };
+  const selectedHasOverrides =
+    (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
+    (selected.textScales && Object.keys(selected.textScales).length > 0) ||
+    (selected.blockLinks && Object.keys(selected.blockLinks).length > 0);
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card sticky top-0 z-30">
