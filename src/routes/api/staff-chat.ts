@@ -5,12 +5,24 @@ import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { getRole } from "@/lib/staffRoles";
 import type { IssueSnapshot } from "@/lib/issue-snapshot";
 
+type AttachmentBrief = {
+  id: string;
+  file_name: string;
+  mime_type: string;
+  kind: "template" | "reference";
+  page_id: string | null;
+  region: string | null;
+  position_x: number | null;
+  position_y: number | null;
+};
+
 type StaffChatBody = {
   role?: string;
   issueId?: string;
   messages?: UIMessage[];
   issueSnapshot?: IssueSnapshot;
   selectedPageId?: string;
+  attachments?: AttachmentBrief[];
 };
 
 const createNoteSchema = z.object({
@@ -23,6 +35,41 @@ const createNoteSchema = z.object({
   body: z.string().max(2000).optional().describe("Longer detail, rationale, or proposed text."),
   page_id: z.string().optional().describe("Page id from the snapshot this note targets, if any."),
   severity: z.enum(["low", "med", "high"]).optional(),
+});
+
+const placeAttachmentSchema = z.object({
+  attachment_id: z
+    .string()
+    .describe("The id of the attachment to place. Must come from the attachments list in context."),
+  page_id: z
+    .string()
+    .describe("Page id from the snapshot to assign the attachment to."),
+  region: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      "Optional region: 'header', 'footer', or 'column-N' (N starts at 1). Pass null to clear region and use free-form coordinates.",
+    ),
+  position_x: z
+    .number()
+    .min(0)
+    .max(1)
+    .nullable()
+    .optional()
+    .describe("Optional horizontal pin position 0..1 (0 = left edge, 1 = right edge)."),
+  position_y: z
+    .number()
+    .min(0)
+    .max(1)
+    .nullable()
+    .optional()
+    .describe("Optional vertical pin position 0..1 (0 = top, 1 = bottom)."),
+  rationale: z
+    .string()
+    .max(400)
+    .optional()
+    .describe("Short reason shown to the user for why you placed it here."),
 });
 
 export const Route = createFileRoute("/api/staff-chat")({
