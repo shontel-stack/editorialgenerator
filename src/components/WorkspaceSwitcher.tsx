@@ -894,3 +894,164 @@ function MarginInput({
     </div>
   );
 }
+
+/**
+ * Settings panel for the monthly editorial publishing schedule rules used
+ * to validate the chosen "Issue Date" when duplicating a publication.
+ */
+function SchedulePanel({
+  open,
+  onOpenChange,
+  rules,
+  onChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  rules: ScheduleRules;
+  onChange: (next: ScheduleRules) => void;
+}) {
+  const [draft, setDraft] = useState<ScheduleRules>(rules);
+
+  useEffect(() => {
+    if (open) setDraft(rules);
+  }, [open, rules]);
+
+  const dayError =
+    draft.minDay < 1 || draft.minDay > 31 || draft.maxDay < 1 || draft.maxDay > 31
+      ? "Days must be between 1 and 31."
+      : draft.minDay > draft.maxDay
+      ? "Minimum day cannot be greater than maximum day."
+      : null;
+  const offsetError =
+    draft.pastMonths < 0 || draft.futureMonths < 0
+      ? "Month offsets cannot be negative."
+      : draft.pastMonths > 120 || draft.futureMonths > 120
+      ? "Month offsets must be 120 or less."
+      : null;
+  const invalid = !!dayError || !!offsetError;
+
+  const setField = (k: keyof ScheduleRules, v: string) => {
+    const n = v === "" ? 0 : Number(v);
+    setDraft((d) => ({ ...d, [k]: Number.isFinite(n) ? n : 0 }));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Publishing schedule rules</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            These rules are used to validate the “Issue Date” you pick when
+            duplicating a publication for a new monthly issue.
+          </p>
+
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+              Allowed days of month
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">Earliest day</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={draft.minDay}
+                  onChange={(e) => setField("minDay", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">Latest day</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={draft.maxDay}
+                  onChange={(e) => setField("maxDay", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+            </div>
+            {dayError ? (
+              <p role="alert" className="mt-1 text-[11px] text-destructive">
+                {dayError}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+              Allowed month offset (from today)
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">
+                  Months in the past
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  value={draft.pastMonths}
+                  onChange={(e) => setField("pastMonths", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">
+                  Months in the future
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  value={draft.futureMonths}
+                  onChange={(e) => setField("futureMonths", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+            </div>
+            {offsetError ? (
+              <p role="alert" className="mt-1 text-[11px] text-destructive">
+                {offsetError}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <DialogFooter>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(DEFAULT_SCHEDULE_RULES);
+            }}
+            className="text-xs px-3 py-2 rounded-sm hover:bg-secondary mr-auto"
+          >
+            Reset to defaults
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="text-xs px-3 py-2 rounded-sm hover:bg-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (invalid) return;
+              onChange(draft);
+              onOpenChange(false);
+            }}
+            disabled={invalid}
+            className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
+          >
+            Save
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
