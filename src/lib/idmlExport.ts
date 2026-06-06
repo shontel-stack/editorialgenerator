@@ -899,8 +899,9 @@ function buildReadme(
 export async function downloadIdmlPackage(
   issue: IssueDoc,
   slug: string,
+  dim?: IdmlDim,
 ): Promise<{ fetched: number; skipped: SkippedImage[] }> {
-  const { bytes, fetched, skipped } = await buildIdmlPackage(issue, slug);
+  const { bytes, fetched, skipped } = await buildIdmlPackage(issue, slug, dim);
   const blob = new Blob([new Uint8Array(bytes)], { type: "application/zip" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
