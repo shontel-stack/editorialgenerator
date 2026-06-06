@@ -1134,7 +1134,7 @@ function Index() {
       <footer className="border-t border-border mt-8">
         <div className="mx-auto max-w-[1800px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
           <span>The Arts Today · Editorial Page System</span>
-          <span>Pageluxe Spec · 10.6667 × 14.2222 in</span>
+          <span>Page size · {dimInches.w} × {dimInches.h} in</span>
         </div>
       </footer>
 
