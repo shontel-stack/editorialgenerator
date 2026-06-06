@@ -124,6 +124,10 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
+  // Page dimensions come from the active publication (with fall-back defaults).
+  const pageDims = useMemo(() => getPageDimensions(activePublication), [activePublication]);
+  const dimPx = pageDims.px;
+  const dimInches = pageDims.inches;
 
   /** Pending spatial proposals from the assistant (move_block / scale_block).
    *  Keyed by toolCallId so the chat card can resolve them. */
