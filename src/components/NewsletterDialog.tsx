@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toJpeg } from "html-to-image";
 import { jsPDF } from "jspdf";
-import { Copy, Download, FileText, Loader2, Sparkles, X } from "lucide-react";
+import { Copy, Download, FileText, Link as LinkIcon, Loader2, Sparkles, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,18 @@ import {
 } from "@/lib/newsletter";
 import { generateNewsletterHighlights } from "@/lib/newsletter.functions";
 import { snapshotIssue } from "@/lib/issue-snapshot";
+import { exportNewsletterInteractivePdf } from "@/lib/newsletter-pdf";
+import type { ExportDim } from "@/lib/exportCover";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issue: IssueDoc;
   issueSlug: string;
+  /** Live DOM nodes for each issue page, used to build the interactive PDF. */
+  pageNodes?: Map<string, HTMLDivElement | null>;
+  /** Issue page dimensions (inches + px) used for the interactive PDF. */
+  pageDim?: ExportDim;
 };
 
 function imageForPage(p: IssuePageNode): string | null {
@@ -44,11 +50,18 @@ function download(filename: string, mime: string, content: Blob | string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function NewsletterDialog({ open, onOpenChange, issue, issueSlug }: Props) {
+export function NewsletterDialog({
+  open,
+  onOpenChange,
+  issue,
+  issueSlug,
+  pageNodes,
+  pageDim,
+}: Props) {
   const generate = useServerFn(generateNewsletterHighlights);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const [busy, setBusy] = useState<"gen" | "pdf" | null>(null);
+  const [busy, setBusy] = useState<"gen" | "pdf" | "ipdf" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [data, setData] = useState<NewsletterData | null>(null);
@@ -157,6 +170,39 @@ export function NewsletterDialog({ open, onOpenChange, issue, issueSlug }: Props
       void PT_PER_IN;
     } catch (e) {
       setError((e as Error).message || "Could not export PDF.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onDownloadInteractivePdf = async () => {
+    const node = previewRef.current;
+    if (!node || !data) return;
+    if (!pageNodes || !pageDim) {
+      setError("Interactive PDF requires the issue pages to be mounted.");
+      return;
+    }
+    setBusy("ipdf");
+    setError(null);
+    try {
+      const map = new Map<string, HTMLElement>();
+      pageNodes.forEach((el, id) => {
+        if (el) map.set(id, el);
+      });
+      await exportNewsletterInteractivePdf({
+        newsletterNode: node,
+        pageNodes: map,
+        highlightPageIds: data.highlights.map((h) => h.pageId),
+        pageDim,
+        filename: `${issueSlug || "newsletter"}-interactive.pdf`,
+        meta: {
+          title: `${issue.master.publication || "Newsletter"} — ${issueLabel}`,
+          author: issue.master.publication || "The Arts Today",
+          subject: dateLabel,
+        },
+      });
+    } catch (e) {
+      setError((e as Error).message || "Could not export interactive PDF.");
     } finally {
       setBusy(null);
     }
@@ -284,13 +330,30 @@ export function NewsletterDialog({ open, onOpenChange, issue, issueSlug }: Props
                   <Button onClick={onDownloadHtml} variant="outline" size="sm">
                     <Download className="h-3.5 w-3.5" /> Download .html
                   </Button>
-                  <Button onClick={onDownloadPdf} size="sm" disabled={busy === "pdf"}>
+                  <Button onClick={onDownloadPdf} variant="outline" size="sm" disabled={busy !== null}>
                     {busy === "pdf" ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <FileText className="h-3.5 w-3.5" />
                     )}
                     Download .pdf
+                  </Button>
+                  <Button
+                    onClick={onDownloadInteractivePdf}
+                    size="sm"
+                    disabled={busy !== null || !pageNodes || !pageDim}
+                    title={
+                      !pageNodes || !pageDim
+                        ? "Open the issue editor to enable interactive PDF"
+                        : "Newsletter + linked issue pages with clickable highlights"
+                    }
+                  >
+                    {busy === "ipdf" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <LinkIcon className="h-3.5 w-3.5" />
+                    )}
+                    Download interactive .pdf
                   </Button>
                 </div>
               </>

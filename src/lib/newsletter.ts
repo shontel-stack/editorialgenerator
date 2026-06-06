@@ -43,7 +43,7 @@ export function buildNewsletterInner(d: NewsletterData): string {
         ? `<tr><td style="padding:0 0 16px 0;"><img src="${esc(h.imageUrl)}" width="552" alt="" style="display:block;width:100%;max-width:552px;height:auto;border:0;outline:none;border-radius:4px;" crossorigin="anonymous" /></td></tr>`
         : "";
       return `
-      <tr><td style="padding:0 24px;">
+      <tr><td data-link-row data-link-target="${esc(h.pageId)}" style="padding:0 24px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           ${img}
           <tr><td style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.25;color:${ink};font-weight:700;padding:0 0 8px 0;">${esc(h.title)}</td></tr>
