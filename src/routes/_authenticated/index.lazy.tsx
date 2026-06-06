@@ -935,7 +935,8 @@ function Index() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card sticky top-0 z-30">
+      <div className="sticky top-0 z-30 bg-background">
+      <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-full px-4 py-4 flex items-center justify-between gap-6 flex-wrap">
           <div className="flex items-center gap-4">
             {/* Brand wordmark */}
@@ -1340,8 +1341,9 @@ function Index() {
           </PopoverContent>
         </Popover>
       </div>
+      </div>
 
-      <div className="px-3 py-3">
+      <div className="px-3 pt-1 pb-3">
       <ResizablePanelGroup
         orientation="horizontal"
         className="min-h-[calc(100vh-180px)] gap-0 rounded-sm"
