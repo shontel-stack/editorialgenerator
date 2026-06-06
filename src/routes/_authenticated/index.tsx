@@ -1851,6 +1851,13 @@ function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NewsletterDialog
+        open={newsletterOpen}
+        onOpenChange={setNewsletterOpen}
+        issue={issue}
+        issueSlug={issueSlug}
+      />
     </main>
   );
 }
