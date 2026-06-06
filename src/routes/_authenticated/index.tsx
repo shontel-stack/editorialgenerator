@@ -1186,6 +1186,26 @@ function Index() {
               <p className="text-[11px] leading-relaxed text-muted-foreground">
                 {PAGE_LAYOUT_DESCRIPTIONS[selectedLayout]} Saved per page.
               </p>
+              {PAGE_LAYOUT_COLUMNS[selectedLayout] > 1 && (
+                <div className="mt-3 border-t border-border/60 pt-3">
+                  <ColumnTuningControls
+                    layout={selectedLayout}
+                    widths={pageStatus.columnWidthsOf(selected.id)}
+                    gutterIn={pageStatus.gutterOf(selected.id)}
+                    onChange={(patch) => pageStatus.setColumnTuning(selected.id, patch)}
+                    presets={layoutPresets.presetsFor(selectedLayout)}
+                    onSavePreset={(name) =>
+                      layoutPresets.save({
+                        name,
+                        layout: selectedLayout,
+                        column_widths: pageStatus.columnWidthsOf(selected.id),
+                        gutter_in: pageStatus.gutterOf(selected.id),
+                      })
+                    }
+                    onDeletePreset={(id) => layoutPresets.remove(id)}
+                  />
+                </div>
+              )}
             </div>
           </Section>
           {selected.pageType === "cover" && (
