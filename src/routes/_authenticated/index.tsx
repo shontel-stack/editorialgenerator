@@ -1125,7 +1125,7 @@ function Index() {
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
           >
-            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
+            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} />
           </LayoutEditProvider>
         ))}
       </div>
