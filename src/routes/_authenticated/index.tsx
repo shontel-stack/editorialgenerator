@@ -1160,6 +1160,30 @@ function Index() {
         <div className="h-full overflow-y-auto px-3">
         {/* Editor for selected page */}
         <aside className="space-y-6">
+          <Section title="Page layout">
+            <div className="space-y-2">
+              <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_LAYOUTS.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      <span className="flex flex-col">
+                        <span className="text-sm">{PAGE_LAYOUT_LABELS[l]}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {PAGE_LAYOUT_DESCRIPTIONS[l]}
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                {PAGE_LAYOUT_DESCRIPTIONS[selectedLayout]} Saved per page.
+              </p>
+            </div>
+          </Section>
           {selected.pageType === "cover" && (
             <CoverEditor
               data={selected.data as CoverData}
