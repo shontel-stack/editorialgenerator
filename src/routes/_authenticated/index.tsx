@@ -1424,6 +1424,25 @@ function Index() {
               </button>
             )}
             <div className="h-5 w-px bg-border mx-1" />
+            <button
+              onClick={() => void undoPlacement()}
+              disabled={!canUndoPlacement}
+              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition disabled:opacity-30 disabled:hover:bg-transparent"
+              title="Undo last attachment placement"
+              aria-label="Undo placement"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => void redoPlacement()}
+              disabled={!canRedoPlacement}
+              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition disabled:opacity-30 disabled:hover:bg-transparent"
+              title="Redo attachment placement"
+              aria-label="Redo placement"
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
+            <div className="h-5 w-px bg-border mx-1" />
             <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden lg:inline">
               Layout
             </span>
