@@ -14,6 +14,11 @@ type Props = {
   columns?: number;
   /** Gutter between columns, in inches. Defaults to 0.167″ (~12pt). */
   gutterIn?: number;
+  /**
+   * Optional per-column width ratios (must sum to 1). When supplied, columns
+   * are sized proportionally instead of evenly.
+   */
+  columnRatios?: number[];
 };
 
 /**
