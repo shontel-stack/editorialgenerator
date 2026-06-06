@@ -13,11 +13,13 @@ export const ACCEPTED_MIME = [
 
 export const ACCEPT_ATTR = ".pdf,.jpg,.jpeg,.png,.webp,.docx";
 
+export type AttachmentKind = "template" | "reference" | "library";
+
 export type AttachmentRow = {
   id: string;
-  issue_id: string;
+  issue_id: string | null;
   page_id: string | null;
-  kind: "template" | "reference";
+  kind: AttachmentKind;
   file_path: string;
   file_name: string;
   mime_type: string;
