@@ -8,13 +8,19 @@ import {
   type AttachmentWithUrl,
 } from "@/lib/attachments";
 
+type AssignOpts = { silent?: boolean; groupKey?: string | null };
+
 type Props = {
   references: AttachmentWithUrl[];
   /** Page dimensions in CSS px at the canvas's scaled size. */
   dim: { w: number; h: number };
   /** Canvas zoom scale (1 = 100%). Used to translate pointer deltas. */
   scale: number;
-  onAssign: (id: string, patch: AttachmentAssignment) => Promise<void> | void;
+  onAssign: (
+    id: string,
+    patch: AttachmentAssignment,
+    opts?: AssignOpts,
+  ) => Promise<void> | void;
 };
 
 function iconFor(mime: string) {
@@ -24,28 +30,27 @@ function iconFor(mime: string) {
   return Paperclip;
 }
 
-/**
- * Default coordinates for a reference that has no explicit pin yet.
- * Spreads them in a small diagonal cascade so multiple unpinned refs don't stack.
- */
 function defaultPos(index: number): { x: number; y: number } {
   const step = 0.04;
   return { x: 0.05 + (index % 8) * step, y: 0.05 + Math.floor(index / 8) * step + (index % 8) * step };
 }
 
+const NUDGE_STEP = 0.005;
+const NUDGE_STEP_LARGE = 0.02;
+
 export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  // Local drag state — committed to the server on pointerup.
   const [dragId, setDragId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [localPos, setLocalPos] = useState<Record<string, { x: number; y: number }>>({});
 
+  // Drag handling — pointermove updates local state, pointerup commits.
   useEffect(() => {
     if (!dragId) return;
     const onMove = (e: PointerEvent) => {
       const host = hostRef.current;
       if (!host) return;
       const rect = host.getBoundingClientRect();
-      // rect already reflects current scale, so dividing by its width/height yields 0..1.
       const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
       const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
       setLocalPos((p) => ({ ...p, [dragId]: { x, y } }));
@@ -53,7 +58,11 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
     const onUp = () => {
       const pos = localPos[dragId];
       if (pos) {
-        void onAssign(dragId, { position_x: pos.x, position_y: pos.y, region: null });
+        void onAssign(
+          dragId,
+          { position_x: pos.x, position_y: pos.y, region: null },
+          { groupKey: `drag:${dragId}` },
+        );
       }
       setDragId(null);
     };
@@ -64,6 +73,63 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
       window.removeEventListener("pointerup", onUp);
     };
   }, [dragId, localPos, onAssign]);
+
+  // Arrow-key nudging on the currently selected pin.
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      if (e.key === "Escape") {
+        setSelectedId(null);
+        return;
+      }
+      const isArrow =
+        e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown";
+      if (!isArrow) return;
+      e.preventDefault();
+
+      const ref = references.find((r) => r.id === selectedId);
+      if (!ref) return;
+      const i = references.indexOf(ref);
+      const local = localPos[selectedId];
+      const baseX = local?.x ?? ref.position_x ?? defaultPos(i).x;
+      const baseY = local?.y ?? ref.position_y ?? defaultPos(i).y;
+      const step = e.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
+      let nx = baseX;
+      let ny = baseY;
+      if (e.key === "ArrowLeft") nx = Math.max(0, baseX - step);
+      else if (e.key === "ArrowRight") nx = Math.min(1, baseX + step);
+      else if (e.key === "ArrowUp") ny = Math.max(0, baseY - step);
+      else if (e.key === "ArrowDown") ny = Math.min(1, baseY + step);
+
+      setLocalPos((p) => ({ ...p, [selectedId]: { x: nx, y: ny } }));
+      void onAssign(
+        selectedId,
+        { position_x: nx, position_y: ny, region: null },
+        { groupKey: `nudge:${selectedId}` },
+      );
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, references, localPos, onAssign]);
+
+  // Click outside any pin clears selection.
+  useEffect(() => {
+    const onDocPointer = (e: PointerEvent) => {
+      const host = hostRef.current;
+      if (!host) return;
+      const target = e.target as Node | null;
+      if (target && host.contains(target)) return;
+      setSelectedId(null);
+    };
+    window.addEventListener("pointerdown", onDocPointer);
+    return () => window.removeEventListener("pointerdown", onDocPointer);
+  }, []);
+
+  void dim;
 
   return (
     <div
@@ -77,6 +143,7 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
         const py = local?.y ?? r.position_y ?? defaultPos(i).y;
         const Icon = iconFor(r.mime_type);
         const isDragging = dragId === r.id;
+        const isSelected = selectedId === r.id;
         return (
           <button
             key={r.id}
@@ -84,10 +151,13 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
             onPointerDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              setSelectedId(r.id);
               setDragId(r.id);
+              (e.currentTarget as HTMLButtonElement).focus();
             }}
-            title={`${r.file_name}${r.region ? ` · ${r.region}` : ""}\nDrag to reposition`}
-            className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 select-none"
+            onFocus={() => setSelectedId(r.id)}
+            title={`${r.file_name}${r.region ? ` · ${r.region}` : ""}\nDrag to reposition · Arrow keys to nudge (Shift = larger step)`}
+            className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 select-none focus:outline-none"
             style={{
               left: `${px * 100}%`,
               top: `${py * 100}%`,
@@ -98,7 +168,7 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
           >
             <div
               className={`flex items-center gap-1 rounded-sm border bg-card/95 backdrop-blur px-1.5 py-0.5 text-[10px] font-medium shadow-md transition ${
-                isDragging
+                isDragging || isSelected
                   ? "border-primary ring-2 ring-primary/40"
                   : "border-border hover:border-primary"
               }`}
