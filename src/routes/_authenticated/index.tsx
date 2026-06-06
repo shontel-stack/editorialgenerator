@@ -1395,7 +1395,7 @@ function Index() {
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
-              {showGuides && <GuidesOverlay dim={dimPx} margins={pageMargins} />}
+              {showGuides && <GuidesOverlay dim={dimPx} margins={pageMargins} columns={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(spread.left.id) ?? DEFAULT_PAGE_LAYOUT]} />}
             </div>
             {spreadView && spread.right && (
               <div
