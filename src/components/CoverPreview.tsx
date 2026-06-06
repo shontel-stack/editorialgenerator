@@ -4,17 +4,20 @@ import { COVER_PX, PALETTES, type CoverData } from "@/lib/coverDefaults";
 import { Draggable } from "./LayoutEdit";
 import { CustomBlocksLayer } from "./CustomBlocksLayer";
 
-type Props = { data: CoverData };
+type Props = { data: CoverData; dim?: { w: number; h: number } };
 
-// The cover is always rendered at intrinsic 3200x4267 px and scaled visually
-// via CSS transform on its wrapper. This guarantees pixel-perfect exports
-// at 300 DPI while the on-screen preview adapts to any container width.
+// The cover is always rendered at the publication's intrinsic pixel canvas
+// (default 3200x4267) and scaled visually via CSS transform on its wrapper.
+// This guarantees pixel-perfect exports at 300 DPI while the on-screen
+// preview adapts to any container width.
 export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPreview(
-  { data },
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const w = dim?.w ?? COVER_PX.w;
+  const h = dim?.h ?? COVER_PX.h;
 
   useEffect(() => {
     let cancelled = false;
@@ -38,8 +41,8 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
       ref={ref}
       data-cover-root
       style={{
-        width: COVER_PX.w,
-        height: COVER_PX.h,
+        width: w,
+        height: h,
         backgroundColor: pal.bg,
         color: pal.fg,
         position: "relative",

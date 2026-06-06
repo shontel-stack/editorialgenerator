@@ -21,10 +21,25 @@ import {
   type IssuePageNode,
 } from "@/lib/coverDefaults";
 
-// --- page geometry (US Letter, points) -------------------------------------
-const PAGE_W = 612; // 8.5"
-const PAGE_H = 792; // 11"
-const MARGIN = 54;  // 0.75"
+// --- page geometry (in PostScript points; 72 pt = 1 inch) -----------------
+// Defaults to US Letter; `buildIdml` / `buildIdmlPackage` / `downloadIdml`
+// / `downloadIdmlPackage` accept a `dim` argument (inches) so each
+// publication's chosen page size flows through the IDML and README.
+const PT_PER_IN = 72;
+const DEFAULT_INCHES = { w: 8.5, h: 11 };
+const MARGIN = 54; // 0.75"
+
+export type IdmlDim = { w: number; h: number }; // inches
+
+type Geom = { PAGE_W: number; PAGE_H: number };
+const geomFromInches = (dim?: IdmlDim): Geom => {
+  const inches = dim && dim.w > 0 && dim.h > 0 ? dim : DEFAULT_INCHES;
+  return {
+    PAGE_W: +(inches.w * PT_PER_IN).toFixed(4),
+    PAGE_H: +(inches.h * PT_PER_IN).toFixed(4),
+  };
+};
+
 
 // --- helpers ---------------------------------------------------------------
 const xmlEscape = (s: string): string =>
@@ -227,18 +242,21 @@ const graphicXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <StrokeStyle Self="StrokeStyle/$ID/Solid" Name="$ID/Solid"/>
 </idPkg:Graphic>`;
 
-const preferencesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+const preferencesXml = ({ PAGE_W, PAGE_H }: Geom): string => {
+  const orientation = PAGE_W > PAGE_H ? "Landscape" : "Portrait";
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
 <idPkg:Preferences xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
-  <DocumentPreference Self="dpref" PageHeight="${PAGE_H}" PageWidth="${PAGE_W}" PageOrientation="Portrait" PagesPerDocument="1" FacingPages="false" AllowPageShuffle="true" DocumentBleedBottomOffset="0" DocumentBleedTopOffset="0" DocumentBleedInsideOrLeftOffset="0" DocumentBleedOutsideOrRightOffset="0" SlugBottomOffset="0" SlugTopOffset="0" SlugInsideOrLeftOffset="0" SlugRightOrOutsideOffset="0" DocumentBleedUniformSize="true" DocumentSlugUniformSize="false" PreserveLayoutWhenShuffling="true" ColumnDirection="Horizontal" ColumnGuideColor="PurpleRed"/>
+  <DocumentPreference Self="dpref" PageHeight="${PAGE_H}" PageWidth="${PAGE_W}" PageOrientation="${orientation}" PagesPerDocument="1" FacingPages="false" AllowPageShuffle="true" DocumentBleedBottomOffset="0" DocumentBleedTopOffset="0" DocumentBleedInsideOrLeftOffset="0" DocumentBleedOutsideOrRightOffset="0" SlugBottomOffset="0" SlugTopOffset="0" SlugInsideOrLeftOffset="0" SlugRightOrOutsideOffset="0" DocumentBleedUniformSize="true" DocumentSlugUniformSize="false" PreserveLayoutWhenShuffling="true" ColumnDirection="Horizontal" ColumnGuideColor="PurpleRed"/>
   <MarginPreference Self="mpref" ColumnCount="1" ColumnGutter="12" Top="${MARGIN}" Bottom="${MARGIN}" Left="${MARGIN}" Right="${MARGIN}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - 2 * MARGIN}"/>
   <TransparencyDefaultContainerObject Self="TransparencyDefaultContainer">
     <TransparencyDefault Self="TransparencyDefault"/>
   </TransparencyDefaultContainerObject>
   <ViewPreference Self="vpref" HorizontalMeasurementUnits="Points" VerticalMeasurementUnits="Points" RulerOrigin="PageOrigin"/>
 </idPkg:Preferences>`;
+};
 
-const masterSpreadXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+const masterSpreadXml = ({ PAGE_W, PAGE_H }: Geom): string => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
 <idPkg:MasterSpread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
   <MasterSpread Self="uMaster" Name="A-Master" NamePrefix="A" BaseName="Master" ShowMasterItems="true" PageCount="1" OverriddenPageItemProps="">
@@ -328,7 +346,9 @@ const buildSpread = (
   pageIndex: number,
   bodyStory: BuiltStory,
   folio: BuiltStory | null,
+  geom: Geom,
 ): BuiltSpread => {
+  const { PAGE_W, PAGE_H } = geom;
   const spreadSelf = `uSpread_${pageIndex + 1}`;
   const pageSelf = `uPage_${pageIndex + 1}`;
 
@@ -480,8 +500,9 @@ ${storySrcs}
 </Document>`;
 };
 
-export function buildIdml(issue: IssueDoc): Uint8Array {
+export function buildIdml(issue: IssueDoc, dim?: IdmlDim): Uint8Array {
   reset();
+  const geom = geomFromInches(dim);
   const spreads: BuiltSpread[] = [];
   const stories: BuiltStory[] = [];
 
@@ -491,7 +512,7 @@ export function buildIdml(issue: IssueDoc): Uint8Array {
     stories.push(body);
     const folio = folioStory(text, i);
     if (folio) stories.push(folio);
-    spreads.push(buildSpread(page, text, i, body, folio));
+    spreads.push(buildSpread(page, text, i, body, folio, geom));
   });
 
   const files: Record<string, Uint8Array> = {};
@@ -504,16 +525,16 @@ export function buildIdml(issue: IssueDoc): Uint8Array {
   files["Resources/Fonts.xml"] = strToU8(fontsXml);
   files["Resources/Styles.xml"] = strToU8(stylesXml);
   files["Resources/Graphic.xml"] = strToU8(graphicXml);
-  files["Resources/Preferences.xml"] = strToU8(preferencesXml);
-  files["MasterSpreads/MasterSpread_uMaster.xml"] = strToU8(masterSpreadXml);
+  files["Resources/Preferences.xml"] = strToU8(preferencesXml(geom));
+  files["MasterSpreads/MasterSpread_uMaster.xml"] = strToU8(masterSpreadXml(geom));
   for (const s of spreads) files[s.filename] = strToU8(s.xml);
   for (const s of stories) files[s.filename] = strToU8(s.xml);
 
   return zipSync(files, { level: 6 });
 }
 
-export function downloadIdml(issue: IssueDoc, filename: string): void {
-  const idmlBytes = buildIdml(issue);
+export function downloadIdml(issue: IssueDoc, filename: string, dim?: IdmlDim): void {
+  const idmlBytes = buildIdml(issue, dim);
   const base = filename.replace(/\.(idml|zip)$/i, "") || "issue";
   const idmlName = `${base}.idml`;
   // Wrap the .idml inside a single .zip for easier sharing (some chat/email
@@ -638,8 +659,9 @@ async function fetchImage(url: string, index: number): Promise<FetchedImage | Sk
 export async function buildIdmlPackage(
   issue: IssueDoc,
   slug: string,
+  dim?: IdmlDim,
 ): Promise<{ bytes: Uint8Array; fetched: number; skipped: SkippedImage[] }> {
-  const idmlBytes = buildIdml(issue);
+  const idmlBytes = buildIdml(issue, dim);
   const urls = collectImageUrls(issue);
   const results = await Promise.all(urls.map((u, i) => fetchImage(u, i)));
 
@@ -687,7 +709,7 @@ export async function buildIdmlPackage(
   for (const f of fetched) files[`Links/${f.filename}`] = f.bytes;
   files["relink-manifest.txt"] = strToU8(manifestLines.join("\n"));
   files["relink-images.jsx"] = strToU8(buildRelinkScript());
-  files["README.txt"] = strToU8(buildReadme(issue, idmlName, fetched.length, skipped));
+  files["README.txt"] = strToU8(buildReadme(issue, idmlName, fetched.length, skipped, dim));
 
   return { bytes: zipSync(files, { level: 6 }), fetched: fetched.length, skipped };
 }
@@ -697,7 +719,17 @@ function buildReadme(
   idmlName: string,
   fetchedCount: number,
   skipped: SkippedImage[],
+  dim?: IdmlDim,
 ): string {
+  const inches = dim && dim.w > 0 && dim.h > 0 ? dim : DEFAULT_INCHES;
+  const wIn = inches.w;
+  const hIn = inches.h;
+  const wMm = +(wIn * 25.4).toFixed(2);
+  const hMm = +(hIn * 25.4).toFixed(2);
+  const wPx = Math.round(wIn * 300);
+  const hPx = Math.round(hIn * 300);
+  const wPt = +(wIn * 72).toFixed(2);
+  const hPt = +(hIn * 72).toFixed(2);
   const lines: string[] = [
     `${issue.master.publication} — ${issue.meta.issue}`,
     `InDesign package`,
@@ -799,18 +831,18 @@ function buildReadme(
     `        Uploads tab → Upload files → drag the entire Links/ folder.`,
     `        Canva keeps the original filenames, which matches relink-manifest.txt.`,
     "",
-    `  EXACT CANVA PAGE SETUP (matches InDesign 10.6667 x 14.2222 in)`,
+    `  EXACT CANVA PAGE SETUP (matches InDesign ${wIn} x ${hIn} in)`,
     `    Canva's Custom size dialog does not accept fractional inches reliably,`,
     `    so enter the equivalent values in a unit Canva rounds cleanly:`,
-    `      • Inches:      Width 10.6667 in   × Height 14.2222 in`,
-    `      • Millimeters: Width 270.93 mm    × Height 361.24 mm   (recommended)`,
-    `      • Pixels @300: Width 3200 px      × Height 4266 px     (print DPI)`,
-    `      • Points:      Width 768 pt       × Height 1024 pt`,
+    `      • Inches:      Width ${wIn} in   × Height ${hIn} in`,
+    `      • Millimeters: Width ${wMm} mm    × Height ${hMm} mm   (recommended)`,
+    `      • Pixels @300: Width ${wPx} px      × Height ${hPx} px     (print DPI)`,
+    `      • Points:      Width ${wPt} pt       × Height ${hPt} pt`,
     `    Steps:`,
     `      [ ] Canva home → Create a design → Custom size.`,
-    `      [ ] Switch the unit dropdown to "mm" and enter 270.93 × 361.24.`,
+    `      [ ] Switch the unit dropdown to "mm" and enter ${wMm} × ${hMm}.`,
     `      [ ] Create design, then open File → Settings and confirm the size`,
-    `          reads back as 10.67 × 14.22 in (Canva rounds the display only).`,
+    `          reads back as ${wIn.toFixed(2)} × ${hIn.toFixed(2)} in (Canva rounds the display only).`,
     "",
     `  MARGINS, BLEED & PASTEBOARD IN CANVA`,
     `    Canva has no true pasteboard; the workspace around the page is just`,
@@ -867,8 +899,9 @@ function buildReadme(
 export async function downloadIdmlPackage(
   issue: IssueDoc,
   slug: string,
+  dim?: IdmlDim,
 ): Promise<{ fetched: number; skipped: SkippedImage[] }> {
-  const { bytes, fetched, skipped } = await buildIdmlPackage(issue, slug);
+  const { bytes, fetched, skipped } = await buildIdmlPackage(issue, slug, dim);
   const blob = new Blob([new Uint8Array(bytes)], { type: "application/zip" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

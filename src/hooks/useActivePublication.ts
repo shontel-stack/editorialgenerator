@@ -11,6 +11,7 @@ import {
   getActivePublicationId,
   listPublications,
   setActivePublicationId,
+  updatePublication,
   type Publication,
   type PublicationInput,
 } from "@/lib/publications";
@@ -84,7 +85,17 @@ export function useActivePublication() {
     [userId, select],
   );
 
+  const update = useCallback(
+    async (id: string, patch: Partial<PublicationInput>): Promise<Publication | null> => {
+      if (!userId) return null;
+      const next = await updatePublication(id, patch);
+      setPublications((prev) => prev.map((p) => (p.id === id ? next : p)));
+      return next;
+    },
+    [userId],
+  );
+
   const active = publications.find((p) => p.id === activeId) ?? null;
 
-  return { userId, publications, active, activeId, loading, error, refresh, select, create };
+  return { userId, publications, active, activeId, loading, error, refresh, select, create, update };
 }

@@ -32,15 +32,13 @@ import {
 } from "@/components/ui/select";
 import {
   ARTICLE_LAYOUTS,
-  COVER_INCHES,
-  COVER_PX,
-  COVER_RATIO,
   DEFAULT_AD,
   DEFAULT_ARTICLE,
   DEFAULT_BACK,
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
   DEFAULT_FONTS,
+  getPageDimensions,
   makeDefaultIssue,
   newIssueId,
   DEFAULT_MASTER,
@@ -123,6 +121,10 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
+  // Page dimensions come from the active publication (with fall-back defaults).
+  const pageDims = useMemo(() => getPageDimensions(activePublication), [activePublication]);
+  const dimPx = pageDims.px;
+  const dimInches = pageDims.inches;
 
   /** Pending spatial proposals from the assistant (move_block / scale_block).
    *  Keyed by toolCallId so the chat card can resolve them. */
@@ -247,18 +249,18 @@ function Index() {
   /* --- preview stage sizing --- */
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
-  const stageW = spreadView && spread.right ? COVER_PX.w * 2 : COVER_PX.w;
+  const stageW = spreadView && spread.right ? dimPx.w * 2 : dimPx.w;
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const update = () => {
-      setScale(Math.min(el.clientWidth / stageW, el.clientHeight / COVER_PX.h));
+      setScale(Math.min(el.clientWidth / stageW, el.clientHeight / dimPx.h));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [stageW]);
+  }, [stageW, dimPx.h]);
 
   /* --- live font preview: inject Google Fonts <link> and apply CSS vars --- */
   const fonts = issue.master.fonts;
@@ -484,9 +486,10 @@ function Index() {
     setBusy(kind.toUpperCase());
     try {
       const name = `arts-today-${issueSlug}-${selected.pageType}-${pageNumberFor(issue, selected.id)}`;
-      if (kind === "pdf") await exportPdf(node, `${name}.pdf`);
-      else if (kind === "png") await exportPng(node, `${name}.png`);
-      else await exportJpeg(node, `${name}.jpg`);
+      const exportDim = { inches: dimInches, px: dimPx };
+      if (kind === "pdf") await exportPdf(node, `${name}.pdf`, exportDim);
+      else if (kind === "png") await exportPng(node, `${name}.png`, exportDim);
+      else await exportJpeg(node, `${name}.jpg`, exportDim);
     } finally {
       setBusy(null);
     }
@@ -510,6 +513,7 @@ function Index() {
           subject: issue.meta.date,
         },
         `arts-today-${issueSlug}-publication.pdf`,
+        { inches: dimInches, px: dimPx },
       );
     } finally {
       setBusy(null);
@@ -906,7 +910,7 @@ function Index() {
               </label>
             </div>
             <button
-              onClick={() => downloadIdml(issue, issueSlug || "issue")}
+              onClick={() => downloadIdml(issue, issueSlug || "issue", dimInches)}
               className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
               title="Download a .zip containing the InDesign-editable IDML file"
             >
@@ -920,6 +924,7 @@ function Index() {
                   const { fetched, skipped } = await downloadIdmlPackage(
                     issue,
                     issueSlug || "issue",
+                    dimInches,
                   );
                   if (skipped.length) {
                     alert(
@@ -1028,7 +1033,7 @@ function Index() {
               <ExportBtn onClick={() => doExport("jpg")} busy={busy === "JPG"}>JPG</ExportBtn>
             </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
-              Single-page export at {COVER_INCHES.w}″ × {COVER_INCHES.h}″ for InDesign, Canva, and Fresco.
+              Single-page export at {dimInches.w}″ × {dimInches.h}″ for InDesign, Canva, and Fresco.
             </p>
           </Section>
         </aside>
@@ -1037,21 +1042,21 @@ function Index() {
         <section
           ref={stageRef}
           className="relative bg-secondary/60 border border-border overflow-hidden"
-          style={{ minHeight: "85vh", aspectRatio: `${stageW / COVER_PX.h}` }}
+          style={{ minHeight: "85vh", aspectRatio: `${stageW / dimPx.h}` }}
         >
           <div
             className="absolute left-1/2 top-1/2 origin-center"
             style={{
               transform: `translate(-50%, -50%) scale(${scale})`,
               width: stageW,
-              height: COVER_PX.h,
+              height: dimPx.h,
               display: "flex",
               gap: 0,
             }}
           >
             <div
               className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-              style={{ width: COVER_PX.w, height: COVER_PX.h }}
+              style={{ width: dimPx.w, height: dimPx.h }}
             >
               <LayoutEditProvider
                 editing={editLayout && spread.left.id === selected.id}
@@ -1067,13 +1072,13 @@ function Index() {
                 customBlocks={spread.left.customBlocks ?? []}
                 setCustomBlocks={(next) => setCustomBlocks(spread.left.id, next)}
               >
-                <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+                <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
             </div>
             {spreadView && spread.right && (
               <div
                 className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-                style={{ width: COVER_PX.w, height: COVER_PX.h }}
+                style={{ width: dimPx.w, height: dimPx.h }}
               >
                 <LayoutEditProvider
                   editing={editLayout && spread.right.id === selected.id}
@@ -1089,7 +1094,7 @@ function Index() {
                   customBlocks={spread.right.customBlocks ?? []}
                   setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
                 >
-                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>
               </div>
             )}
@@ -1117,7 +1122,7 @@ function Index() {
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
           >
-            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} />
+            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} />
           </LayoutEditProvider>
         ))}
       </div>
@@ -1126,7 +1131,7 @@ function Index() {
       <footer className="border-t border-border mt-8">
         <div className="mx-auto max-w-[1800px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
           <span>The Arts Today · Editorial Page System</span>
-          <span>Pageluxe Spec · 10.6667 × 14.2222 in</span>
+          <span>Page size · {dimInches.w} × {dimInches.h} in</span>
         </div>
       </footer>
 

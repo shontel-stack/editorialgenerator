@@ -1,5 +1,7 @@
-// InDesign target: 10.6667 x 14.2222 inches (Pageluxe / The Arts Today)
+// Default InDesign target: 10.6667 x 14.2222 inches (Pageluxe / The Arts Today)
 // At 300 DPI: 3200 x 4267 px. Aspect ratio: 0.75 (3:4).
+// Each publication may override these via `page_width_in` / `page_height_in`
+// on the `publications` table — see `getPageDimensions` below.
 export const COVER_INCHES = { w: 10.6667, h: 14.2222 };
 export const COVER_DPI = 300;
 export const COVER_PX = {
@@ -7,6 +9,56 @@ export const COVER_PX = {
   h: Math.round(COVER_INCHES.h * COVER_DPI), // 4267
 };
 export const COVER_RATIO = COVER_INCHES.w / COVER_INCHES.h; // 0.75
+
+export type PageDimensions = {
+  inches: { w: number; h: number };
+  px: { w: number; h: number };
+  ratio: number;
+};
+
+export const DEFAULT_PAGE_DIMENSIONS: PageDimensions = {
+  inches: { w: COVER_INCHES.w, h: COVER_INCHES.h },
+  px: { w: COVER_PX.w, h: COVER_PX.h },
+  ratio: COVER_RATIO,
+};
+
+/** Curated print presets, in inches. The "custom" entry signals the UI to
+ *  reveal width/height inputs and is not a real size on its own. */
+export const DIMENSION_PRESETS: { key: string; label: string; w: number; h: number }[] = [
+  { key: "pageluxe",  label: "Pageluxe (10.6667 × 14.2222 in)", w: 10.6667, h: 14.2222 },
+  { key: "letter",    label: "US Letter (8.5 × 11 in)",         w: 8.5,     h: 11 },
+  { key: "legal",     label: "US Legal (8.5 × 14 in)",          w: 8.5,     h: 14 },
+  { key: "tabloid",   label: "Tabloid (11 × 17 in)",            w: 11,      h: 17 },
+  { key: "a4",        label: "A4 (8.27 × 11.69 in)",            w: 8.2677,  h: 11.6929 },
+  { key: "a5",        label: "A5 (5.83 × 8.27 in)",             w: 5.8268,  h: 8.2677 },
+  { key: "a3",        label: "A3 (11.69 × 16.54 in)",           w: 11.6929, h: 16.5354 },
+  { key: "square",    label: "Square (10 × 10 in)",             w: 10,      h: 10 },
+  { key: "magazine",  label: "Magazine (8.375 × 10.875 in)",    w: 8.375,   h: 10.875 },
+  { key: "custom",    label: "Custom…",                         w: 0,       h: 0 },
+];
+
+/** Convert publication row fields to a full PageDimensions object. */
+export function getPageDimensions(
+  source: { page_width_in?: number | null; page_height_in?: number | null } | null | undefined,
+): PageDimensions {
+  const w = source?.page_width_in ?? null;
+  const h = source?.page_height_in ?? null;
+  if (!w || !h || w <= 0 || h <= 0) return DEFAULT_PAGE_DIMENSIONS;
+  return {
+    inches: { w, h },
+    px: { w: Math.round(w * COVER_DPI), h: Math.round(h * COVER_DPI) },
+    ratio: w / h,
+  };
+}
+
+/** Try to match (w,h) inches to a preset key. Returns "custom" if no match. */
+export function matchPresetKey(w: number, h: number): string {
+  const eps = 0.01;
+  const hit = DIMENSION_PRESETS.find(
+    (p) => p.key !== "custom" && Math.abs(p.w - w) < eps && Math.abs(p.h - h) < eps,
+  );
+  return hit?.key ?? "custom";
+}
 
 export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back";
 

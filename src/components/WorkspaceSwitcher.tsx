@@ -1,10 +1,11 @@
 /**
  * Workspace switcher — dropdown in the editor header that lists the user's
- * publications and lets them switch or create one.
+ * publications, lets them switch, create, or edit the page-size of the
+ * currently active one.
  */
 
-import { useState } from "react";
-import { Building2, Check, ChevronDown, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, Check, ChevronDown, Plus, Settings2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,18 +23,90 @@ import {
 } from "@/components/ui/dialog";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { confirmDiscardUnsaved } from "@/lib/unsavedGuards";
+import {
+  COVER_INCHES,
+  DIMENSION_PRESETS,
+  matchPresetKey,
+} from "@/lib/coverDefaults";
 
 export function WorkspaceSwitcher() {
-  const { publications, active, select, create, loading } = useActivePublication();
+  const { publications, active, select, create, update, loading } = useActivePublication();
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+
   const [name, setName] = useState("");
   const [tagline, setTagline] = useState("");
   const [voice, setVoice] = useState("");
   const [masthead, setMasthead] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // dimensions for the create dialog
+  const [presetKey, setPresetKey] = useState<string>("pageluxe");
+  const [widthIn, setWidthIn] = useState<string>(String(COVER_INCHES.w));
+  const [heightIn, setHeightIn] = useState<string>(String(COVER_INCHES.h));
+
+  // dimensions for the edit dialog (separate state so opening it doesn't
+  // clobber the new-publication form)
+  const [editPreset, setEditPreset] = useState<string>("pageluxe");
+  const [editWidth, setEditWidth] = useState<string>("");
+  const [editHeight, setEditHeight] = useState<string>("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const resetCreateForm = () => {
+    setName("");
+    setTagline("");
+    setVoice("");
+    setMasthead("");
+    setPresetKey("pageluxe");
+    setWidthIn(String(COVER_INCHES.w));
+    setHeightIn(String(COVER_INCHES.h));
+  };
+
+  // When the edit dialog opens, seed its inputs from the active publication.
+  useEffect(() => {
+    if (!editOpen || !active) return;
+    const w = active.page_width_in ?? COVER_INCHES.w;
+    const h = active.page_height_in ?? COVER_INCHES.h;
+    setEditWidth(String(w));
+    setEditHeight(String(h));
+    setEditPreset(matchPresetKey(w, h));
+  }, [editOpen, active]);
+
+  const onPresetChange = (
+    key: string,
+    setKey: (k: string) => void,
+    setW: (v: string) => void,
+    setH: (v: string) => void,
+  ) => {
+    setKey(key);
+    const preset = DIMENSION_PRESETS.find((p) => p.key === key);
+    if (preset && preset.key !== "custom") {
+      setW(String(preset.w));
+      setH(String(preset.h));
+    }
+  };
+
+  const parseDims = (
+    w: string,
+    h: string,
+  ): { page_width_in: number; page_height_in: number } | null => {
+    const wn = parseFloat(w);
+    const hn = parseFloat(h);
+    if (!isFinite(wn) || !isFinite(hn)) return null;
+    if (wn <= 0 || hn <= 0 || wn > 100 || hn > 100) return null;
+    return {
+      page_width_in: Math.round(wn * 10000) / 10000,
+      page_height_in: Math.round(hn * 10000) / 10000,
+    };
+  };
+
   const handleCreate = async () => {
     if (!name.trim() || submitting) return;
+    const dims = parseDims(widthIn, heightIn);
+    if (!dims) {
+      alert("Page width and height must be positive numbers (max 100 in).");
+      return;
+    }
     setSubmitting(true);
     try {
       await create({
@@ -41,14 +114,30 @@ export function WorkspaceSwitcher() {
         tagline: tagline.trim() || undefined,
         brand_voice: voice.trim() || undefined,
         masthead: masthead.trim() || undefined,
+        ...dims,
       });
       setOpen(false);
-      setName("");
-      setTagline("");
-      setVoice("");
-      setMasthead("");
+      resetCreateForm();
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSaveDims = async () => {
+    if (!active || editSubmitting) return;
+    const dims = parseDims(editWidth, editHeight);
+    if (!dims) {
+      alert("Page width and height must be positive numbers (max 100 in).");
+      return;
+    }
+    setEditSubmitting(true);
+    try {
+      await update(active.id, dims);
+      setEditOpen(false);
+    } catch (e) {
+      alert(`Could not save dimensions: ${(e as Error).message}`);
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -74,34 +163,51 @@ export function WorkspaceSwitcher() {
               No publications yet. Create one to scope issues, staff threads, and the board.
             </div>
           ) : (
-            publications.map((p) => (
-              <DropdownMenuItem
-                key={p.id}
-                onClick={async () => {
-                  if (p.id === active?.id) return;
-                  if (!(await confirmDiscardUnsaved("switch publication"))) return;
-                  select(p.id);
-                }}
-                className="flex items-start gap-2"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{p.name}</div>
-                  {p.tagline ? (
-                    <div className="text-[11px] text-muted-foreground truncate">{p.tagline}</div>
-                  ) : null}
-                </div>
-                {p.id === active?.id ? <Check className="h-3.5 w-3.5 mt-1" /> : null}
-              </DropdownMenuItem>
-            ))
+            publications.map((p) => {
+              const w = p.page_width_in ?? COVER_INCHES.w;
+              const h = p.page_height_in ?? COVER_INCHES.h;
+              return (
+                <DropdownMenuItem
+                  key={p.id}
+                  onClick={async () => {
+                    if (p.id === active?.id) return;
+                    if (!(await confirmDiscardUnsaved("switch publication"))) return;
+                    select(p.id);
+                  }}
+                  className="flex items-start gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{p.name}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {p.tagline ? `${p.tagline} · ` : ""}
+                      {w}″ × {h}″
+                    </div>
+                  </div>
+                  {p.id === active?.id ? <Check className="h-3.5 w-3.5 mt-1" /> : null}
+                </DropdownMenuItem>
+              );
+            })
           )}
           <DropdownMenuSeparator />
+          {active ? (
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Settings2 className="h-3.5 w-3.5 mr-2" /> Edit page size…
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onClick={() => setOpen(true)}>
             <Plus className="h-3.5 w-3.5 mr-2" /> New publication
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* New publication */}
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) resetCreateForm();
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New publication</DialogTitle>
@@ -127,11 +233,25 @@ export function WorkspaceSwitcher() {
               <textarea
                 value={voice}
                 onChange={(e) => setVoice(e.target.value)}
-                rows={4}
-                placeholder="Describe the voice your staff should write in. e.g. precise, slow, sensory; no exclamation marks; never marketing."
+                rows={3}
+                placeholder="Describe the voice your staff should write in."
                 className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
+            <DimensionsForm
+              presetKey={presetKey}
+              widthIn={widthIn}
+              heightIn={heightIn}
+              onPresetChange={(k) => onPresetChange(k, setPresetKey, setWidthIn, setHeightIn)}
+              onWidthChange={(v) => {
+                setWidthIn(v);
+                setPresetKey("custom");
+              }}
+              onHeightChange={(v) => {
+                setHeightIn(v);
+                setPresetKey("custom");
+              }}
+            />
           </div>
           <DialogFooter>
             <button
@@ -150,7 +270,120 @@ export function WorkspaceSwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit page size */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Page size · {active?.name ?? ""}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Applies to the editor canvas, PDF export, and the InDesign IDML
+              page geometry. Changing the aspect ratio of an existing
+              publication may shift the position of free-form blocks placed in
+              older issues.
+            </p>
+            <DimensionsForm
+              presetKey={editPreset}
+              widthIn={editWidth}
+              heightIn={editHeight}
+              onPresetChange={(k) =>
+                onPresetChange(k, setEditPreset, setEditWidth, setEditHeight)
+              }
+              onWidthChange={(v) => {
+                setEditWidth(v);
+                setEditPreset("custom");
+              }}
+              onHeightChange={(v) => {
+                setEditHeight(v);
+                setEditPreset("custom");
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setEditOpen(false)}
+              className="text-xs px-3 py-2 rounded-sm hover:bg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveDims}
+              disabled={editSubmitting || !active}
+              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
+            >
+              {editSubmitting ? "Saving…" : "Save"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+  );
+}
+
+function DimensionsForm({
+  presetKey,
+  widthIn,
+  heightIn,
+  onPresetChange,
+  onWidthChange,
+  onHeightChange,
+}: {
+  presetKey: string;
+  widthIn: string;
+  heightIn: string;
+  onPresetChange: (k: string) => void;
+  onWidthChange: (v: string) => void;
+  onHeightChange: (v: string) => void;
+}) {
+  return (
+    <div className="border-t border-border pt-3 space-y-2">
+      <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+        Page size
+      </label>
+      <select
+        value={presetKey}
+        onChange={(e) => onPresetChange(e.target.value)}
+        className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      >
+        {DIMENSION_PRESETS.map((p) => (
+          <option key={p.key} value={p.key}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+            Width (in)
+          </label>
+          <input
+            type="number"
+            step="0.0001"
+            min="0.5"
+            max="100"
+            value={widthIn}
+            onChange={(e) => onWidthChange(e.target.value)}
+            className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+            Height (in)
+          </label>
+          <input
+            type="number"
+            step="0.0001"
+            min="0.5"
+            max="100"
+            value={heightIn}
+            onChange={(e) => onHeightChange(e.target.value)}
+            className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 

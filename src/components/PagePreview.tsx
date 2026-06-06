@@ -20,25 +20,26 @@ type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | Bac
 type Props = {
   pageType: PageType;
   data: AnyData;
+  dim?: { w: number; h: number };
 };
 
 export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePreview(
-  { pageType, data },
+  { pageType, data, dim },
   ref,
 ) {
   switch (pageType) {
     case "cover":
-      return <CoverPreview ref={ref} data={data as CoverData} />;
+      return <CoverPreview ref={ref} data={data as CoverData} dim={dim} />;
     case "article":
-      return <ArticlePreview ref={ref} data={data as ArticleData} />;
+      return <ArticlePreview ref={ref} data={data as ArticleData} dim={dim} />;
     case "photo":
-      return <PhotoPreview ref={ref} data={data as PhotoData} />;
+      return <PhotoPreview ref={ref} data={data as PhotoData} dim={dim} />;
     case "contents":
-      return <ContentsPreview ref={ref} data={data as ContentsData} />;
+      return <ContentsPreview ref={ref} data={data as ContentsData} dim={dim} />;
     case "ad":
-      return <AdPreview ref={ref} data={data as AdData} />;
+      return <AdPreview ref={ref} data={data as AdData} dim={dim} />;
     case "back":
-      return <BackCoverPreview ref={ref} data={data as BackCoverData} />;
+      return <BackCoverPreview ref={ref} data={data as BackCoverData} dim={dim} />;
   }
 });
 
@@ -48,18 +49,20 @@ function Page({
   innerRef,
   pal,
   children,
+  dim,
 }: {
   innerRef: React.Ref<HTMLDivElement>;
   pal: ReturnType<() => typeof PALETTES[keyof typeof PALETTES]>;
   children: React.ReactNode;
+  dim?: { w: number; h: number };
 }) {
   return (
     <div
       ref={innerRef}
       data-cover-root
       style={{
-        width: COVER_PX.w,
-        height: COVER_PX.h,
+        width: dim?.w ?? COVER_PX.w,
+        height: dim?.h ?? COVER_PX.h,
         backgroundColor: pal.bg,
         color: pal.fg,
         position: "relative",
@@ -366,8 +369,8 @@ function ArticleFooter({
   );
 }
 
-const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(function ArticlePreview(
-  { data },
+const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData; dim?: { w: number; h: number } }>(function ArticlePreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
@@ -675,7 +678,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
   const showHeaderFolio = L !== "full-image-overlay";
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       {showHeaderFolio && <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />}
       {blocks}
       {L !== "full-image-overlay" && <ArticleFooter data={data} pal={pal} />}
@@ -685,8 +688,8 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(functio
 
 /* — PHOTO ESSAY — */
 
-const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function PhotoPreview(
-  { data },
+const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData; dim?: { w: number; h: number } }>(function PhotoPreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
@@ -694,7 +697,7 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
   const isFramed = data.layout === "framed";
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       <Draggable
         blockKey="image"
         style={{
@@ -859,14 +862,14 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function Ph
 
 /* — CONTENTS — */
 
-const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(function ContentsPreview(
-  { data },
+const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData; dim?: { w: number; h: number } }>(function ContentsPreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
 
       <Draggable
@@ -1052,8 +1055,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData }>(funct
 
 /* — AD — full-page brand placement — */
 
-const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPreview(
-  { data },
+const AdPreview = forwardRef<HTMLDivElement, { data: AdData; dim?: { w: number; h: number } }>(function AdPreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
@@ -1061,7 +1064,7 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
   const isFramed = data.layout === "framed";
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       {/* Image */}
       <Draggable
         blockKey="image"
@@ -1221,14 +1224,14 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPrevie
 
 /* — BACK COVER — closing page — */
 
-const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(function BackCoverPreview(
-  { data },
+const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData; dim?: { w: number; h: number } }>(function BackCoverPreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       {/* Optional background image */}
       {data.imageUrl && (
         <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>

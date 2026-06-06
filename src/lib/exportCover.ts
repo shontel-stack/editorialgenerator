@@ -3,22 +3,34 @@ import { jsPDF } from "jspdf";
 import { PDFArray, PDFDocument, PDFName, PDFNumber, PDFString, PDFHexString, type PDFRef, type PDFDict } from "pdf-lib";
 import { COVER_INCHES, COVER_PX, type PageType } from "./coverDefaults";
 
+/* -------- dimension helpers -------- */
+
+export type ExportDim = {
+  inches: { w: number; h: number };
+  px: { w: number; h: number };
+};
+
+const DEFAULT_DIM: ExportDim = {
+  inches: { w: COVER_INCHES.w, h: COVER_INCHES.h },
+  px: { w: COVER_PX.w, h: COVER_PX.h },
+};
+
 /* -------- single-page exports -------- */
 
-async function renderNodeToPng(node: HTMLElement): Promise<string> {
+async function renderNodeToPng(node: HTMLElement, dim: ExportDim): Promise<string> {
   return toPng(node, {
-    width: COVER_PX.w,
-    height: COVER_PX.h,
+    width: dim.px.w,
+    height: dim.px.h,
     pixelRatio: 1,
     cacheBust: true,
     backgroundColor: "#ffffff",
   });
 }
 
-async function renderNodeToJpeg(node: HTMLElement): Promise<string> {
+async function renderNodeToJpeg(node: HTMLElement, dim: ExportDim): Promise<string> {
   return toJpeg(node, {
-    width: COVER_PX.w,
-    height: COVER_PX.h,
+    width: dim.px.w,
+    height: dim.px.h,
     pixelRatio: 1,
     cacheBust: true,
     quality: 0.95,
@@ -49,33 +61,31 @@ function downloadBlob(bytes: Uint8Array, filename: string, mime: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function exportPng(node: HTMLElement, filename: string) {
-  const url = await renderNodeToPng(node);
+export async function exportPng(node: HTMLElement, filename: string, dim: ExportDim = DEFAULT_DIM) {
+  const url = await renderNodeToPng(node, dim);
   downloadDataUrl(url, filename);
 }
 
-export async function exportJpeg(node: HTMLElement, filename: string) {
-  const url = await renderNodeToJpeg(node);
+export async function exportJpeg(node: HTMLElement, filename: string, dim: ExportDim = DEFAULT_DIM) {
+  const url = await renderNodeToJpeg(node, dim);
   downloadDataUrl(url, filename);
 }
 
-export async function exportPdf(node: HTMLElement, filename: string) {
-  const url = await renderNodeToJpeg(node);
+export async function exportPdf(node: HTMLElement, filename: string, dim: ExportDim = DEFAULT_DIM) {
+  const url = await renderNodeToJpeg(node, dim);
   const pdf = new jsPDF({
     unit: "in",
-    format: [COVER_INCHES.w, COVER_INCHES.h],
-    orientation: "portrait",
+    format: [dim.inches.w, dim.inches.h],
+    orientation: dim.inches.w > dim.inches.h ? "landscape" : "portrait",
     compress: true,
   });
-  pdf.addImage(url, "JPEG", 0, 0, COVER_INCHES.w, COVER_INCHES.h, undefined, "FAST");
+  pdf.addImage(url, "JPEG", 0, 0, dim.inches.w, dim.inches.h, undefined, "FAST");
   pdf.save(filename);
 }
 
 /* -------- multi-page INTERACTIVE publication PDF -------- */
 
 const PT_PER_IN = 72;
-const PAGE_W = COVER_INCHES.w * PT_PER_IN;
-const PAGE_H = COVER_INCHES.h * PT_PER_IN;
 
 export type IssuePage = {
   id: string;
@@ -94,7 +104,11 @@ export async function exportIssuePdf(
   pages: IssuePage[],
   meta: IssueMeta,
   filename: string,
+  dim: ExportDim = DEFAULT_DIM,
 ) {
+  const PAGE_W = dim.inches.w * PT_PER_IN;
+  const PAGE_H = dim.inches.h * PT_PER_IN;
+
   const doc = await PDFDocument.create();
   doc.setTitle(meta.title);
   doc.setAuthor(meta.author);
@@ -107,7 +121,7 @@ export async function exportIssuePdf(
 
   for (let i = 0; i < pages.length; i++) {
     const { node, id } = pages[i];
-    const jpegDataUrl = await renderNodeToJpeg(node);
+    const jpegDataUrl = await renderNodeToJpeg(node, dim);
     const jpegBytes = dataUrlToBytes(jpegDataUrl);
     const image = await doc.embedJpg(jpegBytes);
     const page = doc.addPage([PAGE_W, PAGE_H]);
@@ -115,6 +129,7 @@ export async function exportIssuePdf(
     pageRefs.push(page.ref);
     pageById.set(id, { index: i, ref: page.ref });
   }
+
 
   // Contents links — match rows with data-link-target = target node id
   for (let i = 0; i < pages.length; i++) {
