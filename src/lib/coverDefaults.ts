@@ -487,6 +487,26 @@ export function folioSideForIndex(index0Based: number): "left" | "right" {
 }
 
 /**
+ * Hard cap on per-page `paritySkip`. Real publications almost never need
+ * more than a handful of unprinted inserts in front of a single page;
+ * clamping prevents a stray input (or malicious draft) from producing an
+ * absurd physical-index drift that would break the canvas and exports.
+ */
+export const MAX_PARITY_SKIP = 16;
+
+/**
+ * Coerce any incoming value into a safe integer in `[0, MAX_PARITY_SKIP]`.
+ * Rejects negatives, NaN, Infinity, and non-finite numbers. Returns 0 for
+ * anything that can't be parsed — never throws so the renderer stays
+ * resilient to legacy/corrupt data.
+ */
+export function normalizeParitySkip(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(MAX_PARITY_SKIP, Math.floor(n));
+}
+
+/**
  * Compute the *physical* 0-based sheet index for each page in `pages`,
  * accounting for `paritySkip` (unprinted inserts that occupy a sheet but
  * carry no printed page). The returned array has the same length as
@@ -503,8 +523,7 @@ export function computePhysicalIndices(pages: { paritySkip?: number }[]): number
   const out: number[] = new Array(pages.length);
   let shift = 0;
   for (let i = 0; i < pages.length; i++) {
-    const skip = Math.max(0, Math.floor(pages[i].paritySkip ?? 0));
-    shift += skip;
+    shift += normalizeParitySkip(pages[i].paritySkip);
     out[i] = i + shift;
   }
   return out;
