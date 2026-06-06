@@ -16,9 +16,27 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
+import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { downloadIdml, downloadIdmlPackage } from "@/lib/idmlExport";
+import {
+  PAGE_LAYOUTS,
+  PAGE_LAYOUT_LABELS,
+  PAGE_LAYOUT_DESCRIPTIONS,
+  DEFAULT_PAGE_LAYOUT,
+  type PageLayout,
+} from "@/lib/pageLayouts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
