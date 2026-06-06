@@ -1055,8 +1055,8 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData; dim?: {
 
 /* — AD — full-page brand placement — */
 
-const AdPreview = forwardRef<HTMLDivElement, { data: AdData }>(function AdPreview(
-  { data },
+const AdPreview = forwardRef<HTMLDivElement, { data: AdData; dim?: { w: number; h: number } }>(function AdPreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
