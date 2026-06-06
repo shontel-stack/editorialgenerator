@@ -1612,12 +1612,20 @@ function Index() {
                     <input
                       type="number"
                       min={0}
-                      max={8}
+                      max={MAX_PARITY_SKIP}
                       step={1}
-                      value={selected.paritySkip ?? 0}
+                      value={normalizeParitySkip(selected.paritySkip)}
                       onChange={(e) => {
-                        const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
-                        updateNode(selected.id, { paritySkip: n || undefined });
+                        const n = normalizeParitySkip(e.target.value);
+                        updateNode(selected.id, { paritySkip: n === 0 ? undefined : n });
+                      }}
+                      onBlur={(e) => {
+                        // Re-normalise on blur so any out-of-range value the
+                        // browser allowed (e.g. paste) is snapped to bounds.
+                        const n = normalizeParitySkip(e.target.value);
+                        if (String(n) !== e.target.value) {
+                          updateNode(selected.id, { paritySkip: n === 0 ? undefined : n });
+                        }
                       }}
                       className="w-20 rounded-sm border border-border bg-background px-2 py-1 text-xs"
                     />
