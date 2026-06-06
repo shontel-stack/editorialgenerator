@@ -244,34 +244,37 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign, editing
     <div
       ref={hostRef}
       className="absolute inset-0"
-      style={{ zIndex: 5 }}
+      style={{ zIndex: 5, pointerEvents: editing ? "none" : undefined }}
     >
-      {/* Marquee capture layer — sits behind pins, catches drags on empty canvas. */}
-      <div
-        className="absolute inset-0"
-        style={{ cursor: marquee ? "crosshair" : "default" }}
-        onPointerDown={(e) => {
-          // Only respond to primary button on the empty layer itself.
-          if (e.button !== 0) return;
-          if (e.target !== e.currentTarget) return;
-          const host = hostRef.current;
-          if (!host) return;
-          const rect = host.getBoundingClientRect();
-          const sx = (e.clientX - rect.left) / rect.width;
-          const sy = (e.clientY - rect.top) / rect.height;
-          const additive = e.shiftKey || e.metaKey || e.ctrlKey;
-          setMarquee({
-            startX: sx,
-            startY: sy,
-            curX: sx,
-            curY: sy,
-            additive,
-            baseSelection: additive ? new Set(selectedIds) : new Set(),
-          });
-          if (!additive) setSelectedIds(new Set());
-          nudgeBatchRef.current = null;
-        }}
-      />
+      {/* Marquee capture layer — sits behind pins, catches drags on empty canvas.
+          Disabled in layout-edit mode so block dragging receives pointer events. */}
+      {!editing && (
+        <div
+          className="absolute inset-0"
+          style={{ cursor: marquee ? "crosshair" : "default" }}
+          onPointerDown={(e) => {
+            // Only respond to primary button on the empty layer itself.
+            if (e.button !== 0) return;
+            if (e.target !== e.currentTarget) return;
+            const host = hostRef.current;
+            if (!host) return;
+            const rect = host.getBoundingClientRect();
+            const sx = (e.clientX - rect.left) / rect.width;
+            const sy = (e.clientY - rect.top) / rect.height;
+            const additive = e.shiftKey || e.metaKey || e.ctrlKey;
+            setMarquee({
+              startX: sx,
+              startY: sy,
+              curX: sx,
+              curY: sy,
+              additive,
+              baseSelection: additive ? new Set(selectedIds) : new Set(),
+            });
+            if (!additive) setSelectedIds(new Set());
+            nudgeBatchRef.current = null;
+          }}
+        />
+      )}
 
       {marqueeRect && (
         <div
