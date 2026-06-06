@@ -717,6 +717,12 @@ function StaffChat({
     () =>
       new DefaultChatTransport({
         api: "/api/staff-chat",
+        headers: async () => {
+          const { supabase } = await import("@/integrations/supabase/client");
+          const { data } = await supabase.auth.getSession();
+          const token = data.session?.access_token;
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        },
         prepareSendMessagesRequest: ({ messages, body }) => ({
           body: {
             ...body,
