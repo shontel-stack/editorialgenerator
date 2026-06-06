@@ -137,7 +137,15 @@ export async function updatePageStatus(
   patch: Partial<
     Pick<
       PageStatusRow,
-      "status" | "assignee_role" | "due_date" | "notes" | "position" | "page_label" | "layout"
+      | "status"
+      | "assignee_role"
+      | "due_date"
+      | "notes"
+      | "position"
+      | "page_label"
+      | "layout"
+      | "column_widths"
+      | "gutter_in"
     >
   >,
 ): Promise<void> {
