@@ -1913,7 +1913,7 @@ function Index() {
         {/* Preview */}
         <section
           ref={stageRef}
-          className="relative bg-secondary/60 border border-border overflow-hidden flex-1"
+          className="relative isolate bg-secondary/60 border border-border overflow-hidden flex-1"
           style={{ minHeight: `calc(70vh - ${stickyH}px)`, aspectRatio: `${stageW / dimPx.h}`, scrollMarginTop: stickyH }}
         >
 
