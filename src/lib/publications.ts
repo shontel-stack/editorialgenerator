@@ -19,6 +19,11 @@ export type Publication = {
   masthead: string | null;
   page_width_in: number | null;
   page_height_in: number | null;
+  margin_top_in: number | null;
+  margin_right_in: number | null;
+  margin_bottom_in: number | null;
+  margin_left_in: number | null;
+  bleed_in: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -34,6 +39,11 @@ export type PublicationInput = {
   masthead?: string;
   page_width_in?: number | null;
   page_height_in?: number | null;
+  margin_top_in?: number | null;
+  margin_right_in?: number | null;
+  margin_bottom_in?: number | null;
+  margin_left_in?: number | null;
+  bleed_in?: number | null;
 };
 
 function slugify(name: string): string {
