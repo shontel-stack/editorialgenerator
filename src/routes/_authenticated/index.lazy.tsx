@@ -1678,9 +1678,8 @@ function Index() {
           </div>
         </section>
         </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
       </div>
+
 
 
       {/* Off-screen capture stage — one ref per page in the issue. */}
