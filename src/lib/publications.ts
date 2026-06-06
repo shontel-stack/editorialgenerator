@@ -84,6 +84,11 @@ export async function createPublication(
       masthead: input.masthead ?? null,
       page_width_in: input.page_width_in ?? null,
       page_height_in: input.page_height_in ?? null,
+      margin_top_in: input.margin_top_in ?? null,
+      margin_right_in: input.margin_right_in ?? null,
+      margin_bottom_in: input.margin_bottom_in ?? null,
+      margin_left_in: input.margin_left_in ?? null,
+      bleed_in: input.bleed_in ?? null,
     })
     .select()
     .single();
