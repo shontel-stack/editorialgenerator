@@ -597,24 +597,59 @@ export function WorkspaceSwitcher() {
                   className="mt-0.5 h-3.5 w-3.5 accent-foreground cursor-pointer"
                 />
                 <span>
-                  Append current issue date{" "}
-                  <span className="text-foreground">({formatIssueDate(dateFormat)})</span> to the name
+                  Append issue date{" "}
+                  <span className="text-foreground">
+                    ({formatIssueDate(dateFormat, issueDate)})
+                  </span>{" "}
+                  to the name
                 </span>
               </label>
-              <div className="pl-6">
-                <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
-                  Date format
-                </label>
-                <select
-                  value={dateFormat}
-                  onChange={(e) => changeDateFormat(e.target.value as typeof dateFormat)}
-                  disabled={!appendIssueDate}
-                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-                >
-                  <option value="month-year">Month YYYY (e.g. {formatIssueDate("month-year")})</option>
-                  <option value="year-month">YYYY-MM (e.g. {formatIssueDate("year-month")})</option>
-                  <option value="iso-date">Issue date YYYY-MM-DD (e.g. {formatIssueDate("iso-date")})</option>
-                </select>
+              <div className="pl-6 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                    Issue date
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!appendIssueDate}
+                        className={cn(
+                          "w-full justify-start text-left font-normal h-9 px-2.5 text-sm",
+                          !issueDate && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                        {issueDate ? format(issueDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={issueDate}
+                        onSelect={changeIssueDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                    Date format
+                  </label>
+                  <select
+                    value={dateFormat}
+                    onChange={(e) => changeDateFormat(e.target.value as typeof dateFormat)}
+                    disabled={!appendIssueDate}
+                    className="w-full h-9 border border-input bg-background px-2.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                  >
+                    <option value="month-year">Month YYYY</option>
+                    <option value="year-month">YYYY-MM</option>
+                    <option value="iso-date">YYYY-MM-DD</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
