@@ -265,12 +265,21 @@ function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autosaveKeyStr]);
 
+  // Refs to sync actions so the resolve handler (declared above the hooks)
+  // can kick autosave/cloud/queue immediately when the user picks an option.
+  const autosaveSaveNowRef = useRef<() => void>(() => {});
+  const cloudSyncNowRef = useRef<() => void>(() => {});
+  const queueDrainNowRef = useRef<() => void>(() => {});
+
   const handleConflictResolve = useCallback(
     (choice: "local" | "remote" | "merge") => {
       if (!conflict) return;
       const { local, remote } = conflict;
+      let shouldPushImmediately = true;
       if (choice === "remote") {
+        // Cloud is authoritative — adopt it as the new baseline; no push needed.
         adoptSnapshot(remote.data, remote.ts);
+        shouldPushImmediately = false;
       } else if (choice === "local") {
         // Cloud will be overwritten on next push; no baseline yet.
         adoptSnapshot(local.data, null);
@@ -280,7 +289,15 @@ function Index() {
         adoptSnapshot(merged, null);
       }
       setConflict(null);
-      setTimeout(() => setAutosaveRestoring(false), 0);
+      // Un-pause autosave + cloud sync, then immediately reconcile so the
+      // resolved snapshot lands locally and remotely without waiting for the
+      // debounce timers. Also drain any queued offline writes that piled up.
+      setAutosaveRestoring(false);
+      setTimeout(() => {
+        autosaveSaveNowRef.current();
+        if (shouldPushImmediately) cloudSyncNowRef.current();
+        queueDrainNowRef.current();
+      }, 0);
     },
     [conflict, adoptSnapshot],
   );
