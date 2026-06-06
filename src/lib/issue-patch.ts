@@ -67,13 +67,13 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
       };
     }
     case "update_master": {
-      const p = patch.patch;
-      const merged: IssueMaster = { ...issue.master, ...p };
-      if (p.folioTemplate) {
+      const { folioTemplate: folioPatch, ...rest } = patch.patch;
+      const merged: IssueMaster = { ...issue.master, ...rest };
+      if (folioPatch) {
         const current = normalizeFolioTemplate(issue.master.folioTemplate);
         merged.folioTemplate = {
-          left: p.folioTemplate.left ?? current.left,
-          right: p.folioTemplate.right ?? current.right,
+          left: folioPatch.left ?? current.left,
+          right: folioPatch.right ?? current.right,
         };
       }
       return { ...issue, master: merged };
