@@ -244,6 +244,9 @@ function Index() {
     before: PlacementPatch;
     after: PlacementPatch;
     groupKey: string | null;
+    /** Optional shared id so multi-target edits (e.g. nudging a multi-selection)
+     *  undo/redo together as a single step. */
+    batchId: string | null;
     lastAt: number;
   };
   const undoStackRef = useRef<PlacementHistoryEntry[]>([]);
@@ -262,16 +265,26 @@ function Index() {
 
   const flushPlacementGroup = useCallback(() => {
     // Force the next applyPlacement to start a fresh entry by clearing
-    // the lastAt timestamp on the top of the stack.
-    const top = undoStackRef.current[undoStackRef.current.length - 1];
-    if (top) top.lastAt = 0;
+    // the lastAt timestamp on every entry of the current batch on top
+    // of the stack.
+    const stack = undoStackRef.current;
+    const top = stack[stack.length - 1];
+    if (!top) return;
+    if (top.batchId) {
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].batchId === top.batchId) stack[i].lastAt = 0;
+        else break;
+      }
+    } else {
+      top.lastAt = 0;
+    }
   }, []);
 
   const applyPlacement = useCallback(
     async (
       id: string,
       patch: PlacementPatch,
-      opts?: { silent?: boolean; groupKey?: string | null },
+      opts?: { silent?: boolean; groupKey?: string | null; batchId?: string | null },
     ) => {
       const current = attachmentRowsRef.current.find((r) => r.id === id);
       if (!current) return;
@@ -290,27 +303,51 @@ function Index() {
       if (!opts?.silent) {
         const now = Date.now();
         const groupKey = opts?.groupKey ?? null;
-        const top = undoStackRef.current[undoStackRef.current.length - 1];
-        const sameTarget = top && top.id === id;
-        const sameGroup =
-          sameTarget &&
-          (groupKey !== null
-            ? top.groupKey === groupKey
-            : top.groupKey === null && now - top.lastAt <= GROUP_WINDOW_MS);
-        if (sameGroup) {
-          // Merge: keep original `before`, extend `after` with the latest values.
+        const batchId = opts?.batchId ?? null;
+        const stack = undoStackRef.current;
+
+        // Find a mergeable existing entry for this id.
+        // - With a groupKey: scan back for the latest matching (id, groupKey)
+        //   within the time window. This lets multi-target nudges coalesce
+        //   even when entries for other ids sit on top of it.
+        // - Without a groupKey: only check the very top entry.
+        let mergeIdx = -1;
+        if (groupKey !== null) {
+          for (let i = stack.length - 1; i >= 0; i--) {
+            const e = stack[i];
+            if (e.id === id && e.groupKey === groupKey && now - e.lastAt <= GROUP_WINDOW_MS) {
+              mergeIdx = i;
+              break;
+            }
+            // Don't merge across an older break (lastAt === 0 marker).
+            if (e.lastAt === 0) break;
+          }
+        } else {
+          const top = stack[stack.length - 1];
+          if (
+            top &&
+            top.id === id &&
+            top.groupKey === null &&
+            now - top.lastAt <= GROUP_WINDOW_MS
+          ) {
+            mergeIdx = stack.length - 1;
+          }
+        }
+
+        if (mergeIdx >= 0) {
+          const entry = stack[mergeIdx];
           for (const k of ["page_id", "region", "position_x", "position_y"] as const) {
             if (k in after) {
-              (top.after as Record<string, unknown>)[k] = (after as Record<string, unknown>)[k];
-              if (!(k in top.before)) {
-                (top.before as Record<string, unknown>)[k] = (before as Record<string, unknown>)[k];
+              (entry.after as Record<string, unknown>)[k] = (after as Record<string, unknown>)[k];
+              if (!(k in entry.before)) {
+                (entry.before as Record<string, unknown>)[k] = (before as Record<string, unknown>)[k];
               }
             }
           }
-          top.lastAt = now;
+          entry.lastAt = now;
         } else {
-          undoStackRef.current.push({ id, before, after, groupKey, lastAt: now });
-          if (undoStackRef.current.length > 100) undoStackRef.current.shift();
+          stack.push({ id, before, after, groupKey, batchId, lastAt: now });
+          if (stack.length > 200) stack.shift();
         }
         redoStackRef.current = [];
         setHistoryTick((t) => t + 1);
@@ -320,20 +357,43 @@ function Index() {
   );
 
   const undoPlacement = useCallback(async () => {
-    const entry = undoStackRef.current.pop();
+    const stack = undoStackRef.current;
+    const entry = stack.pop();
     if (!entry) return;
-    await attachments.updateAssignment(entry.id, entry.before);
-    redoStackRef.current.push(entry);
-    // Break grouping so the next edit starts a new step.
+    const batch: PlacementHistoryEntry[] = [entry];
+    if (entry.batchId) {
+      while (stack.length && stack[stack.length - 1].batchId === entry.batchId) {
+        batch.push(stack.pop()!);
+      }
+    }
+    // Revert in reverse application order.
+    for (const e of batch) {
+      await attachments.updateAssignment(e.id, e.before);
+    }
+    // Restore on redo stack in original order so redo replays correctly.
+    for (let i = batch.length - 1; i >= 0; i--) {
+      redoStackRef.current.push(batch[i]);
+    }
     flushPlacementGroup();
     setHistoryTick((t) => t + 1);
   }, [attachments, flushPlacementGroup]);
 
   const redoPlacement = useCallback(async () => {
-    const entry = redoStackRef.current.pop();
+    const stack = redoStackRef.current;
+    const entry = stack.pop();
     if (!entry) return;
-    await attachments.updateAssignment(entry.id, entry.after);
-    undoStackRef.current.push(entry);
+    const batch: PlacementHistoryEntry[] = [entry];
+    if (entry.batchId) {
+      while (stack.length && stack[stack.length - 1].batchId === entry.batchId) {
+        batch.push(stack.pop()!);
+      }
+    }
+    for (const e of batch) {
+      await attachments.updateAssignment(e.id, e.after);
+    }
+    for (let i = batch.length - 1; i >= 0; i--) {
+      undoStackRef.current.push(batch[i]);
+    }
     flushPlacementGroup();
     setHistoryTick((t) => t + 1);
   }, [attachments, flushPlacementGroup]);
