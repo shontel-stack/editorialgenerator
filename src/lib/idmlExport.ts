@@ -719,7 +719,17 @@ function buildReadme(
   idmlName: string,
   fetchedCount: number,
   skipped: SkippedImage[],
+  dim?: IdmlDim,
 ): string {
+  const inches = dim && dim.w > 0 && dim.h > 0 ? dim : DEFAULT_INCHES;
+  const wIn = inches.w;
+  const hIn = inches.h;
+  const wMm = +(wIn * 25.4).toFixed(2);
+  const hMm = +(hIn * 25.4).toFixed(2);
+  const wPx = Math.round(wIn * 300);
+  const hPx = Math.round(hIn * 300);
+  const wPt = +(wIn * 72).toFixed(2);
+  const hPt = +(hIn * 72).toFixed(2);
   const lines: string[] = [
     `${issue.master.publication} — ${issue.meta.issue}`,
     `InDesign package`,
