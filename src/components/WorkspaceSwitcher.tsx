@@ -157,29 +157,54 @@ export function WorkspaceSwitcher() {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState("");
   const [appendIssueDate, setAppendIssueDate] = useState(false);
+  type DateFormat = "month-year" | "year-month" | "iso-date";
+  const [dateFormat, setDateFormat] = useState<DateFormat>("month-year");
 
-  // Human-readable "current issue date" suffix (e.g. "March 2026"). Using
-  // today's date as the issue date — duplicating a publication is normally
-  // done when starting work on the next issue.
-  const issueDateSuffix = (): string =>
-    new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  // Human-readable suffix for the chosen format. Using today's date as the
+  // issue date — duplicating a publication is normally done when starting
+  // work on the next issue.
+  const formatIssueDate = (fmt: DateFormat): string => {
+    const d = new Date();
+    switch (fmt) {
+      case "month-year":
+        return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      case "year-month":
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      case "iso-date":
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  };
 
+  // Strip any previously appended date suffix in any supported format.
   const stripDateSuffix = (s: string): string =>
-    s.replace(/\s*[—–-]\s*[A-Za-z]+\s+\d{4}\s*$/u, "").trimEnd();
+    s
+      .replace(/\s*[—–-]\s*[A-Za-z]+\s+\d{4}\s*$/u, "")
+      .replace(/\s*[—–-]\s*\d{4}-\d{2}(?:-\d{2})?\s*$/u, "")
+      .trimEnd();
 
   const openDuplicateDialog = () => {
     if (!active || submitting) return;
     setDuplicateName(`${active.name} (copy)`);
     setAppendIssueDate(false);
+    setDateFormat("month-year");
     setDuplicateOpen(true);
+  };
+
+  const applyDateSuffix = (base: string, append: boolean, fmt: DateFormat): string => {
+    const cleaned = stripDateSuffix(base);
+    return append ? `${cleaned} — ${formatIssueDate(fmt)}` : cleaned;
   };
 
   const toggleAppendIssueDate = (next: boolean) => {
     setAppendIssueDate(next);
-    setDuplicateName((prev) => {
-      const base = stripDateSuffix(prev);
-      return next ? `${base} — ${issueDateSuffix()}` : base;
-    });
+    setDuplicateName((prev) => applyDateSuffix(prev, next, dateFormat));
+  };
+
+  const changeDateFormat = (next: DateFormat) => {
+    setDateFormat(next);
+    if (appendIssueDate) {
+      setDuplicateName((prev) => applyDateSuffix(prev, true, next));
+    }
   };
 
   const confirmDuplicate = async () => {
