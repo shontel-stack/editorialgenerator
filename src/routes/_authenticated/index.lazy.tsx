@@ -1085,6 +1085,31 @@ function Index() {
     setSelectedId(a.id);
   };
 
+  /** Duplicate a page (deep-clone data + per-block overrides + custom blocks)
+   *  and insert it directly after the source. Skips cover/back. */
+  const duplicatePage = (id: string) => {
+    setIssue((d) => {
+      const idx = d.pages.findIndex((p) => p.id === id);
+      if (idx < 0) return d;
+      const src = d.pages[idx];
+      if (src.pageType === "cover" || src.pageType === "back") return d;
+      const cloned: IssuePageNode = {
+        ...(JSON.parse(JSON.stringify(src)) as IssuePageNode),
+        id: newId(),
+        customBlocks: (src.customBlocks ?? []).map((b) => ({ ...b, id: newId() })),
+      };
+      const backIdx = d.pages.findIndex((p) => p.pageType === "back");
+      let insertAt = idx + 1;
+      if (backIdx >= 0 && insertAt > backIdx) insertAt = backIdx;
+      const next = [...d.pages];
+      next.splice(insertAt, 0, cloned);
+      setSelectedId(cloned.id);
+      return { ...d, pages: next };
+    });
+  };
+
+
+
   // Remove the selected page AND its spread partner (if any).
   const removeSpread = (id: string) =>
     setIssue((d) => {
