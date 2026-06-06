@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { snapshotIssue } from "@/lib/issue-snapshot";
 import type { IssueDoc } from "@/lib/coverDefaults";
 import { STAFF_ROLES, STAFF_BY_ID, type StaffRole } from "@/lib/staffRoles";
-import { ChevronLeft, X, Users, Inbox, Check, Trash2, Flag, FileEdit, MessageSquare, GitBranch } from "lucide-react";
+import { ChevronLeft, X, Users, Inbox, Check, Trash2, Flag, FileEdit, MessageSquare, GitBranch, MapPin } from "lucide-react";
 import { PublicationBadge } from "@/components/PublicationBadge";
 
 /* ------------------------------------------------------------------ */
@@ -52,6 +52,34 @@ type NoteToolOutput = {
   severity?: "low" | "med" | "high";
 };
 
+export type AttachmentBrief = {
+  id: string;
+  file_name: string;
+  mime_type: string;
+  kind: "template" | "reference";
+  page_id: string | null;
+  region: string | null;
+  position_x: number | null;
+  position_y: number | null;
+};
+
+export type PlacementPatch = {
+  page_id?: string | null;
+  region?: string | null;
+  position_x?: number | null;
+  position_y?: number | null;
+};
+
+type PlacementToolOutput = {
+  kind: "placement";
+  attachment_id: string;
+  page_id: string;
+  region?: string | null;
+  position_x?: number | null;
+  position_y?: number | null;
+  rationale?: string;
+};
+
 /* ------------------------------------------------------------------ */
 /*                              Drawer shell                            */
 /* ------------------------------------------------------------------ */
@@ -63,6 +91,8 @@ export function StaffPanel({
   publicationId,
   publicationName,
   selectedPageId,
+  attachments,
+  onPlaceAttachment,
 }: {
   open: boolean;
   onClose: () => void;
@@ -70,6 +100,8 @@ export function StaffPanel({
   publicationId: string | null;
   publicationName?: string | null;
   selectedPageId: string;
+  attachments?: AttachmentBrief[];
+  onPlaceAttachment?: (id: string, patch: PlacementPatch) => Promise<void> | void;
 }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [view, setView] = useState<"masthead" | "inbox">("masthead");
@@ -159,6 +191,8 @@ export function StaffPanel({
           issue={issue}
           publicationId={publicationId}
           selectedPageId={selectedPageId}
+          attachments={attachments}
+          onPlaceAttachment={onPlaceAttachment}
         />
       ) : view === "inbox" ? (
         <InboxView
@@ -573,11 +607,15 @@ function StaffChat({
   issue,
   publicationId,
   selectedPageId,
+  attachments,
+  onPlaceAttachment,
 }: {
   role: StaffRole;
   issue: IssueDoc;
   publicationId: string | null;
   selectedPageId: string;
+  attachments?: AttachmentBrief[];
+  onPlaceAttachment?: (id: string, patch: PlacementPatch) => Promise<void> | void;
 }) {
   const issueId = issue.meta.issueId;
   const [initial, setInitial] = useState<UIMessage[] | null>(null);
@@ -670,6 +708,11 @@ function StaffChat({
     };
   }, [issueId, publicationId, role.id, role.title]);
 
+  const attachmentsRef = useRef(attachments);
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -682,6 +725,7 @@ function StaffChat({
             messages,
             issueSnapshot: snapshotIssue(issueRef.current),
             selectedPageId: selectedPageIdRef.current,
+            attachments: attachmentsRef.current ?? [],
           },
         }),
       }),
@@ -694,9 +738,15 @@ function StaffChat({
     transport,
   });
 
-  // Persist new messages + file any tool-created notes.
+  // Persist new messages + file any tool-created notes + apply placements.
   const persistedRef = useRef<Set<string>>(new Set());
   const filedNotesRef = useRef<Set<string>>(new Set());
+  const appliedPlacementsRef = useRef<Set<string>>(new Set());
+  const onPlaceAttachmentRef = useRef(onPlaceAttachment);
+  useEffect(() => {
+    onPlaceAttachmentRef.current = onPlaceAttachment;
+  }, [onPlaceAttachment]);
+
   useEffect(() => {
     if (!threadId) return;
     if (status !== "ready") return;
@@ -707,6 +757,7 @@ function StaffChat({
 
       const toSaveMsgs: Array<{ id: string; role: string; parts: UIMessage["parts"] }> = [];
       const toFileNotes: Array<NoteToolOutput & { toolCallId: string }> = [];
+      const toApplyPlacements: Array<PlacementToolOutput & { toolCallId: string }> = [];
 
       for (const m of messages) {
         if (!persistedRef.current.has(m.id) && !initial?.some((h) => h.id === m.id)) {
@@ -715,14 +766,27 @@ function StaffChat({
         }
         if (m.role !== "assistant") continue;
         for (const part of m.parts as Array<Record<string, unknown>>) {
-          if (part.type !== "tool-create_note") continue;
+          const partType = part.type;
           if (part.state !== "output-available") continue;
           const callId = String(part.toolCallId ?? "");
-          if (!callId || filedNotesRef.current.has(callId)) continue;
-          const output = part.output as NoteToolOutput | undefined;
-          if (!output || output.kind !== "note") continue;
-          filedNotesRef.current.add(callId);
-          toFileNotes.push({ ...output, toolCallId: callId });
+          if (!callId) continue;
+
+          if (partType === "tool-create_note" && !filedNotesRef.current.has(callId)) {
+            const output = part.output as NoteToolOutput | undefined;
+            if (output && output.kind === "note") {
+              filedNotesRef.current.add(callId);
+              toFileNotes.push({ ...output, toolCallId: callId });
+            }
+          } else if (
+            partType === "tool-place_attachment" &&
+            !appliedPlacementsRef.current.has(callId)
+          ) {
+            const output = part.output as PlacementToolOutput | undefined;
+            if (output && output.kind === "placement") {
+              appliedPlacementsRef.current.add(callId);
+              toApplyPlacements.push({ ...output, toolCallId: callId });
+            }
+          }
         }
       }
 
@@ -756,6 +820,21 @@ function StaffChat({
           })),
         );
         if (noteErr) console.warn("[staff-chat] file note failed:", noteErr.message);
+      }
+
+      if (toApplyPlacements.length && onPlaceAttachmentRef.current) {
+        for (const p of toApplyPlacements) {
+          try {
+            await onPlaceAttachmentRef.current(p.attachment_id, {
+              page_id: p.page_id,
+              region: p.region ?? null,
+              position_x: p.position_x ?? null,
+              position_y: p.position_y ?? null,
+            });
+          } catch (e) {
+            console.warn("[staff-chat] place_attachment failed:", (e as Error).message);
+          }
+        }
       }
     })();
   }, [status, messages, initial, threadId, issueId, publicationId, role.id]);
@@ -829,6 +908,39 @@ function StaffChat({
                             {out.page_id ? ` · ${out.page_id}` : ""}
                           </div>
                           <div className="font-medium">{out.title}</div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (
+                    part.type === "tool-place_attachment" &&
+                    (part as { state?: string }).state === "output-available"
+                  ) {
+                    const out = (part as { output?: PlacementToolOutput }).output;
+                    if (!out) return null;
+                    const att = attachments?.find((a) => a.id === out.attachment_id);
+                    const where =
+                      out.region
+                        ? `region ${out.region}`
+                        : out.position_x != null && out.position_y != null
+                          ? `pin ${Math.round(out.position_x * 100)}% / ${Math.round(out.position_y * 100)}%`
+                          : "page";
+                    return (
+                      <div
+                        key={idx}
+                        className="mt-2 rounded-sm border border-border bg-secondary/40 px-3 py-2 text-xs flex items-start gap-2"
+                      >
+                        <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
+                            Placed on page · {out.page_id} · {where}
+                          </div>
+                          <div className="font-medium truncate">
+                            {att?.file_name ?? out.attachment_id}
+                          </div>
+                          {out.rationale && (
+                            <div className="text-muted-foreground mt-0.5">{out.rationale}</div>
+                          )}
                         </div>
                       </div>
                     );
