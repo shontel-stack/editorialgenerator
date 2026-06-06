@@ -500,8 +500,9 @@ ${storySrcs}
 </Document>`;
 };
 
-export function buildIdml(issue: IssueDoc): Uint8Array {
+export function buildIdml(issue: IssueDoc, dim?: IdmlDim): Uint8Array {
   reset();
+  const geom = geomFromInches(dim);
   const spreads: BuiltSpread[] = [];
   const stories: BuiltStory[] = [];
 
@@ -511,7 +512,7 @@ export function buildIdml(issue: IssueDoc): Uint8Array {
     stories.push(body);
     const folio = folioStory(text, i);
     if (folio) stories.push(folio);
-    spreads.push(buildSpread(page, text, i, body, folio));
+    spreads.push(buildSpread(page, text, i, body, folio, geom));
   });
 
   const files: Record<string, Uint8Array> = {};
@@ -524,16 +525,16 @@ export function buildIdml(issue: IssueDoc): Uint8Array {
   files["Resources/Fonts.xml"] = strToU8(fontsXml);
   files["Resources/Styles.xml"] = strToU8(stylesXml);
   files["Resources/Graphic.xml"] = strToU8(graphicXml);
-  files["Resources/Preferences.xml"] = strToU8(preferencesXml);
-  files["MasterSpreads/MasterSpread_uMaster.xml"] = strToU8(masterSpreadXml);
+  files["Resources/Preferences.xml"] = strToU8(preferencesXml(geom));
+  files["MasterSpreads/MasterSpread_uMaster.xml"] = strToU8(masterSpreadXml(geom));
   for (const s of spreads) files[s.filename] = strToU8(s.xml);
   for (const s of stories) files[s.filename] = strToU8(s.xml);
 
   return zipSync(files, { level: 6 });
 }
 
-export function downloadIdml(issue: IssueDoc, filename: string): void {
-  const idmlBytes = buildIdml(issue);
+export function downloadIdml(issue: IssueDoc, filename: string, dim?: IdmlDim): void {
+  const idmlBytes = buildIdml(issue, dim);
   const base = filename.replace(/\.(idml|zip)$/i, "") || "issue";
   const idmlName = `${base}.idml`;
   // Wrap the .idml inside a single .zip for easier sharing (some chat/email
