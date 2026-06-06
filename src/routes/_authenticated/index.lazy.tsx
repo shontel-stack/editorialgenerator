@@ -1341,8 +1341,9 @@ function Index() {
           </PopoverContent>
         </Popover>
       </div>
+      </div>
 
-      <div className="px-3 py-3">
+      <div className="px-3 pt-1 pb-3">
       <ResizablePanelGroup
         orientation="horizontal"
         className="min-h-[calc(100vh-180px)] gap-0 rounded-sm"
