@@ -330,13 +330,30 @@ export function NewsletterDialog({
                   <Button onClick={onDownloadHtml} variant="outline" size="sm">
                     <Download className="h-3.5 w-3.5" /> Download .html
                   </Button>
-                  <Button onClick={onDownloadPdf} size="sm" disabled={busy === "pdf"}>
+                  <Button onClick={onDownloadPdf} variant="outline" size="sm" disabled={busy !== null}>
                     {busy === "pdf" ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <FileText className="h-3.5 w-3.5" />
                     )}
                     Download .pdf
+                  </Button>
+                  <Button
+                    onClick={onDownloadInteractivePdf}
+                    size="sm"
+                    disabled={busy !== null || !pageNodes || !pageDim}
+                    title={
+                      !pageNodes || !pageDim
+                        ? "Open the issue editor to enable interactive PDF"
+                        : "Newsletter + linked issue pages with clickable highlights"
+                    }
+                  >
+                    {busy === "ipdf" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <LinkIcon className="h-3.5 w-3.5" />
+                    )}
+                    Download interactive .pdf
                   </Button>
                 </div>
               </>
