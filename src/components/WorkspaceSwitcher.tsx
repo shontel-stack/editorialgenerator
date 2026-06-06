@@ -46,12 +46,22 @@ export function WorkspaceSwitcher() {
   const [presetKey, setPresetKey] = useState<string>("pageluxe");
   const [widthIn, setWidthIn] = useState<string>(String(COVER_INCHES.w));
   const [heightIn, setHeightIn] = useState<string>(String(COVER_INCHES.h));
+  const [mTop, setMTop] = useState<string>(String(DEFAULT_PAGE_MARGINS.top));
+  const [mRight, setMRight] = useState<string>(String(DEFAULT_PAGE_MARGINS.right));
+  const [mBottom, setMBottom] = useState<string>(String(DEFAULT_PAGE_MARGINS.bottom));
+  const [mLeft, setMLeft] = useState<string>(String(DEFAULT_PAGE_MARGINS.left));
+  const [bleed, setBleed] = useState<string>(String(DEFAULT_PAGE_MARGINS.bleed));
 
   // dimensions for the edit dialog (separate state so opening it doesn't
   // clobber the new-publication form)
   const [editPreset, setEditPreset] = useState<string>("pageluxe");
   const [editWidth, setEditWidth] = useState<string>("");
   const [editHeight, setEditHeight] = useState<string>("");
+  const [editMTop, setEditMTop] = useState<string>("");
+  const [editMRight, setEditMRight] = useState<string>("");
+  const [editMBottom, setEditMBottom] = useState<string>("");
+  const [editMLeft, setEditMLeft] = useState<string>("");
+  const [editBleed, setEditBleed] = useState<string>("");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const resetCreateForm = () => {
@@ -62,6 +72,11 @@ export function WorkspaceSwitcher() {
     setPresetKey("pageluxe");
     setWidthIn(String(COVER_INCHES.w));
     setHeightIn(String(COVER_INCHES.h));
+    setMTop(String(DEFAULT_PAGE_MARGINS.top));
+    setMRight(String(DEFAULT_PAGE_MARGINS.right));
+    setMBottom(String(DEFAULT_PAGE_MARGINS.bottom));
+    setMLeft(String(DEFAULT_PAGE_MARGINS.left));
+    setBleed(String(DEFAULT_PAGE_MARGINS.bleed));
   };
 
   // When the edit dialog opens, seed its inputs from the active publication.
@@ -72,6 +87,12 @@ export function WorkspaceSwitcher() {
     setEditWidth(String(w));
     setEditHeight(String(h));
     setEditPreset(matchPresetKey(w, h));
+    const m = getPageMargins(active);
+    setEditMTop(String(m.top));
+    setEditMRight(String(m.right));
+    setEditMBottom(String(m.bottom));
+    setEditMLeft(String(m.left));
+    setEditBleed(String(m.bleed));
   }, [editOpen, active]);
 
   const onPresetChange = (
