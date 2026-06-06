@@ -34,15 +34,8 @@ function snapEdge(value: number, guides: number[] | undefined, threshold: number
   return best;
 }
 
-/** Snap a rotation angle (degrees) to the nearest common angle when close. */
-const ROTATION_SNAPS = [-180, -135, -90, -45, 0, 15, 30, 45, 60, 90, 120, 135, 180];
-const ROTATION_THRESHOLD = 4; // degrees
-function snapRotation(deg: number): number {
-  for (const a of ROTATION_SNAPS) {
-    if (Math.abs(deg - a) <= ROTATION_THRESHOLD) return a;
-  }
-  return deg;
-}
+// Rotation snapping is now user-configurable via `useSnapSettings` —
+// see src/lib/snapSettings.ts.
 
 const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
   display: "var(--font-display)",
