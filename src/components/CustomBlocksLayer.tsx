@@ -11,6 +11,7 @@ import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCo
 import type { CustomBlock } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
+import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -33,15 +34,8 @@ function snapEdge(value: number, guides: number[] | undefined, threshold: number
   return best;
 }
 
-/** Snap a rotation angle (degrees) to the nearest common angle when close. */
-const ROTATION_SNAPS = [-180, -135, -90, -45, 0, 15, 30, 45, 60, 90, 120, 135, 180];
-const ROTATION_THRESHOLD = 4; // degrees
-function snapRotation(deg: number): number {
-  for (const a of ROTATION_SNAPS) {
-    if (Math.abs(deg - a) <= ROTATION_THRESHOLD) return a;
-  }
-  return deg;
-}
+// Rotation snapping is now user-configurable via `useSnapSettings` —
+// see src/lib/snapSettings.ts.
 
 const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
   display: "var(--font-display)",
@@ -870,6 +864,7 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
 }
 
 function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "image" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+  const snap = useSnapSettings();
   return (
     <>
       <label style={btnStyle("normal")}>
@@ -893,7 +888,7 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
       </select>
       <label style={labelStyle}>
         Rotate
-        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotation(Number(e.target.value)) })} style={{ ...inputStyle, width: 56 }} />
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotationWith(Number(e.target.value), snap) })} style={{ ...inputStyle, width: 56 }} />
       </label>
       <label style={labelStyle}>
         Border
@@ -915,6 +910,7 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
 }
 
 function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "video" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+  const snap = useSnapSettings();
   return (
     <>
       <label style={labelStyle}>
@@ -938,7 +934,7 @@ function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind
       </button>
       <label style={labelStyle}>
         Rotate
-        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotation(Number(e.target.value)) })} style={{ ...inputStyle, width: 56 }} />
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotationWith(Number(e.target.value), snap) })} style={{ ...inputStyle, width: 56 }} />
       </label>
     </>
   );

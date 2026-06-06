@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
 import { GuidesOverlay } from "@/components/GuidesOverlay";
+import { SnapSettingsPanel } from "@/components/SnapSettingsPanel";
+import { useSnapSettings } from "@/lib/snapSettings";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
@@ -129,6 +131,7 @@ function Index() {
   const dimPx = pageDims.px;
   const dimInches = pageDims.inches;
   const pageMargins = useMemo(() => getPageMargins(activePublication), [activePublication]);
+  const snapSettings = useSnapSettings();
   // Snap targets: bleed (outside trim), trim edges, margin (safe area), centers.
   // Coords are in page-px at 300 DPI to match the editor canvas.
   const snapGuides = useMemo(() => {
@@ -141,9 +144,9 @@ function Index() {
     return {
       xs: [-bleed, 0, mL, dimPx.w / 2, dimPx.w - mR, dimPx.w, dimPx.w + bleed],
       ys: [-bleed, 0, mT, dimPx.h / 2, dimPx.h - mB, dimPx.h, dimPx.h + bleed],
-      threshold: 30, // ~0.1 in at 300 DPI
+      threshold: snapSettings.edgeTolerancePx,
     };
-  }, [pageMargins, dimPx.w, dimPx.h]);
+  }, [pageMargins, dimPx.w, dimPx.h, snapSettings.edgeTolerancePx]);
   // Full IDML/Canva geometry packet — width/height + margins + bleed.
   const idmlDim = useMemo(
     () => ({
@@ -840,6 +843,10 @@ function Index() {
               Drag any outlined block on the page. Use the <strong>+ Add</strong> palette in the top-right of the page to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
             </p>
           )}
+
+          <SnapSettingsPanel />
+
+
 
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
