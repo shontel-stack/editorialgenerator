@@ -34,7 +34,7 @@ export async function upsertIssueDraft<T = unknown>(input: {
     issue_id: input.issueId,
     publication_id: input.publicationId,
     issue_label: input.issueLabel,
-    data: input.data as unknown as Record<string, unknown>,
+    data: input.data as never,
     client_updated_at: new Date(input.clientUpdatedAt).toISOString(),
   };
   const { data, error } = await supabase
