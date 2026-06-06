@@ -7,11 +7,12 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2 } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
 import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
+import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -47,8 +48,25 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
   const id = newId();
   const base = { id, x: 600, y: 600, z: 50 } as const;
   switch (kind) {
-    case "text":
-      return { ...base, kind: "text", w: 1200, h: 240, text: "Double-click to edit", fontFamily: "serif", fontSize: 60, align: "left", color: "#0a0a0a" };
+    case "text": {
+      const d = getTextBlockDefaults();
+      return {
+        id,
+        kind: "text",
+        x: d.marginX,
+        y: d.marginY,
+        z: 50,
+        w: d.w,
+        h: d.h,
+        text: "Double-click to edit",
+        fontFamily: d.fontFamily,
+        fontSize: d.fontSize,
+        fontWeight: d.fontWeight,
+        italic: d.italic,
+        align: d.align,
+        color: d.color,
+      };
+    }
     case "image":
       return { ...base, kind: "image", w: 1200, h: 1200, imageUrl: "", imageFit: "cover" };
     case "shape":
