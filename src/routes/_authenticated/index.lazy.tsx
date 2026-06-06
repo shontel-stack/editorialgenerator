@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -1130,6 +1130,144 @@ function Index() {
         <Popover>
           <PopoverTrigger asChild>
             <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
+              <SquarePen className="h-3.5 w-3.5" /> Edit page <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[420px] max-h-[80vh] overflow-y-auto p-3">
+            <aside className="space-y-6">
+              <Section title="Page layout">
+                <div className="space-y-2">
+                  <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_LAYOUTS.map((l) => (
+                        <SelectItem key={l} value={l}>
+                          <span className="flex flex-col">
+                            <span className="text-sm">{PAGE_LAYOUT_LABELS[l]}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {PAGE_LAYOUT_DESCRIPTIONS[l]}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    {PAGE_LAYOUT_DESCRIPTIONS[selectedLayout]} Saved per page.
+                  </p>
+                  {PAGE_LAYOUT_COLUMNS[selectedLayout] > 1 && (
+                    <div className="mt-3 border-t border-border/60 pt-3">
+                      <ColumnTuningControls
+                        layout={selectedLayout}
+                        widths={pageStatus.columnWidthsOf(selected.id)}
+                        gutterIn={pageStatus.gutterOf(selected.id)}
+                        onChange={(patch) => pageStatus.setColumnTuning(selected.id, patch)}
+                        presets={layoutPresets.presetsFor(selectedLayout)}
+                        onSavePreset={(name) =>
+                          layoutPresets.save({
+                            name,
+                            layout: selectedLayout,
+                            column_widths: pageStatus.columnWidthsOf(selected.id),
+                            gutter_in: pageStatus.gutterOf(selected.id),
+                          })
+                        }
+                        onDeletePreset={(id) => layoutPresets.remove(id)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </Section>
+              {selected.pageType === "cover" && (
+                <CoverEditor
+                  data={selected.data as CoverData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
+              {selected.pageType === "article" && (
+                <ArticleEditor
+                  data={selected.data as ArticleData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
+              {selected.pageType === "photo" && (
+                <PhotoEditor
+                  data={selected.data as PhotoData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
+              {selected.pageType === "contents" && (
+                <ContentsEditor
+                  data={selected.data as ContentsData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
+              {selected.pageType === "ad" && (
+                <AdEditor
+                  data={selected.data as AdData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
+              {selected.pageType === "back" && (
+                <BackCoverEditor
+                  data={selected.data as BackCoverData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
+
+              {selected.pageType !== "cover" &&
+                selected.pageType !== "back" &&
+                selected.pageType !== "contents" && (
+                  <Section title="Contents listing">
+                    <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={selected.includeInContents}
+                        onChange={(e) => updateNode(selected.id, { includeInContents: e.target.checked })}
+                        className="accent-[color:var(--ruby)]"
+                      />
+                      Show this page in the Contents index
+                    </label>
+                  </Section>
+                )}
+
+              {selected.pageType !== "cover" && selected.pageType !== "back" && (
+                <Section title="References for this page" defaultOpen>
+                  <PageReferencesEditor
+                    pageId={selected.id}
+                    references={attachments.referencesByPage.get(selected.id) ?? []}
+                    columnCount={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(selected.id)] ?? 1}
+                    onUpload={(file) =>
+                      attachments.upload({ pageId: selected.id, kind: "reference", file })
+                    }
+                    onRemove={(row) => attachments.remove(row)}
+                    onAssign={(id, patch) => applyPlacement(id, patch)}
+                  />
+                  <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
+                    Multiple files allowed. Pin each to a region (column / header / footer) or
+                    a free-form coordinate. The editor sees PDFs and images directly; Word docs are
+                    converted to text.
+                  </p>
+                </Section>
+              )}
+
+              <Section title="Export · this page">
+                <div className="grid grid-cols-3 gap-2">
+                  <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
+                  <ExportBtn onClick={() => doExport("png")} busy={busy === "PNG"}>PNG</ExportBtn>
+                  <ExportBtn onClick={() => doExport("jpg")} busy={busy === "JPG"}>JPG</ExportBtn>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
+                  Single-page export at {dimInches.w}″ × {dimInches.h}″ for InDesign, Canva, and Fresco.
+                </p>
+              </Section>
+            </aside>
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
               <Settings2 className="h-3.5 w-3.5" /> Snap <ChevronDown className="h-3 w-3 opacity-70" />
             </button>
           </PopoverTrigger>
@@ -1344,169 +1482,10 @@ function Index() {
       </div>
 
       <div className="px-3 pt-1 pb-3">
-      <ResizablePanelGroup
-        orientation="horizontal"
-        className="min-h-[calc(100vh-180px)] gap-0 rounded-sm"
-      >
+        <div className="pl-3 flex flex-col gap-3">
 
-        <ResizablePanel
-          panelRef={middlePanelRef}
-          id="ws-middle"
-          defaultSize={26}
-          minSize={18}
-          maxSize={42}
-          collapsible
-          collapsedSize={0}
-          onResize={(size) => setMiddleCollapsed(size.asPercentage < 1)}
-        >
-        <div className="h-full overflow-y-auto px-3">
-        {/* Editor for selected page */}
-        <aside className="space-y-6">
-          <Section title="Page layout">
-            <div className="space-y-2">
-              <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_LAYOUTS.map((l) => (
-                    <SelectItem key={l} value={l}>
-                      <span className="flex flex-col">
-                        <span className="text-sm">{PAGE_LAYOUT_LABELS[l]}</span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {PAGE_LAYOUT_DESCRIPTIONS[l]}
-                        </span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                {PAGE_LAYOUT_DESCRIPTIONS[selectedLayout]} Saved per page.
-              </p>
-              {PAGE_LAYOUT_COLUMNS[selectedLayout] > 1 && (
-                <div className="mt-3 border-t border-border/60 pt-3">
-                  <ColumnTuningControls
-                    layout={selectedLayout}
-                    widths={pageStatus.columnWidthsOf(selected.id)}
-                    gutterIn={pageStatus.gutterOf(selected.id)}
-                    onChange={(patch) => pageStatus.setColumnTuning(selected.id, patch)}
-                    presets={layoutPresets.presetsFor(selectedLayout)}
-                    onSavePreset={(name) =>
-                      layoutPresets.save({
-                        name,
-                        layout: selectedLayout,
-                        column_widths: pageStatus.columnWidthsOf(selected.id),
-                        gutter_in: pageStatus.gutterOf(selected.id),
-                      })
-                    }
-                    onDeletePreset={(id) => layoutPresets.remove(id)}
-                  />
-                </div>
-              )}
-            </div>
-          </Section>
-          {selected.pageType === "cover" && (
-            <CoverEditor
-              data={selected.data as CoverData}
-              set={(p) => updateData<typeof selected>(selected.id, p)}
-            />
-          )}
-          {selected.pageType === "article" && (
-            <ArticleEditor
-              data={selected.data as ArticleData}
-              set={(p) => updateData<typeof selected>(selected.id, p)}
-            />
-          )}
-          {selected.pageType === "photo" && (
-            <PhotoEditor
-              data={selected.data as PhotoData}
-              set={(p) => updateData<typeof selected>(selected.id, p)}
-            />
-          )}
-          {selected.pageType === "contents" && (
-            <ContentsEditor
-              data={selected.data as ContentsData}
-              set={(p) => updateData<typeof selected>(selected.id, p)}
-            />
-          )}
-          {selected.pageType === "ad" && (
-            <AdEditor
-              data={selected.data as AdData}
-              set={(p) => updateData<typeof selected>(selected.id, p)}
-            />
-          )}
-          {selected.pageType === "back" && (
-            <BackCoverEditor
-              data={selected.data as BackCoverData}
-              set={(p) => updateData<typeof selected>(selected.id, p)}
-            />
-          )}
-
-          {selected.pageType !== "cover" &&
-            selected.pageType !== "back" &&
-            selected.pageType !== "contents" && (
-              <Section title="Contents listing">
-                <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={selected.includeInContents}
-                    onChange={(e) => updateNode(selected.id, { includeInContents: e.target.checked })}
-                    className="accent-[color:var(--ruby)]"
-                  />
-                  Show this page in the Contents index
-                </label>
-              </Section>
-            )}
-
-          {selected.pageType !== "cover" && selected.pageType !== "back" && (
-            <Section title="References for this page" defaultOpen>
-              <PageReferencesEditor
-                pageId={selected.id}
-                references={attachments.referencesByPage.get(selected.id) ?? []}
-                columnCount={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(selected.id)] ?? 1}
-                onUpload={(file) =>
-                  attachments.upload({ pageId: selected.id, kind: "reference", file })
-                }
-                onRemove={(row) => attachments.remove(row)}
-                onAssign={(id, patch) => applyPlacement(id, patch)}
-              />
-              <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
-                Multiple files allowed. Pin each to a region (column / header / footer) or
-                a free-form coordinate. The editor sees PDFs and images directly; Word docs are
-                converted to text.
-              </p>
-            </Section>
-          )}
-
-
-          <Section title="Export · this page">
-            <div className="grid grid-cols-3 gap-2">
-              <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
-              <ExportBtn onClick={() => doExport("png")} busy={busy === "PNG"}>PNG</ExportBtn>
-              <ExportBtn onClick={() => doExport("jpg")} busy={busy === "JPG"}>JPG</ExportBtn>
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
-              Single-page export at {dimInches.w}″ × {dimInches.h}″ for InDesign, Canva, and Fresco.
-            </p>
-          </Section>
-        </aside>
-        </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel id="ws-canvas" defaultSize={54} minSize={30}>
-        <div className="h-full overflow-y-auto pl-3 flex flex-col gap-3">
           {/* Canvas ribbon — most-used controls + panel collapse toggles */}
           <div className="border border-border bg-card rounded-sm px-2 py-1.5 flex items-center gap-2 flex-wrap sticky top-0 z-10">
-            <button
-              onClick={toggleMiddlePanel}
-              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
-              title={middleCollapsed ? "Show edit panel" : "Hide edit panel"}
-              aria-label={middleCollapsed ? "Show edit panel" : "Hide edit panel"}
-            >
-              {middleCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
-            </button>
-            <div className="h-5 w-px bg-border mx-1" />
             <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden sm:inline">View</span>
             <div className="inline-flex border border-border rounded-sm overflow-hidden">
               <button
@@ -1690,9 +1669,8 @@ function Index() {
           </div>
         </section>
         </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
       </div>
+
 
 
       {/* Off-screen capture stage — one ref per page in the issue. */}
