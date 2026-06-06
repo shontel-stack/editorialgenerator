@@ -1075,6 +1075,12 @@ function Index() {
                 />
               </div>
             </div>
+            <div className="h-8 w-px bg-border mx-2" />
+            <AutosaveIndicator
+              status={autosave.status}
+              lastSavedAt={autosave.lastSavedAt}
+              onSaveNow={autosave.saveNow}
+            />
           </div>
           <div className="flex items-center gap-4">
             <AttachmentControl
