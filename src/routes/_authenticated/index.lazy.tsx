@@ -110,6 +110,8 @@ import {
 
   pageNumberFor,
   renderFolio,
+  folioSideForIndex,
+  normalizeFolioTemplate,
   type AdData,
   type ArticleData,
   type ArticleLayout,
@@ -743,10 +745,10 @@ function Index() {
   // with the issue list automatically.
   const pagesForRender = useMemo(() => {
     const contentsEntries = deriveContentsEntries(issue);
-    const folio = renderFolio(issue.master, issue.meta);
     const total = issue.pages.length;
     return issue.pages.map((p, i) => {
       const num = formatPageNumber(issue.master, i + 1, total);
+      const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(i));
       switch (p.pageType) {
         case "cover":
           return { ...p, data: { ...p.data, issue: issue.meta.issue, date: issue.meta.date } };
@@ -1674,15 +1676,44 @@ function Index() {
                 onChange={(v) => updateMaster({ publication: v })}
               />
             </Field>
-            <Field label="Folio template">
-              <Input
-                value={issue.master.folioTemplate}
-                onChange={(v) => updateMaster({ folioTemplate: v })}
-              />
-            </Field>
-            <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2">
-              Tokens: <code>{"{publication}"}</code> <code>{"{issue}"}</code> <code>{"{date}"}</code>
-            </p>
+            {(() => {
+              const tpl = normalizeFolioTemplate(issue.master.folioTemplate);
+              return (
+                <>
+                  <Field label="Folio — left page (verso)">
+                    <Input
+                      value={tpl.left}
+                      onChange={(v) =>
+                        updateMaster({ folioTemplate: { ...tpl, left: v } })
+                      }
+                    />
+                  </Field>
+                  <Field label="Folio — right page (recto)">
+                    <Input
+                      value={tpl.right}
+                      onChange={(v) =>
+                        updateMaster({ folioTemplate: { ...tpl, right: v } })
+                      }
+                    />
+                  </Field>
+                  <div className="-mt-2 flex items-center justify-between gap-2">
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Tokens: <code>{"{publication}"}</code> <code>{"{issue}"}</code>{" "}
+                      <code>{"{date}"}</code> <code>{"{copyright}"}</code>
+                    </p>
+                    <button
+                      type="button"
+                      className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground hover:text-foreground transition"
+                      onClick={() =>
+                        updateMaster({ folioTemplate: { left: tpl.left, right: tpl.left } })
+                      }
+                    >
+                      Same on both
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
             <Field label="Page number style">
               <Select
                 value={issue.master.pageNumberFormat}

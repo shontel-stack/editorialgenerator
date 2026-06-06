@@ -10,17 +10,24 @@ import {
   makeNode,
   type ArticleData,
   type ArticleLayout,
+  type FolioTemplate,
   type IssueDoc,
   type IssueFonts,
   type IssueMaster,
   type IssuePageNode,
+  normalizeFolioTemplate,
 } from "./coverDefaults";
+
+/** Master patch tolerates partial folioTemplate (left or right only). */
+export type MasterPatch = Partial<Omit<IssueMaster, "folioTemplate">> & {
+  folioTemplate?: Partial<FolioTemplate>;
+};
 
 /** Discriminated union of patches the assistant can return. */
 export type IssuePatch =
   | { kind: "update_page_field"; pageId: string; field: string; value: string }
   | { kind: "set_article_layout"; pageId: string; layout: ArticleLayout }
-  | { kind: "update_master"; patch: Partial<IssueMaster> }
+  | { kind: "update_master"; patch: MasterPatch }
   | { kind: "set_fonts"; display?: string; serif?: string; sans?: string }
   | { kind: "add_page"; pageType: "article" | "photo" | "ad" | "contents" }
   | { kind: "add_spread"; left: "article" | "photo" | "ad"; right: "article" | "photo" | "ad" }
@@ -59,8 +66,18 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
         ),
       };
     }
-    case "update_master":
-      return { ...issue, master: { ...issue.master, ...patch.patch } };
+    case "update_master": {
+      const { folioTemplate: folioPatch, ...rest } = patch.patch;
+      const merged: IssueMaster = { ...issue.master, ...rest };
+      if (folioPatch) {
+        const current = normalizeFolioTemplate(issue.master.folioTemplate);
+        merged.folioTemplate = {
+          left: folioPatch.left ?? current.left,
+          right: folioPatch.right ?? current.right,
+        };
+      }
+      return { ...issue, master: merged };
+    }
     case "set_fonts": {
       const fonts: IssueFonts = {
         display: fontStack(patch.display, "display") ?? issue.master.fonts?.display ?? DEFAULT_FONTS.display,

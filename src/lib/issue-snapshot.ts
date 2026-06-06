@@ -1,4 +1,9 @@
-import type { IssueDoc, IssuePageNode } from "./coverDefaults";
+import {
+  normalizeFolioTemplate,
+  type FolioTemplate,
+  type IssueDoc,
+  type IssuePageNode,
+} from "./coverDefaults";
 
 /** Compact summary of the issue used as system-prompt context for the AI. */
 export type IssueSnapshot = {
@@ -6,7 +11,7 @@ export type IssueSnapshot = {
   meta: IssueDoc["meta"];
   master: {
     publication: string;
-    folioTemplate: string;
+    folioTemplate: FolioTemplate;
     pageNumberFormat: string;
     fonts: { display: string; serif: string; sans: string };
   };
@@ -26,7 +31,7 @@ export function snapshotIssue(issue: IssueDoc): IssueSnapshot {
     meta: issue.meta,
     master: {
       publication: issue.master.publication,
-      folioTemplate: issue.master.folioTemplate,
+      folioTemplate: normalizeFolioTemplate(issue.master.folioTemplate),
       pageNumberFormat: issue.master.pageNumberFormat,
       fonts: issue.master.fonts,
     },

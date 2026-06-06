@@ -103,7 +103,13 @@ export const setArticleLayoutSchema = z.object({
 
 export const updateMasterSchema = z.object({
   publication: z.string().optional(),
-  folioTemplate: z.string().optional().describe("Tokens: {publication} {issue} {date}"),
+  folioTemplate: z
+    .object({
+      left: z.string().optional().describe("Verso (left-hand page) folio template."),
+      right: z.string().optional().describe("Recto (right-hand page) folio template."),
+    })
+    .optional()
+    .describe("Tokens: {publication} {issue} {date} {copyright}. Set left/right independently for verso/recto."),
   pageNumberFormat: z.enum(["padded", "plain", "of-total", "none"]).optional(),
   showFolioOnArticles: z.boolean().optional(),
   showFolioOnPhotos: z.boolean().optional(),

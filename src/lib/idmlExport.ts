@@ -15,6 +15,7 @@ import { zipSync, strToU8 } from "fflate";
 import {
   formatPageNumber,
   renderFolio,
+  folioSideForIndex,
   type ArticleData,
   type CoverData,
   type IssueDoc,
@@ -103,7 +104,7 @@ const collectPageText = (
 ): PageText => {
   const totalPages = issue.pages.length;
   const pn = formatPageNumber(issue.master, pageIndex + 1, totalPages);
-  const folio = renderFolio(issue.master, issue.meta);
+  const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(pageIndex));
 
   switch (page.pageType) {
     case "cover": {
