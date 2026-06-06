@@ -256,23 +256,57 @@ export async function exportNewsletterInteractivePdf(
   }
 
   // 4) Add link annotations on the newsletter page over each highlight row.
-  const linkEls = newsletterNode.querySelectorAll<HTMLElement>(
-    "[data-link-row][data-link-target]",
+  const linkEls = Array.from(
+    newsletterNode.querySelectorAll<HTMLElement>(
+      "[data-link-row][data-link-target]",
+    ),
   );
   const sx = NL_W_PT / nlRect.width;
   const sy = NL_H_PT / nlRect.height;
+  const verifyTargets: Array<{
+    targetId: string;
+    targetRef: PDFRef;
+    annotRef: PDFRef;
+  }> = [];
+  const missingTargets: string[] = [];
   linkEls.forEach((el) => {
     const targetId = el.dataset.linkTarget;
     if (!targetId) return;
     const targetRef = pageRefById.get(targetId);
-    if (!targetRef) return;
+    if (!targetRef) {
+      missingTargets.push(targetId);
+      return;
+    }
     const r = el.getBoundingClientRect();
     const x1 = (r.left - nlRect.left) * sx;
     const x2 = (r.right - nlRect.left) * sx;
     const y2 = NL_H_PT - (r.top - nlRect.top) * sy;
     const y1 = NL_H_PT - (r.bottom - nlRect.top) * sy;
-    addInternalLink(doc, nlPage.ref, targetRef, [x1, y1, x2, y2]);
+    const annotRef = addInternalLink(doc, nlPage.ref, targetRef, [
+      x1,
+      y1,
+      x2,
+      y2,
+    ]);
+    verifyTargets.push({ targetId, targetRef, annotRef });
   });
+
+  if (missingTargets.length > 0) {
+    throw new Error(
+      `Interactive PDF: no rendered page for highlight target(s): ${missingTargets.join(", ")}`,
+    );
+  }
+  if (verifyTargets.length === 0) {
+    throw new Error(
+      "Interactive PDF: no highlight link rows were found in the newsletter preview.",
+    );
+  }
+  verifyHighlightLinks(
+    doc,
+    nlPage.ref,
+    { w: NL_W_PT, h: NL_H_PT },
+    verifyTargets,
+  );
 
   buildOutline(doc, outlineItems);
   doc.catalog.set(PDFName.of("PageMode"), PDFName.of("UseOutlines"));
