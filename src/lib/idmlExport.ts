@@ -436,8 +436,8 @@ const buildSpread = (
   // Folio frame at the bottom.
   if (folio) {
     const folId = nextSelfId("uFOL");
-    const fTop = PAGE_H - MARGIN - 18;
-    const fBottom = PAGE_H - MARGIN;
+    const fTop = PAGE_H - MB - 18;
+    const fBottom = PAGE_H - MB;
     items.push(
       `      <TextFrame Self="${folId}" ParentStory="${folio.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${fTop} ${left} ${fBottom} ${right}" ItemTransform="1 0 0 1 0 0">
         <Properties>
