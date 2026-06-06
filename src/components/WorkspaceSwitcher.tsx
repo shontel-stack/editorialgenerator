@@ -346,6 +346,12 @@ export function WorkspaceSwitcher() {
                 setEditPreset("custom");
               }}
             />
+            <MarginsForm
+              mTop={editMTop} mRight={editMRight} mBottom={editMBottom}
+              mLeft={editMLeft} bleed={editBleed}
+              onTop={setEditMTop} onRight={setEditMRight} onBottom={setEditMBottom}
+              onLeft={setEditMLeft} onBleed={setEditBleed}
+            />
           </div>
           <DialogFooter>
             <button
