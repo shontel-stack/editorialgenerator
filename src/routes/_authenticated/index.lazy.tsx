@@ -28,8 +28,10 @@ import { getLastPositions, setLastPosition, type LastPosition } from "@/lib/publ
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { useSyncQueueDrainer } from "@/hooks/useSyncQueueDrainer";
 import { autosaveKey, loadAutosave } from "@/lib/issueAutosave";
 import { fetchIssueDraft, upsertIssueDraft } from "@/lib/issueDrafts";
+import { enqueueDraft } from "@/lib/syncQueue";
 import { AutosaveIndicator } from "@/components/AutosaveIndicator";
 import {
   PAGE_LAYOUTS,
