@@ -688,8 +688,8 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData; dim?: { w
 
 /* — PHOTO ESSAY — */
 
-const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData }>(function PhotoPreview(
-  { data },
+const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData; dim?: { w: number; h: number } }>(function PhotoPreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
