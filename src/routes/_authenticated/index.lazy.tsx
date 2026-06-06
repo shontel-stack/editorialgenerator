@@ -112,6 +112,8 @@ import {
   renderFolio,
   folioSideForIndex,
   computePhysicalIndices,
+  normalizeParitySkip,
+  MAX_PARITY_SKIP,
   normalizeFolioTemplate,
   type AdData,
   type ArticleData,
