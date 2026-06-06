@@ -1224,8 +1224,8 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData; dim?: { w: number; 
 
 /* — BACK COVER — closing page — */
 
-const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData }>(function BackCoverPreview(
-  { data },
+const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData; dim?: { w: number; h: number } }>(function BackCoverPreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
