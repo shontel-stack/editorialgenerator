@@ -145,6 +145,10 @@ export function NewsletterDialog({
       const rect = node.getBoundingClientRect();
       const widthPx = Math.max(600, Math.round(rect.width));
       const heightPx = Math.max(800, Math.round(rect.height));
+      const [{ toJpeg }, { jsPDF }] = await Promise.all([
+        import("html-to-image"),
+        import("jspdf"),
+      ]);
       const jpeg = await toJpeg(node, {
         width: widthPx,
         height: heightPx,
