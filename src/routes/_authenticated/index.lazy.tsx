@@ -1268,6 +1268,14 @@ function Index() {
               queueDraining={queueDrainer.draining}
               onRetryQueue={queueDrainer.drainNow}
             />
+            <DraftConflictDialog
+              open={conflict != null}
+              localTs={conflict?.local.ts ?? 0}
+              remoteTs={conflict?.remote.ts ?? 0}
+              localPageCount={conflict?.local.data.pages.length ?? 0}
+              remotePageCount={conflict?.remote.data.pages.length ?? 0}
+              onResolve={handleConflictResolve}
+            />
           </div>
           <div className="flex items-center gap-4">
             <AttachmentControl
