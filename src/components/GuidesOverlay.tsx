@@ -7,6 +7,13 @@ type Props = {
   margins: PageMargins;
   /** Optional override for label visibility. */
   showLabels?: boolean;
+  /**
+   * Number of body columns to draw inside the safe area. 0/1 = no column
+   * guides; 2 draws one gutter divider, 3 draws two, etc.
+   */
+  columns?: number;
+  /** Gutter between columns, in inches. Defaults to 0.167″ (~12pt). */
+  gutterIn?: number;
 };
 
 /**
