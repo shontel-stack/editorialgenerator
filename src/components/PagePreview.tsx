@@ -20,25 +20,26 @@ type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | Bac
 type Props = {
   pageType: PageType;
   data: AnyData;
+  dim?: { w: number; h: number };
 };
 
 export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePreview(
-  { pageType, data },
+  { pageType, data, dim },
   ref,
 ) {
   switch (pageType) {
     case "cover":
-      return <CoverPreview ref={ref} data={data as CoverData} />;
+      return <CoverPreview ref={ref} data={data as CoverData} dim={dim} />;
     case "article":
-      return <ArticlePreview ref={ref} data={data as ArticleData} />;
+      return <ArticlePreview ref={ref} data={data as ArticleData} dim={dim} />;
     case "photo":
-      return <PhotoPreview ref={ref} data={data as PhotoData} />;
+      return <PhotoPreview ref={ref} data={data as PhotoData} dim={dim} />;
     case "contents":
-      return <ContentsPreview ref={ref} data={data as ContentsData} />;
+      return <ContentsPreview ref={ref} data={data as ContentsData} dim={dim} />;
     case "ad":
-      return <AdPreview ref={ref} data={data as AdData} />;
+      return <AdPreview ref={ref} data={data as AdData} dim={dim} />;
     case "back":
-      return <BackCoverPreview ref={ref} data={data as BackCoverData} />;
+      return <BackCoverPreview ref={ref} data={data as BackCoverData} dim={dim} />;
   }
 });
 
@@ -48,18 +49,20 @@ function Page({
   innerRef,
   pal,
   children,
+  dim,
 }: {
   innerRef: React.Ref<HTMLDivElement>;
   pal: ReturnType<() => typeof PALETTES[keyof typeof PALETTES]>;
   children: React.ReactNode;
+  dim?: { w: number; h: number };
 }) {
   return (
     <div
       ref={innerRef}
       data-cover-root
       style={{
-        width: COVER_PX.w,
-        height: COVER_PX.h,
+        width: dim?.w ?? COVER_PX.w,
+        height: dim?.h ?? COVER_PX.h,
         backgroundColor: pal.bg,
         color: pal.fg,
         position: "relative",
