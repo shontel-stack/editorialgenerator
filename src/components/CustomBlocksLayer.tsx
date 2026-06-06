@@ -5,6 +5,7 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as RPointerEvent,
+  type ReactNode,
 } from "react";
 import QRCode from "qrcode";
 import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2 } from "lucide-react";
