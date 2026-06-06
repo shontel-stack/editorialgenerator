@@ -252,18 +252,18 @@ function Index() {
   /* --- preview stage sizing --- */
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.2);
-  const stageW = spreadView && spread.right ? COVER_PX.w * 2 : COVER_PX.w;
+  const stageW = spreadView && spread.right ? dimPx.w * 2 : dimPx.w;
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const update = () => {
-      setScale(Math.min(el.clientWidth / stageW, el.clientHeight / COVER_PX.h));
+      setScale(Math.min(el.clientWidth / stageW, el.clientHeight / dimPx.h));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [stageW]);
+  }, [stageW, dimPx.h]);
 
   /* --- live font preview: inject Google Fonts <link> and apply CSS vars --- */
   const fonts = issue.master.fonts;
