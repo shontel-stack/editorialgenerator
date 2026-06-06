@@ -28,6 +28,8 @@ import {
 
 const PAGE_SIZE = 20;
 
+type PageRef = { id: string; label: string };
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -36,6 +38,7 @@ type Props = {
   publicationName?: string | null;
   selectedPageId: string | null;
   selectedPageLabel?: string;
+  pages?: PageRef[];
   attachments: {
     rows: AttachmentWithUrl[];
     loading: boolean;
@@ -46,8 +49,10 @@ type Props = {
       file: File;
     }) => Promise<void>;
     remove: (row: AttachmentWithUrl) => Promise<void>;
+    updateAssignment?: (id: string, patch: AttachmentAssignment) => Promise<void>;
   };
 };
+
 
 function iconFor(mime: string) {
   if (isPdf(mime)) return FileText;
