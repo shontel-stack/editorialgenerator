@@ -57,7 +57,7 @@ type CtxValue = Ctx & {
   setSelectedKey: (key: string | null) => void;
 };
 
-const LayoutEditContext = createContext<Ctx | null>(null);
+const LayoutEditContext = createContext<CtxValue | null>(null);
 
 export function useLayoutEdit() {
   return useContext(LayoutEditContext);
@@ -81,6 +81,26 @@ export function LayoutEditProvider({
   onRequestEdit,
   children,
 }: Ctx & { children: ReactNode }) {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  // Clear selection whenever this page leaves edit mode so re-entering starts
+  // with nothing selected.
+  useEffect(() => {
+    if (!editing) setSelectedKey(null);
+  }, [editing]);
+
+  // Escape clears selection while editing.
+  useEffect(() => {
+    if (!editing || !selectedKey) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      if (e.key === "Escape") setSelectedKey(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing, selectedKey]);
+
   return (
     <LayoutEditContext.Provider
       value={{
@@ -99,6 +119,8 @@ export function LayoutEditProvider({
         guides,
         snapSettings,
         onRequestEdit,
+        selectedKey,
+        setSelectedKey,
       }}
     >
       {children}
