@@ -32,7 +32,14 @@ type Props = {
  * match. Bleed extends *outside* the trim, so the parent wrapper must allow
  * overflow.
  */
-export function GuidesOverlay({ dim, margins, showLabels = true, columns = 1, gutterIn = 0.167 }: Props) {
+export function GuidesOverlay({
+  dim,
+  margins,
+  showLabels = true,
+  columns = 1,
+  gutterIn = 0.167,
+  columnRatios,
+}: Props) {
   const DPI = 300;
   const mTop = margins.top * DPI;
   const mRight = margins.right * DPI;
@@ -43,7 +50,14 @@ export function GuidesOverlay({ dim, margins, showLabels = true, columns = 1, gu
   const safeH = dim.h - mTop - mBottom;
   const cols = Math.max(1, Math.floor(columns));
   const gutter = Math.max(0, gutterIn * DPI);
-  const colW = cols > 1 ? (safeW - gutter * (cols - 1)) / cols : safeW;
+  const totalGutter = gutter * Math.max(0, cols - 1);
+  const usableW = Math.max(0, safeW - totalGutter);
+  const ratios =
+    columnRatios && columnRatios.length === cols
+      ? columnRatios
+      : Array.from({ length: cols }, () => 1 / cols);
+  const ratioSum = ratios.reduce((a, b) => a + b, 0) || 1;
+  const colWidths = ratios.map((r) => (r / ratioSum) * usableW);
 
   const MAGENTA = "rgba(236, 0, 140, 0.95)"; // safe-area (margin)
   const CYAN = "rgba(0, 174, 239, 0.95)"; // bleed (crop)
