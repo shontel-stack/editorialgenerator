@@ -25,7 +25,9 @@ import { useActivePublication } from "@/hooks/useActivePublication";
 import { confirmDiscardUnsaved } from "@/lib/unsavedGuards";
 import {
   COVER_INCHES,
+  DEFAULT_PAGE_MARGINS,
   DIMENSION_PRESETS,
+  getPageMargins,
   matchPresetKey,
 } from "@/lib/coverDefaults";
 
