@@ -683,7 +683,19 @@ export function WorkspaceSwitcher() {
                 >
                   {issueDateError}
                 </p>
-              ) : null}
+              <div className="pl-6 pt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>
+                  Allowed: day {scheduleRules.minDay}–{scheduleRules.maxDay}, −
+                  {scheduleRules.pastMonths} / +{scheduleRules.futureMonths} months
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setScheduleOpen(true)}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Configure schedule…
+                </button>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -704,6 +716,13 @@ export function WorkspaceSwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SchedulePanel
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        rules={scheduleRules}
+        onChange={updateScheduleRules}
+      />
     </>
   );
 }
