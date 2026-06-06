@@ -1036,7 +1036,7 @@ function Index() {
               <ExportBtn onClick={() => doExport("jpg")} busy={busy === "JPG"}>JPG</ExportBtn>
             </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
-              Single-page export at {COVER_INCHES.w}″ × {COVER_INCHES.h}″ for InDesign, Canva, and Fresco.
+              Single-page export at {dimInches.w}″ × {dimInches.h}″ for InDesign, Canva, and Fresco.
             </p>
           </Section>
         </aside>
@@ -1045,21 +1045,21 @@ function Index() {
         <section
           ref={stageRef}
           className="relative bg-secondary/60 border border-border overflow-hidden"
-          style={{ minHeight: "85vh", aspectRatio: `${stageW / COVER_PX.h}` }}
+          style={{ minHeight: "85vh", aspectRatio: `${stageW / dimPx.h}` }}
         >
           <div
             className="absolute left-1/2 top-1/2 origin-center"
             style={{
               transform: `translate(-50%, -50%) scale(${scale})`,
               width: stageW,
-              height: COVER_PX.h,
+              height: dimPx.h,
               display: "flex",
               gap: 0,
             }}
           >
             <div
               className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-              style={{ width: COVER_PX.w, height: COVER_PX.h }}
+              style={{ width: dimPx.w, height: dimPx.h }}
             >
               <LayoutEditProvider
                 editing={editLayout && spread.left.id === selected.id}
@@ -1075,13 +1075,13 @@ function Index() {
                 customBlocks={spread.left.customBlocks ?? []}
                 setCustomBlocks={(next) => setCustomBlocks(spread.left.id, next)}
               >
-                <PagePreview pageType={spread.left.pageType} data={spread.left.data} />
+                <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
             </div>
             {spreadView && spread.right && (
               <div
                 className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-                style={{ width: COVER_PX.w, height: COVER_PX.h }}
+                style={{ width: dimPx.w, height: dimPx.h }}
               >
                 <LayoutEditProvider
                   editing={editLayout && spread.right.id === selected.id}
@@ -1097,7 +1097,7 @@ function Index() {
                   customBlocks={spread.right.customBlocks ?? []}
                   setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
                 >
-                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} />
+                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>
               </div>
             )}
