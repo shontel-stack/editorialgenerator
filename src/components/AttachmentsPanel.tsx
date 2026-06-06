@@ -91,10 +91,16 @@ export function AttachmentsPanel({
   selectedPageLabel,
   pages = [],
   attachments,
+  library,
+  onInsertImage,
 }: Props) {
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
+  const [tab, setTab] = useState<"issue" | "library">("issue");
   const [busy, setBusy] = useState(false);
+  const [libBusy, setLibBusy] = useState(false);
+  const [libErr, setLibErr] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [scope, setScope] = useState<"issue" | "page">("issue");
   const [kind, setKind] = useState<"reference" | "template">("reference");
