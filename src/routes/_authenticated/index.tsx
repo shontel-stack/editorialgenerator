@@ -1303,6 +1303,25 @@ function Index() {
                 Reset
               </button>
             )}
+            <div className="h-5 w-px bg-border mx-1" />
+            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden lg:inline">
+              Layout
+            </span>
+            <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
+              <SelectTrigger
+                className="h-7 w-[170px] text-xs"
+                title="Choose a layout template for this page"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_LAYOUTS.map((l) => (
+                  <SelectItem key={l} value={l} className="text-xs">
+                    {PAGE_LAYOUT_LABELS[l]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="ml-auto text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden md:inline">
               {dimInches.w}″ × {dimInches.h}″
             </span>
