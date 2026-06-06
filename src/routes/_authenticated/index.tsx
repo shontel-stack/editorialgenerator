@@ -1473,6 +1473,12 @@ function Index() {
                     gutterIn={pageStatus.gutterOf(spread.right!.id)}
                   />
                 )}
+                <ReferencePinsOverlay
+                  references={attachments.referencesByPage.get(spread.right.id) ?? []}
+                  dim={dimPx}
+                  scale={scale}
+                  onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                />
               </div>
             )}
           </div>
