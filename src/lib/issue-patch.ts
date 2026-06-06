@@ -27,7 +27,7 @@ export type MasterPatch = Partial<Omit<IssueMaster, "folioTemplate">> & {
 export type IssuePatch =
   | { kind: "update_page_field"; pageId: string; field: string; value: string }
   | { kind: "set_article_layout"; pageId: string; layout: ArticleLayout }
-  | { kind: "update_master"; patch: Partial<IssueMaster> }
+  | { kind: "update_master"; patch: MasterPatch }
   | { kind: "set_fonts"; display?: string; serif?: string; sans?: string }
   | { kind: "add_page"; pageType: "article" | "photo" | "ad" | "contents" }
   | { kind: "add_spread"; left: "article" | "photo" | "ad"; right: "article" | "photo" | "ad" }
