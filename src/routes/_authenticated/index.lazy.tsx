@@ -21,6 +21,7 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
+import { useLibraryAttachments } from "@/hooks/useLibraryAttachments";
 import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
@@ -469,6 +470,7 @@ function Index() {
     return out;
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
+  const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
 
   // ----- Placement undo / redo history -----
   // Records changes made via drag-on-canvas, sidebar pin edits, AttachmentsPanel
@@ -2137,6 +2139,23 @@ function Index() {
         selectedPageLabel={selected.pageType}
         pages={pageRefsForStatus}
         attachments={{ ...attachments, updateAssignment: applyPlacement }}
+        library={libraryAttachments}
+        onInsertImage={(row) => {
+          if (!row.signedUrl) return;
+          const existing = selected.customBlocks ?? [];
+          const block = {
+            id: newId(),
+            kind: "image" as const,
+            x: 80,
+            y: 80,
+            z: 50,
+            w: 480,
+            h: 320,
+            imageUrl: row.signedUrl,
+            imageFit: "cover" as const,
+          };
+          setCustomBlocks(selected.id, [...existing, block]);
+        }}
       />
 
 
@@ -2147,16 +2166,18 @@ function Index() {
         publicationId={activePublication?.id ?? null}
         publicationName={activePublication?.name ?? null}
         selectedPageId={selected.id}
-        attachments={attachments.rows.map((r) => ({
-          id: r.id,
-          file_name: r.file_name,
-          mime_type: r.mime_type,
-          kind: r.kind,
-          page_id: r.page_id,
-          region: r.region,
-          position_x: r.position_x,
-          position_y: r.position_y,
-        }))}
+        attachments={attachments.rows
+          .filter((r): r is typeof r & { kind: "template" | "reference" } => r.kind !== "library")
+          .map((r) => ({
+            id: r.id,
+            file_name: r.file_name,
+            mime_type: r.mime_type,
+            kind: r.kind,
+            page_id: r.page_id,
+            region: r.region,
+            position_x: r.position_x,
+            position_y: r.position_y,
+          }))}
         onPlaceAttachment={(id, patch) => applyPlacement(id, patch)}
       />
 

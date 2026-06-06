@@ -1,0 +1,1 @@
+ALTER TABLE public.issue_attachments ALTER COLUMN issue_id DROP NOT NULL;

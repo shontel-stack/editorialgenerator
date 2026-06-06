@@ -13,11 +13,13 @@ export const ACCEPTED_MIME = [
 
 export const ACCEPT_ATTR = ".pdf,.jpg,.jpeg,.png,.webp,.docx";
 
+export type AttachmentKind = "template" | "reference" | "library";
+
 export type AttachmentRow = {
   id: string;
-  issue_id: string;
+  issue_id: string | null;
   page_id: string | null;
-  kind: "template" | "reference";
+  kind: AttachmentKind;
   file_path: string;
   file_name: string;
   mime_type: string;
@@ -283,5 +285,72 @@ export async function updateAttachmentAssignment(
 
   const { error } = await supabase.from("issue_attachments").update(payload).eq("id", id);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Publication library: shared media bucket scoped to a publication (no issue).
+// ---------------------------------------------------------------------------
+
+export async function listLibraryAttachments(
+  publicationId: string,
+): Promise<AttachmentRow[]> {
+  const { data, error } = await supabase
+    .from("issue_attachments")
+    .select("*")
+    .eq("kind", "library")
+    .eq("publication_id", publicationId)
+    .is("issue_id", null)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as AttachmentRow[];
+}
+
+export async function uploadLibraryAttachment(opts: {
+  publicationId: string;
+  file: File;
+}): Promise<AttachmentRow> {
+  const { publicationId, file } = opts;
+  if (!publicationId) {
+    throw new Error("Select a publication before adding library files.");
+  }
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    throw new Error(`File too large (max ${Math.floor(MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB).`);
+  }
+  if (!ACCEPTED_MIME.includes(file.type)) {
+    throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
+  }
+
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error("You must be signed in to upload library files.");
+
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80);
+  const path = `${uid}/_library/${publicationId}/${Date.now()}-${safe}`;
+
+  const up = await supabase.storage
+    .from(ATTACHMENT_BUCKET)
+    .upload(path, file, { contentType: file.type });
+  if (up.error) throw up.error;
+
+  const extracted = isWordDoc(file.type) ? await extractDocxText(file) : null;
+
+  const insert = await supabase
+    .from("issue_attachments")
+    .insert({
+      issue_id: null,
+      user_id: uid,
+      publication_id: publicationId,
+      page_id: null,
+      kind: "library",
+      file_path: path,
+      file_name: file.name,
+      mime_type: file.type,
+      size_bytes: file.size,
+      extracted_text: extracted,
+    })
+    .select("*")
+    .single();
+  if (insert.error) throw insert.error;
+  return insert.data as AttachmentRow;
 }
 
