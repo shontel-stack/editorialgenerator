@@ -800,7 +800,7 @@ function Index() {
 
       <div className="px-3 py-3">
       <ResizablePanelGroup
-        direction="horizontal"
+        orientation="horizontal"
         className="min-h-[calc(100vh-140px)] gap-0 rounded-sm"
       >
         <ResizablePanel
@@ -811,7 +811,7 @@ function Index() {
           maxSize={35}
           collapsible
           collapsedSize={0}
-          onResize={(size) => setLeftCollapsed(size < 1)}
+          onResize={(size) => setLeftCollapsed(size.asPercentage < 1)}
         >
         <div className="h-full overflow-y-auto pr-3">
         {/* Page list */}
@@ -1093,7 +1093,7 @@ function Index() {
           maxSize={42}
           collapsible
           collapsedSize={0}
-          onResize={(size) => setMiddleCollapsed(size < 1)}
+          onResize={(size) => setMiddleCollapsed(size.asPercentage < 1)}
         >
         <div className="h-full overflow-y-auto px-3">
         {/* Editor for selected page */}
