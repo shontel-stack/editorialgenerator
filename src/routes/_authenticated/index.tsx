@@ -1447,7 +1447,7 @@ function Index() {
                   attachments.upload({ pageId: selected.id, kind: "reference", file })
                 }
                 onRemove={(row) => attachments.remove(row)}
-                onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
+                onAssign={(id, patch) => applyPlacement(id, patch)}
               />
               <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
                 Multiple files allowed. Pin each to a region (column / header / footer) or
