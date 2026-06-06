@@ -469,6 +469,7 @@ function Index() {
     return out;
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
+  const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
 
   // ----- Placement undo / redo history -----
   // Records changes made via drag-on-canvas, sidebar pin edits, AttachmentsPanel
