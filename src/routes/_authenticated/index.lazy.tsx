@@ -1607,6 +1607,7 @@ function Index() {
                 setCustomBlocks={(next) => setCustomBlocks(spread.left.id, next)}
                 guides={showGuides ? guidesFor(spread.left) : undefined}
                 snapSettings={effectiveSnapFor(spread.left)}
+                onRequestEdit={() => { setSelectedId(spread.left.id); setEditLayout(true); }}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
@@ -1646,6 +1647,7 @@ function Index() {
                   setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
                   guides={showGuides ? guidesFor(spread.right) : undefined}
                   snapSettings={effectiveSnapFor(spread.right)}
+                  onRequestEdit={() => { setSelectedId(spread.right!.id); setEditLayout(true); }}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>
