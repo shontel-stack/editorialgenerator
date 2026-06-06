@@ -863,7 +863,11 @@ function Index() {
             </p>
           )}
 
-          <SnapSettingsPanel />
+          <SnapSettingsPanel
+            pageLabel={selected.pageType}
+            override={selected.snapOverride ?? null}
+            onChangeOverride={(next) => setSnapOverride(selected.id, next)}
+          />
 
 
 
