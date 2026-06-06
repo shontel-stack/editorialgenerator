@@ -14,6 +14,7 @@ import {
   type IssueFonts,
   type IssueMaster,
   type IssuePageNode,
+  normalizeFolioTemplate,
 } from "./coverDefaults";
 
 /** Discriminated union of patches the assistant can return. */
