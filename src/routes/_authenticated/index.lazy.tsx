@@ -1486,15 +1486,6 @@ function Index() {
 
           {/* Canvas ribbon — most-used controls + panel collapse toggles */}
           <div className="border border-border bg-card rounded-sm px-2 py-1.5 flex items-center gap-2 flex-wrap sticky top-0 z-10">
-            <button
-              onClick={toggleMiddlePanel}
-              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
-              title={middleCollapsed ? "Show edit panel" : "Hide edit panel"}
-              aria-label={middleCollapsed ? "Show edit panel" : "Hide edit panel"}
-            >
-              {middleCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
-            </button>
-            <div className="h-5 w-px bg-border mx-1" />
             <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden sm:inline">View</span>
             <div className="inline-flex border border-border rounded-sm overflow-hidden">
               <button
