@@ -14,6 +14,16 @@ export type Overrides = Record<string, { dx: number; dy: number }>;
 export type ScaleMap = Record<string, number>;
 export type LinkMap = Record<string, string>;
 
+/**
+ * Snap guides for the editor — lists of page-px coordinates that block edges
+ * (and centers) snap to while dragging. Threshold is in page-px (300 DPI).
+ */
+export type SnapGuides = {
+  xs: number[];
+  ys: number[];
+  threshold: number;
+};
+
 type Ctx = {
   editing: boolean;
   scale: number;
@@ -30,6 +40,8 @@ type Ctx = {
   /** Custom (user-added) blocks for this page. */
   customBlocks?: CustomBlock[];
   setCustomBlocks?: (next: CustomBlock[]) => void;
+  /** Optional snap targets (margin / bleed / trim / center). */
+  guides?: SnapGuides;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
@@ -51,6 +63,7 @@ export function LayoutEditProvider({
   previewScales,
   customBlocks,
   setCustomBlocks,
+  guides,
   children,
 }: Ctx & { children: ReactNode }) {
   return (
@@ -68,6 +81,7 @@ export function LayoutEditProvider({
         previewScales,
         customBlocks,
         setCustomBlocks,
+        guides,
       }}
     >
       {children}
@@ -77,6 +91,55 @@ export function LayoutEditProvider({
 
 const SNAP = 40;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
+
+/** Snap a single coord to the nearest guide within threshold. Returns the
+ *  adjustment delta (snapped - value) or 0 if no guide is close enough. */
+function snapDelta(value: number, guides: number[], threshold: number): number {
+  let best = 0;
+  let bestDist = threshold;
+  for (const g of guides) {
+    const d = g - value;
+    const ad = Math.abs(d);
+    if (ad < bestDist) {
+      bestDist = ad;
+      best = d;
+    }
+  }
+  return best;
+}
+
+/** Try snapping a block (with left/top/width/height after move) to guides.
+ *  Considers the block's leading edge, center, and trailing edge on each axis,
+ *  and returns the adjustments to apply to dx,dy. */
+function snapToGuides(
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+  guides: SnapGuides,
+): { ax: number; ay: number } {
+  const candX = [left, left + width / 2, left + width];
+  const candY = [top, top + height / 2, top + height];
+  let ax = 0;
+  let axBest = guides.threshold;
+  for (const c of candX) {
+    const d = snapDelta(c, guides.xs, guides.threshold);
+    if (d !== 0 && Math.abs(d) < axBest) {
+      axBest = Math.abs(d);
+      ax = d;
+    }
+  }
+  let ay = 0;
+  let ayBest = guides.threshold;
+  for (const c of candY) {
+    const d = snapDelta(c, guides.ys, guides.threshold);
+    if (d !== 0 && Math.abs(d) < ayBest) {
+      ayBest = Math.abs(d);
+      ay = d;
+    }
+  }
+  return { ax, ay };
+}
 
 export function Draggable({
   blockKey,
@@ -98,7 +161,17 @@ export function Draggable({
   const hasPreview = Boolean(preview) || typeof previewScale === "number";
 
   const [local, setLocal] = useState<{ dx: number; dy: number } | null>(null);
-  const drag = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
+  const drag = useRef<{
+    x: number;
+    y: number;
+    dx: number;
+    dy: number;
+    /** Untranslated origin (top-left) of this block on the page canvas, in page-px. */
+    originLeft: number;
+    originTop: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [showSize, setShowSize] = useState(false);
 
   // Preview position wins over saved/local while a pending proposal exists.
@@ -106,31 +179,62 @@ export function Draggable({
   const dy = preview?.dy ?? local?.dy ?? saved?.dy ?? 0;
   const effectiveScale = previewScale ?? textScale;
 
+  /** Apply guide snapping on top of a raw dx/dy delta. */
+  const applySnap = (ndx: number, ndy: number): { dx: number; dy: number; snappedX: boolean; snappedY: boolean } => {
+    const d = drag.current;
+    if (!d || !ctx?.guides) return { dx: ndx, dy: ndy, snappedX: false, snappedY: false };
+    const left = d.originLeft + ndx;
+    const top = d.originTop + ndy;
+    const { ax, ay } = snapToGuides(left, top, d.width, d.height, ctx.guides);
+    return { dx: ndx + ax, dy: ndy + ay, snappedX: ax !== 0, snappedY: ay !== 0 };
+  };
+
   const onPointerDown = (e: RPointerEvent<HTMLDivElement>) => {
     if (!editing || !ctx) return;
     e.preventDefault();
     e.stopPropagation();
-    drag.current = { x: e.clientX, y: e.clientY, dx, dy };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    const el = e.currentTarget;
+    const root = el.closest("[data-cover-root]") as HTMLElement | null;
+    const s = ctx.scale || 1;
+    const elRect = el.getBoundingClientRect();
+    const rootRect = root?.getBoundingClientRect() ?? { left: elRect.left, top: elRect.top };
+    const curLeft = (elRect.left - rootRect.left) / s;
+    const curTop = (elRect.top - rootRect.top) / s;
+    drag.current = {
+      x: e.clientX,
+      y: e.clientY,
+      dx,
+      dy,
+      originLeft: curLeft - dx,
+      originTop: curTop - dy,
+      width: elRect.width / s,
+      height: elRect.height / s,
+    };
+    el.setPointerCapture(e.pointerId);
     setLocal({ dx, dy });
   };
   const onPointerMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!drag.current || !ctx) return;
     const s = ctx.scale || 1;
-    const ndx = drag.current.dx + (e.clientX - drag.current.x) / s;
-    const ndy = drag.current.dy + (e.clientY - drag.current.y) / s;
-    setLocal({ dx: ndx, dy: ndy });
+    const rawDx = drag.current.dx + (e.clientX - drag.current.x) / s;
+    const rawDy = drag.current.dy + (e.clientY - drag.current.y) / s;
+    const snapped = applySnap(rawDx, rawDy);
+    setLocal({ dx: snapped.dx, dy: snapped.dy });
   };
   const onPointerUp = (e: RPointerEvent<HTMLDivElement>) => {
     if (!drag.current || !ctx) return;
     const s = ctx.scale || 1;
-    const ndx = drag.current.dx + (e.clientX - drag.current.x) / s;
-    const ndy = drag.current.dy + (e.clientY - drag.current.y) / s;
-    const snapped = { dx: snap(ndx), dy: snap(ndy) };
+    const rawDx = drag.current.dx + (e.clientX - drag.current.x) / s;
+    const rawDy = drag.current.dy + (e.clientY - drag.current.y) / s;
+    const snapped = applySnap(rawDx, rawDy);
+    // If a guide engaged on an axis, keep the exact snapped value; otherwise
+    // fall back to the 40-px coarse grid so legacy snapping still applies.
+    const finalDx = snapped.snappedX ? Math.round(snapped.dx) : snap(snapped.dx);
+    const finalDy = snapped.snappedY ? Math.round(snapped.dy) : snap(snapped.dy);
     drag.current = null;
     setLocal(null);
-    if (snapped.dx === 0 && snapped.dy === 0) ctx.setOverride(blockKey, null);
-    else ctx.setOverride(blockKey, snapped);
+    if (finalDx === 0 && finalDy === 0) ctx.setOverride(blockKey, null);
+    else ctx.setOverride(blockKey, { dx: finalDx, dy: finalDy });
   };
 
   const existingTransform = (style.transform as string | undefined) ?? "";
