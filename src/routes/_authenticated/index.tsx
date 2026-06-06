@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2 } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail } from "lucide-react";
+import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
 import { PagePreview } from "@/components/PagePreview";
@@ -132,6 +133,7 @@ export const Route = createFileRoute("/_authenticated/")({
 function Index() {
   const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
+  const [newsletterOpen, setNewsletterOpen] = useState(false);
   useUnsavedGuard(
     () =>
       JSON.stringify(issue) !== lastSavedRef.current
@@ -1264,6 +1266,13 @@ function Index() {
               <Download className="h-3.5 w-3.5" />
               {busy === "PUBLICATION" ? "Assembling…" : "Export Publication PDF"}
             </button>
+            <button
+              onClick={() => setNewsletterOpen(true)}
+              className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
+              title="Generate an HTML newsletter email with AI-picked highlights from this issue"
+            >
+              <Mail className="h-3 w-3" /> Generate newsletter email
+            </button>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={saveIssue}
@@ -1842,6 +1851,13 @@ function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NewsletterDialog
+        open={newsletterOpen}
+        onOpenChange={setNewsletterOpen}
+        issue={issue}
+        issueSlug={issueSlug}
+      />
     </main>
   );
 }
