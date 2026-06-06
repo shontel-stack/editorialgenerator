@@ -148,6 +148,17 @@ function Index() {
     },
   );
   const saveIssueRef = useRef<(() => void) | null>(null);
+  const stickyRef = useRef<HTMLDivElement | null>(null);
+  const [stickyH, setStickyH] = useState(0);
+  useEffect(() => {
+    const el = stickyRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setStickyH(el.getBoundingClientRect().height));
+    ro.observe(el);
+    setStickyH(el.getBoundingClientRect().height);
+    return () => ro.disconnect();
+  }, []);
+
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
@@ -1236,8 +1247,9 @@ function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="sticky top-0 z-30 bg-background">
+    <main className="min-h-screen bg-background text-foreground" style={{ scrollPaddingTop: stickyH }}>
+      <div ref={stickyRef} className="sticky top-0 z-30 bg-background">
+
       <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-full px-4 py-4 flex items-center justify-between gap-6 flex-wrap">
           <div className="flex items-center gap-4">
@@ -1902,8 +1914,9 @@ function Index() {
         <section
           ref={stageRef}
           className="relative bg-secondary/60 border border-border overflow-hidden flex-1"
-          style={{ minHeight: "70vh", aspectRatio: `${stageW / dimPx.h}` }}
+          style={{ minHeight: `calc(70vh - ${stickyH}px)`, aspectRatio: `${stageW / dimPx.h}`, scrollMarginTop: stickyH }}
         >
+
           <div
             className="absolute left-1/2 top-1/2 origin-center"
             style={{
