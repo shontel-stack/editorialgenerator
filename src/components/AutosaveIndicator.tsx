@@ -12,6 +12,10 @@ export interface AutosaveIndicatorProps {
   cloudLastSyncedAt?: number | null;
   cloudError?: string | null;
   onSyncNow?: () => void;
+  /** Number of offline-queued draft updates waiting to upload. */
+  queuePending?: number;
+  queueDraining?: boolean;
+  onRetryQueue?: () => void;
 }
 
 function formatRelative(ts: number, now: number): string {
