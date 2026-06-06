@@ -121,10 +121,24 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
-  // Page dimensions come from the active publication (with fall-back defaults).
+  // Page dimensions (and margin/bleed) come from the active publication.
   const pageDims = useMemo(() => getPageDimensions(activePublication), [activePublication]);
   const dimPx = pageDims.px;
   const dimInches = pageDims.inches;
+  const pageMargins = useMemo(() => getPageMargins(activePublication), [activePublication]);
+  // Full IDML/Canva geometry packet — width/height + margins + bleed.
+  const idmlDim = useMemo(
+    () => ({
+      w: dimInches.w,
+      h: dimInches.h,
+      marginTop: pageMargins.top,
+      marginRight: pageMargins.right,
+      marginBottom: pageMargins.bottom,
+      marginLeft: pageMargins.left,
+      bleed: pageMargins.bleed,
+    }),
+    [dimInches.w, dimInches.h, pageMargins],
+  );
 
   /** Pending spatial proposals from the assistant (move_block / scale_block).
    *  Keyed by toolCallId so the chat card can resolve them. */
