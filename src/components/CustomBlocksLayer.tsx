@@ -182,13 +182,41 @@ function CustomBlockView({
     const s = pageScale || 1;
     const dx = (e.clientX - dragRef.current.x) / s;
     const dy = (e.clientY - dragRef.current.y) / s;
+    const g = ctx?.guides;
     if (dragRef.current.mode === "move") {
-      onChange({ x: dragRef.current.box.x + dx, y: dragRef.current.box.y + dy });
+      let nx = dragRef.current.box.x + dx;
+      let ny = dragRef.current.box.y + dy;
+      if (g) {
+        // Snap leading edge, center, or trailing edge — whichever is closest.
+        const w = dragRef.current.box.w;
+        const h = dragRef.current.box.h;
+        const ax = [
+          snapEdge(nx, g.xs, g.threshold),
+          snapEdge(nx + w / 2, g.xs, g.threshold),
+          snapEdge(nx + w, g.xs, g.threshold),
+        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
+        const ay = [
+          snapEdge(ny, g.ys, g.threshold),
+          snapEdge(ny + h / 2, g.ys, g.threshold),
+          snapEdge(ny + h, g.ys, g.threshold),
+        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
+        nx += ax;
+        ny += ay;
+      }
+      onChange({ x: nx, y: ny });
     } else {
-      onChange({
-        w: Math.max(80, dragRef.current.box.w + dx),
-        h: Math.max(40, dragRef.current.box.h + dy),
-      });
+      let nw = Math.max(80, dragRef.current.box.w + dx);
+      let nh = Math.max(40, dragRef.current.box.h + dy);
+      if (g) {
+        // Bottom-right handle: snap the right & bottom edges.
+        const right = dragRef.current.box.x + nw;
+        const bottom = dragRef.current.box.y + nh;
+        const ax = snapEdge(right, g.xs, g.threshold);
+        const ay = snapEdge(bottom, g.ys, g.threshold);
+        nw = Math.max(80, nw + ax);
+        nh = Math.max(40, nh + ay);
+      }
+      onChange({ w: nw, h: nh });
     }
   };
   const onUp = (e: RPointerEvent<HTMLDivElement>) => {
@@ -196,12 +224,46 @@ function CustomBlockView({
     const s = pageScale || 1;
     const dx = (e.clientX - dragRef.current.x) / s;
     const dy = (e.clientY - dragRef.current.y) / s;
+    const g = ctx?.guides;
     if (dragRef.current.mode === "move") {
-      onChange({ x: snap(dragRef.current.box.x + dx), y: snap(dragRef.current.box.y + dy) });
-    } else {
+      let nx = dragRef.current.box.x + dx;
+      let ny = dragRef.current.box.y + dy;
+      let usedGuideX = false;
+      let usedGuideY = false;
+      if (g) {
+        const w = dragRef.current.box.w;
+        const h = dragRef.current.box.h;
+        const ax = [
+          snapEdge(nx, g.xs, g.threshold),
+          snapEdge(nx + w / 2, g.xs, g.threshold),
+          snapEdge(nx + w, g.xs, g.threshold),
+        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
+        const ay = [
+          snapEdge(ny, g.ys, g.threshold),
+          snapEdge(ny + h / 2, g.ys, g.threshold),
+          snapEdge(ny + h, g.ys, g.threshold),
+        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
+        if (ax !== 0) { nx += ax; usedGuideX = true; }
+        if (ay !== 0) { ny += ay; usedGuideY = true; }
+      }
       onChange({
-        w: snap(Math.max(80, dragRef.current.box.w + dx)),
-        h: snap(Math.max(40, dragRef.current.box.h + dy)),
+        x: usedGuideX ? Math.round(nx) : snap(nx),
+        y: usedGuideY ? Math.round(ny) : snap(ny),
+      });
+    } else {
+      let nw = Math.max(80, dragRef.current.box.w + dx);
+      let nh = Math.max(40, dragRef.current.box.h + dy);
+      let usedGuideW = false;
+      let usedGuideH = false;
+      if (g) {
+        const ax = snapEdge(dragRef.current.box.x + nw, g.xs, g.threshold);
+        const ay = snapEdge(dragRef.current.box.y + nh, g.ys, g.threshold);
+        if (ax !== 0) { nw = Math.max(80, nw + ax); usedGuideW = true; }
+        if (ay !== 0) { nh = Math.max(40, nh + ay); usedGuideH = true; }
+      }
+      onChange({
+        w: usedGuideW ? Math.round(nw) : snap(nw),
+        h: usedGuideH ? Math.round(nh) : snap(nh),
       });
     }
     dragRef.current = null;
