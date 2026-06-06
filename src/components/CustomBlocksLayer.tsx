@@ -893,7 +893,7 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
       </select>
       <label style={labelStyle}>
         Rotate
-        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotation(Number(e.target.value)) })} style={{ ...inputStyle, width: 56 }} />
       </label>
       <label style={labelStyle}>
         Border
@@ -938,7 +938,7 @@ function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind
       </button>
       <label style={labelStyle}>
         Rotate
-        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotation(Number(e.target.value)) })} style={{ ...inputStyle, width: 56 }} />
       </label>
     </>
   );
