@@ -346,7 +346,9 @@ const buildSpread = (
   pageIndex: number,
   bodyStory: BuiltStory,
   folio: BuiltStory | null,
+  geom: Geom,
 ): BuiltSpread => {
+  const { PAGE_W, PAGE_H } = geom;
   const spreadSelf = `uSpread_${pageIndex + 1}`;
   const pageSelf = `uPage_${pageIndex + 1}`;
 
