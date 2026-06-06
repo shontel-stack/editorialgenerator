@@ -159,6 +159,8 @@ export type Database = {
           id: string
           masthead: string | null
           name: string
+          page_height_in: number | null
+          page_width_in: number | null
           palette_key: string | null
           slug: string
           tagline: string | null
@@ -173,6 +175,8 @@ export type Database = {
           id?: string
           masthead?: string | null
           name: string
+          page_height_in?: number | null
+          page_width_in?: number | null
           palette_key?: string | null
           slug: string
           tagline?: string | null
@@ -187,6 +191,8 @@ export type Database = {
           id?: string
           masthead?: string | null
           name?: string
+          page_height_in?: number | null
+          page_width_in?: number | null
           palette_key?: string | null
           slug?: string
           tagline?: string | null
