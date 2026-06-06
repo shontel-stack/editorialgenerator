@@ -487,6 +487,30 @@ export function folioSideForIndex(index0Based: number): "left" | "right" {
 }
 
 /**
+ * Compute the *physical* 0-based sheet index for each page in `pages`,
+ * accounting for `paritySkip` (unprinted inserts that occupy a sheet but
+ * carry no printed page). The returned array has the same length as
+ * `pages`; `result[i]` is the physical position of the i-th printed page.
+ *
+ * Example: pages [cover, article, insert(skip=1), article]
+ *   →     phys [0,     1,       3,                4]
+ *   →    side [right, left,    left,              right]
+ *
+ * Use this in concert with `folioSideForIndex` whenever a renderer needs
+ * verso/recto parity to follow the physical layout.
+ */
+export function computePhysicalIndices(pages: { paritySkip?: number }[]): number[] {
+  const out: number[] = new Array(pages.length);
+  let shift = 0;
+  for (let i = 0; i < pages.length; i++) {
+    const skip = Math.max(0, Math.floor(pages[i].paritySkip ?? 0));
+    shift += skip;
+    out[i] = i + shift;
+  }
+  return out;
+}
+
+/**
  * Render the folio string for a single page. The `side` argument picks the
  * verso (left) or recto (right) template; defaults to "right" so legacy
  * call sites keep working.
