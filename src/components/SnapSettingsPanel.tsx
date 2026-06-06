@@ -32,7 +32,14 @@ type PageOverrideProps = {
  *   selected page uses its own rotation snap angles / tolerances regardless
  *   of the global defaults. When disabled, the page falls back to global.
  */
-export function SnapSettingsPanel({ pageLabel, override, onChangeOverride }: PageOverrideProps = {}) {
+export function SnapSettingsPanel({
+  pageLabel,
+  override,
+  onChangeOverride,
+  pages,
+  currentPageId,
+  onApplyOverrideToPages,
+}: PageOverrideProps = {}) {
   const global = useSnapSettings();
   const [open, setOpen] = useState(false);
   const [pageOpen, setPageOpen] = useState(Boolean(override));
