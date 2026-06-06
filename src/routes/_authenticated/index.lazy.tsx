@@ -105,6 +105,8 @@ import {
   formatPageNumber,
   googleFontsUrl,
   makeNode,
+  newId,
+
   pageNumberFor,
   renderFolio,
   type AdData,
