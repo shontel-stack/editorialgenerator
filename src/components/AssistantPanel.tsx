@@ -111,7 +111,7 @@ export function AssistantPanel({
     messages: initial ?? [],
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      headers: async () => {
+      headers: async (): Promise<Record<string, string>> => {
         const { supabase } = await import("@/integrations/supabase/client");
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
