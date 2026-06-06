@@ -49,6 +49,19 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
   // change, mouse drag, or Escape so the next nudge starts a fresh undo step.
   const nudgeBatchRef = useRef<string | null>(null);
 
+  // Marquee selection: a rectangle drawn on the empty canvas to lasso pins.
+  // Stored in 0..1 page-relative coords so we can match against each pin's
+  // logical position regardless of zoom.
+  type Marquee = {
+    startX: number;
+    startY: number;
+    curX: number;
+    curY: number;
+    additive: boolean;
+    baseSelection: Set<string>;
+  };
+  const [marquee, setMarquee] = useState<Marquee | null>(null);
+
   const selectPin = (id: string, additive: boolean) => {
     nudgeBatchRef.current = null;
     setSelectedIds((prev) => {
@@ -145,35 +158,131 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedIds, references, localPos, onAssign]);
 
-  // Click outside any pin clears selection.
+  // Marquee drag handling (window-level for smooth tracking outside the host).
   useEffect(() => {
-    const onDocPointer = (e: PointerEvent) => {
+    if (!marquee) return;
+    const onMove = (e: PointerEvent) => {
       const host = hostRef.current;
       if (!host) return;
-      const target = e.target as Node | null;
-      if (target && host.contains(target)) return;
-      setSelectedIds(new Set());
-      nudgeBatchRef.current = null;
+      const rect = host.getBoundingClientRect();
+      const cx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      const cy = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+      setMarquee((m) => (m ? { ...m, curX: cx, curY: cy } : m));
     };
-    window.addEventListener("pointerdown", onDocPointer);
-    return () => window.removeEventListener("pointerdown", onDocPointer);
-  }, []);
+    const onUp = () => {
+      setMarquee((m) => {
+        if (!m) return null;
+        const x1 = Math.min(m.startX, m.curX);
+        const x2 = Math.max(m.startX, m.curX);
+        const y1 = Math.min(m.startY, m.curY);
+        const y2 = Math.max(m.startY, m.curY);
+        const hit = new Set<string>();
+        references.forEach((r, i) => {
+          const local = localPos[r.id];
+          const px = local?.x ?? r.position_x ?? defaultPos(i).x;
+          const py = local?.y ?? r.position_y ?? defaultPos(i).y;
+          if (px >= x1 && px <= x2 && py >= y1 && py <= y2) hit.add(r.id);
+        });
+        // If the user barely moved, treat it as a click-to-clear.
+        const tiny = Math.abs(m.curX - m.startX) < 0.005 && Math.abs(m.curY - m.startY) < 0.005;
+        if (tiny && hit.size === 0) {
+          setSelectedIds(m.additive ? m.baseSelection : new Set());
+        } else if (m.additive) {
+          const next = new Set(m.baseSelection);
+          for (const id of hit) next.add(id);
+          setSelectedIds(next);
+        } else {
+          setSelectedIds(hit);
+        }
+        nudgeBatchRef.current = null;
+        return null;
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [marquee, references, localPos]);
 
   void dim;
+
+  const marqueeRect = marquee
+    ? (() => {
+        const x1 = Math.min(marquee.startX, marquee.curX);
+        const x2 = Math.max(marquee.startX, marquee.curX);
+        const y1 = Math.min(marquee.startY, marquee.curY);
+        const y2 = Math.max(marquee.startY, marquee.curY);
+        return { left: `${x1 * 100}%`, top: `${y1 * 100}%`, width: `${(x2 - x1) * 100}%`, height: `${(y2 - y1) * 100}%` };
+      })()
+    : null;
+
+  // Live preview of pins covered by the in-progress marquee so the user sees
+  // exactly what will be selected on pointer-up.
+  const liveHit = (() => {
+    if (!marquee) return null;
+    const x1 = Math.min(marquee.startX, marquee.curX);
+    const x2 = Math.max(marquee.startX, marquee.curX);
+    const y1 = Math.min(marquee.startY, marquee.curY);
+    const y2 = Math.max(marquee.startY, marquee.curY);
+    const set = new Set<string>();
+    references.forEach((r, i) => {
+      const local = localPos[r.id];
+      const px = local?.x ?? r.position_x ?? defaultPos(i).x;
+      const py = local?.y ?? r.position_y ?? defaultPos(i).y;
+      if (px >= x1 && px <= x2 && py >= y1 && py <= y2) set.add(r.id);
+    });
+    return set;
+  })();
 
   return (
     <div
       ref={hostRef}
-      className="absolute inset-0 pointer-events-none"
+      className="absolute inset-0"
       style={{ zIndex: 5 }}
     >
+      {/* Marquee capture layer — sits behind pins, catches drags on empty canvas. */}
+      <div
+        className="absolute inset-0"
+        style={{ cursor: marquee ? "crosshair" : "default" }}
+        onPointerDown={(e) => {
+          // Only respond to primary button on the empty layer itself.
+          if (e.button !== 0) return;
+          if (e.target !== e.currentTarget) return;
+          const host = hostRef.current;
+          if (!host) return;
+          const rect = host.getBoundingClientRect();
+          const sx = (e.clientX - rect.left) / rect.width;
+          const sy = (e.clientY - rect.top) / rect.height;
+          const additive = e.shiftKey || e.metaKey || e.ctrlKey;
+          setMarquee({
+            startX: sx,
+            startY: sy,
+            curX: sx,
+            curY: sy,
+            additive,
+            baseSelection: additive ? new Set(selectedIds) : new Set(),
+          });
+          if (!additive) setSelectedIds(new Set());
+          nudgeBatchRef.current = null;
+        }}
+      />
+
+      {marqueeRect && (
+        <div
+          className="absolute pointer-events-none border border-primary/70 bg-primary/10"
+          style={marqueeRect}
+        />
+      )}
+
       {references.map((r, i) => {
         const local = localPos[r.id];
         const px = local?.x ?? r.position_x ?? defaultPos(i).x;
         const py = local?.y ?? r.position_y ?? defaultPos(i).y;
         const Icon = iconFor(r.mime_type);
         const isDragging = dragId === r.id;
-        const isSelected = selectedIds.has(r.id);
+        const isSelected = selectedIds.has(r.id) || (liveHit?.has(r.id) ?? false);
         return (
           <button
             key={r.id}
@@ -183,12 +292,10 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
               e.stopPropagation();
               const additive = e.shiftKey || e.metaKey || e.ctrlKey;
               selectPin(r.id, additive);
-              // Only start dragging on a plain click (no modifier) so
-              // Shift/Cmd-click stays a pure selection toggle.
               if (!additive) setDragId(r.id);
               (e.currentTarget as HTMLButtonElement).focus();
             }}
-            title={`${r.file_name}${r.region ? ` · ${r.region}` : ""}\nDrag to move · Arrows to nudge (Shift = larger) · Shift/Cmd-click to multi-select`}
+            title={`${r.file_name}${r.region ? ` · ${r.region}` : ""}\nDrag to move · Arrows to nudge (Shift = larger) · Shift/Cmd-click or marquee-drag to multi-select`}
             className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 select-none focus:outline-none"
             style={{
               left: `${px * 100}%`,
