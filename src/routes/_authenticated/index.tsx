@@ -1431,7 +1431,15 @@ function Index() {
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>
-                {showGuides && <GuidesOverlay dim={dimPx} margins={pageMargins} columns={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(spread.right.id) ?? DEFAULT_PAGE_LAYOUT]} />}
+                {showGuides && (
+                  <GuidesOverlay
+                    dim={dimPx}
+                    margins={pageMargins}
+                    columns={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(spread.right.id) ?? DEFAULT_PAGE_LAYOUT]}
+                    columnRatios={pageStatus.columnWidthsOf(spread.right!.id)}
+                    gutterIn={pageStatus.gutterOf(spread.right!.id)}
+                  />
+                )}
               </div>
             )}
           </div>
