@@ -103,6 +103,42 @@ export type Database = {
         }
         Relationships: []
       }
+      issue_drafts: {
+        Row: {
+          client_updated_at: string
+          created_at: string
+          data: Json
+          id: string
+          issue_id: string
+          issue_label: string | null
+          publication_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_updated_at?: string
+          created_at?: string
+          data: Json
+          id?: string
+          issue_id: string
+          issue_label?: string | null
+          publication_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_updated_at?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          issue_id?: string
+          issue_label?: string | null
+          publication_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       layout_presets: {
         Row: {
           column_widths: Json
