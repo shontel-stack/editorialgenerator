@@ -22,6 +22,15 @@ type PageOverrideProps = {
   currentPageId?: string;
   /** Bulk-apply the current override to a list of page ids. */
   onApplyOverrideToPages?: (ids: string[], override: Partial<SnapSettings> | null) => void;
+  /** Undo the most recent snap-override apply/clear/edit across the document. */
+  onUndoOverrides?: () => void;
+  /** Redo the most recently undone snap-override change. */
+  onRedoOverrides?: () => void;
+  canUndoOverrides?: boolean;
+  canRedoOverrides?: boolean;
+  /** Bump to force the panel to re-evaluate undo/redo button state. */
+  historyTick?: number;
+
 };
 
 /**
