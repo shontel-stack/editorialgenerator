@@ -16,6 +16,7 @@ import {
   formatPageNumber,
   renderFolio,
   folioSideForIndex,
+  computePhysicalIndices,
   type ArticleData,
   type CoverData,
   type IssueDoc,
