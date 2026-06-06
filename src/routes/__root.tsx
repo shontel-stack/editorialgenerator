@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DevErrorOverlay } from "../components/DevErrorOverlay";
 import { UnsavedPromptHost } from "../components/UnsavedPromptHost";
+import { RootErrorBoundary } from "../components/RootErrorBoundary";
 
 function NotFoundComponent() {
   return (
@@ -112,7 +113,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body suppressHydrationWarning>
-        {children}
+        <RootErrorBoundary>{children}</RootErrorBoundary>
         <Scripts />
       </body>
     </html>
