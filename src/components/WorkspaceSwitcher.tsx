@@ -219,6 +219,36 @@ export function WorkspaceSwitcher() {
     }
   };
 
+  // Monthly editorial publishing schedule:
+  // - Issues publish on the 1st–28th of a month (avoids ambiguous month-end
+  //   edge cases like Feb 29, and matches a predictable monthly cadence).
+  // - The issue date must fall within a sensible window: at most 1 month in
+  //   the past (late publishing) and at most 12 months ahead (planning a
+  //   year of issues).
+  const validateIssueDate = (d: Date): string | null => {
+    const day = d.getDate();
+    if (day < 1 || day > 28) {
+      return "Issue date must fall on the 1st–28th of the month (monthly editorial schedule).";
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const minDate = new Date(today);
+    minDate.setMonth(minDate.getMonth() - 1);
+    const maxDate = new Date(today);
+    maxDate.setMonth(maxDate.getMonth() + 12);
+    const picked = new Date(d);
+    picked.setHours(0, 0, 0, 0);
+    if (picked < minDate) {
+      return "Issue date is too far in the past (more than 1 month ago).";
+    }
+    if (picked > maxDate) {
+      return "Issue date is too far ahead (more than 12 months from today).";
+    }
+    return null;
+  };
+
+  const issueDateError = appendIssueDate ? validateIssueDate(issueDate) : null;
+
   const confirmDuplicate = async () => {
     if (!active || submitting) return;
     const proposed = duplicateName.trim();
