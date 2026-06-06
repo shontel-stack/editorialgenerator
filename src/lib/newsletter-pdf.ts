@@ -181,6 +181,11 @@ export async function exportNewsletterInteractivePdf(
   args: InteractiveNewsletterArgs,
 ): Promise<void> {
   const { newsletterNode, pageNodes, highlightPageIds, pageDim, filename, meta } = args;
+  const [{ toJpeg }, pdfLib] = await Promise.all([
+    import("html-to-image"),
+    import("pdf-lib"),
+  ]);
+  const { PDFDocument, PDFName } = pdfLib;
 
   // 1) Render the newsletter preview to JPEG.
   const nlRect = newsletterNode.getBoundingClientRect();
@@ -280,7 +285,7 @@ export async function exportNewsletterInteractivePdf(
     const x2 = (r.right - nlRect.left) * sx;
     const y2 = NL_H_PT - (r.top - nlRect.top) * sy;
     const y1 = NL_H_PT - (r.bottom - nlRect.top) * sy;
-    const annotRef = addInternalLink(doc, nlPage.ref, targetRef, [
+    const annotRef = addInternalLink(pdfLib, doc, nlPage.ref, targetRef, [
       x1,
       y1,
       x2,
@@ -300,13 +305,14 @@ export async function exportNewsletterInteractivePdf(
     );
   }
   verifyHighlightLinks(
+    pdfLib,
     doc,
     nlPage.ref,
     { w: NL_W_PT, h: NL_H_PT },
     verifyTargets,
   );
 
-  buildOutline(doc, outlineItems);
+  buildOutline(pdfLib, doc, outlineItems);
   doc.catalog.set(PDFName.of("PageMode"), PDFName.of("UseOutlines"));
 
   const bytes = await doc.save();
