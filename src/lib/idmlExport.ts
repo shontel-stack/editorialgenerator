@@ -102,10 +102,11 @@ const collectPageText = (
   page: IssuePageNode,
   issue: IssueDoc,
   pageIndex: number,
+  physicalIndex: number,
 ): PageText => {
   const totalPages = issue.pages.length;
   const pn = formatPageNumber(issue.master, pageIndex + 1, totalPages);
-  const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(pageIndex));
+  const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(physicalIndex));
 
   switch (page.pageType) {
     case "cover": {
