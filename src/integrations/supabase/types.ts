@@ -25,7 +25,10 @@ export type Database = {
           kind: string
           mime_type: string
           page_id: string | null
+          position_x: number | null
+          position_y: number | null
           publication_id: string | null
+          region: string | null
           size_bytes: number
           user_id: string
         }
@@ -39,7 +42,10 @@ export type Database = {
           kind: string
           mime_type: string
           page_id?: string | null
+          position_x?: number | null
+          position_y?: number | null
           publication_id?: string | null
+          region?: string | null
           size_bytes: number
           user_id: string
         }
@@ -53,7 +59,10 @@ export type Database = {
           kind?: string
           mime_type?: string
           page_id?: string | null
+          position_x?: number | null
+          position_y?: number | null
           publication_id?: string | null
+          region?: string | null
           size_bytes?: number
           user_id?: string
         }

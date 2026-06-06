@@ -23,8 +23,12 @@ export type AttachmentRow = {
   mime_type: string;
   size_bytes: number;
   extracted_text: string | null;
+  region: string | null;
+  position_x: number | null;
+  position_y: number | null;
   created_at: string;
 };
+
 
 export type AttachmentWithUrl = AttachmentRow & { signedUrl: string | null };
 
@@ -182,23 +186,27 @@ export async function uploadAttachment(opts: {
     throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
   }
 
-  // Remove any existing attachment with the same unique scope (publication-aware).
-  let existingQ = supabase
-    .from("issue_attachments")
-    .select("id, file_path")
-    .eq("issue_id", issueId)
-    .eq("kind", kind)
-    .filter("page_id", pageId === null ? "is" : "eq", pageId === null ? null : pageId);
-  existingQ = applyPublicationFilter(existingQ as never, publicationId) as typeof existingQ;
-  const existing = await existingQ;
-  if (existing.data?.length) {
-    const paths = existing.data.map((r) => r.file_path);
-    await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
-    await supabase
+  // Templates are unique per (issue, publication) — replace on upload.
+  // References can now have multiple per page; do NOT auto-replace.
+  if (kind === "template") {
+    let existingQ = supabase
       .from("issue_attachments")
-      .delete()
-      .in("id", existing.data.map((r) => r.id));
+      .select("id, file_path")
+      .eq("issue_id", issueId)
+      .eq("kind", kind)
+      .filter("page_id", pageId === null ? "is" : "eq", pageId === null ? null : pageId);
+    existingQ = applyPublicationFilter(existingQ as never, publicationId) as typeof existingQ;
+    const existing = await existingQ;
+    if (existing.data?.length) {
+      const paths = existing.data.map((r) => r.file_path);
+      await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
+      await supabase
+        .from("issue_attachments")
+        .delete()
+        .in("id", existing.data.map((r) => r.id));
+    }
   }
+
 
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
@@ -242,3 +250,38 @@ export async function deleteAttachment(row: AttachmentRow): Promise<void> {
   const { error } = await supabase.from("issue_attachments").delete().eq("id", row.id);
   if (error) throw error;
 }
+
+export type AttachmentAssignment = {
+  page_id?: string | null;
+  region?: string | null;
+  position_x?: number | null;
+  position_y?: number | null;
+};
+
+/** Reassign an attachment to a page / region / pin coordinates. */
+export async function updateAttachmentAssignment(
+  id: string,
+  patch: AttachmentAssignment,
+): Promise<void> {
+  const payload: {
+    page_id?: string | null;
+    region?: string | null;
+    position_x?: number | null;
+    position_y?: number | null;
+  } = {};
+  if (patch.page_id !== undefined) payload.page_id = patch.page_id;
+  if (patch.region !== undefined) payload.region = patch.region;
+  if (patch.position_x !== undefined) {
+    payload.position_x =
+      patch.position_x === null ? null : Math.min(1, Math.max(0, patch.position_x));
+  }
+  if (patch.position_y !== undefined) {
+    payload.position_y =
+      patch.position_y === null ? null : Math.min(1, Math.max(0, patch.position_y));
+  }
+  if (Object.keys(payload).length === 0) return;
+
+  const { error } = await supabase.from("issue_attachments").update(payload).eq("id", id);
+  if (error) throw error;
+}
+

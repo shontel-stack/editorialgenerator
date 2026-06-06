@@ -3,7 +3,9 @@ import {
   deleteAttachment,
   listAttachments,
   signAttachmentUrl,
+  updateAttachmentAssignment,
   uploadAttachment,
+  type AttachmentAssignment,
   type AttachmentRow,
   type AttachmentWithUrl,
 } from "@/lib/attachments";
@@ -58,11 +60,34 @@ export function useIssueAttachments(issueId: string, publicationId: string | nul
     [refresh],
   );
 
+  const updateAssignment = useCallback(
+    async (id: string, patch: AttachmentAssignment) => {
+      await updateAttachmentAssignment(id, patch);
+      await refresh();
+    },
+    [refresh],
+  );
+
   const template = rows.find((r) => r.kind === "template") ?? null;
-  const referencesByPage = new Map<string, AttachmentWithUrl>();
+  const referencesByPage = new Map<string, AttachmentWithUrl[]>();
   for (const r of rows) {
-    if (r.kind === "reference" && r.page_id) referencesByPage.set(r.page_id, r);
+    if (r.kind === "reference" && r.page_id) {
+      const list = referencesByPage.get(r.page_id) ?? [];
+      list.push(r);
+      referencesByPage.set(r.page_id, list);
+    }
   }
 
-  return { rows, template, referencesByPage, loading, error, refresh, upload, remove };
+  return {
+    rows,
+    template,
+    referencesByPage,
+    loading,
+    error,
+    refresh,
+    upload,
+    remove,
+    updateAssignment,
+  };
 }
+

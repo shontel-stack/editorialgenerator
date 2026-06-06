@@ -19,12 +19,16 @@ import {
   isPdf,
   isWordDoc,
   signAttachmentUrl,
+  type AttachmentAssignment,
   type AttachmentRow,
   type AttachmentSortKey,
   type AttachmentWithUrl,
 } from "@/lib/attachments";
 
+
 const PAGE_SIZE = 20;
+
+type PageRef = { id: string; label: string };
 
 type Props = {
   open: boolean;
@@ -34,6 +38,7 @@ type Props = {
   publicationName?: string | null;
   selectedPageId: string | null;
   selectedPageLabel?: string;
+  pages?: PageRef[];
   attachments: {
     rows: AttachmentWithUrl[];
     loading: boolean;
@@ -44,8 +49,10 @@ type Props = {
       file: File;
     }) => Promise<void>;
     remove: (row: AttachmentWithUrl) => Promise<void>;
+    updateAssignment?: (id: string, patch: AttachmentAssignment) => Promise<void>;
   };
 };
+
 
 function iconFor(mime: string) {
   if (isPdf(mime)) return FileText;
@@ -74,8 +81,10 @@ export function AttachmentsPanel({
   publicationName,
   selectedPageId,
   selectedPageLabel,
+  pages = [],
   attachments,
 }: Props) {
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -328,7 +337,8 @@ export function AttachmentsPanel({
               {items.map((row) => {
                 const Icon = iconFor(row.mime_type);
                 return (
-                  <li key={row.id} className="px-4 py-3 flex items-start gap-3">
+                  <li key={row.id} className="px-4 py-3 flex flex-col gap-2">
+                    <div className="flex items-start gap-3">
                     {row.signedUrl && isImage(row.mime_type) ? (
                       <img
                         src={row.signedUrl}
@@ -351,6 +361,10 @@ export function AttachmentsPanel({
                       <p className="text-[10px] text-muted-foreground tracking-wide">
                         {row.kind === "template" ? "Template" : "Reference"}
                         {row.page_id ? ` · page ${row.page_id.slice(-4)}` : " · issue"}
+                        {row.region ? ` · ${row.region}` : ""}
+                        {row.position_x != null && row.position_y != null
+                          ? ` · pin ${row.position_x.toFixed(2)},${row.position_y.toFixed(2)}`
+                          : ""}
                         {" · "}
                         {formatSize(row.size_bytes)}
                       </p>
@@ -376,10 +390,55 @@ export function AttachmentsPanel({
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
+                    </div>
+                    {row.kind === "reference" && attachments.updateAssignment && (
+                      <div className="grid grid-cols-2 gap-1.5 pl-[52px]">
+                        <label className="text-[9px] tracking-[0.2em] uppercase text-muted-foreground flex flex-col gap-0.5">
+                          Page
+                          <select
+                            value={row.page_id ?? ""}
+                            onChange={(e) =>
+                              void attachments.updateAssignment!(row.id, {
+                                page_id: e.target.value || null,
+                              })
+                            }
+                            className="border border-input bg-background px-1.5 py-1 text-[11px] rounded-sm normal-case tracking-normal text-foreground"
+                          >
+                            <option value="">— unassigned —</option>
+                            {pages.map((p) => (
+                              <option key={p.id} value={p.id}>{p.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="text-[9px] tracking-[0.2em] uppercase text-muted-foreground flex flex-col gap-0.5">
+                          Region
+                          <input
+                            type="text"
+                            list="region-suggestions"
+                            value={row.region ?? ""}
+                            placeholder="—"
+                            onChange={(e) =>
+                              void attachments.updateAssignment!(row.id, {
+                                region: e.target.value || null,
+                              })
+                            }
+                            className="border border-input bg-background px-1.5 py-1 text-[11px] rounded-sm normal-case tracking-normal text-foreground"
+                          />
+                        </label>
+                      </div>
+                    )}
                   </li>
                 );
               })}
+              <datalist id="region-suggestions">
+                <option value="column-1" />
+                <option value="column-2" />
+                <option value="column-3" />
+                <option value="header" />
+                <option value="footer" />
+              </datalist>
             </ul>
+
             <div ref={sentinelRef} className="h-2" aria-hidden />
             {hasMore && (
               <div className="px-4 py-3 flex justify-center">

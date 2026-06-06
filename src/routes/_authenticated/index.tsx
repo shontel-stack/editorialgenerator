@@ -12,6 +12,8 @@ import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { AttachmentControl } from "@/components/AttachmentControl";
+import { PageReferencesEditor } from "@/components/PageReferencesEditor";
+
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
@@ -1262,21 +1264,25 @@ function Index() {
             )}
 
           {selected.pageType !== "cover" && selected.pageType !== "back" && (
-            <Section title="Reference for this page" defaultOpen>
-              <AttachmentControl
-                label="Layout / image / Word reference"
-                attachment={attachments.referencesByPage.get(selected.id) ?? null}
-                onUpload={(file) => attachments.upload({ pageId: selected.id, kind: "reference", file })}
-                onRemove={() => {
-                  const r = attachments.referencesByPage.get(selected.id);
-                  return r ? attachments.remove(r) : Promise.resolve();
-                }}
+            <Section title="References for this page" defaultOpen>
+              <PageReferencesEditor
+                pageId={selected.id}
+                references={attachments.referencesByPage.get(selected.id) ?? []}
+                columnCount={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(selected.id)] ?? 1}
+                onUpload={(file) =>
+                  attachments.upload({ pageId: selected.id, kind: "reference", file })
+                }
+                onRemove={(row) => attachments.remove(row)}
+                onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
               />
-              <p className="text-[10px] leading-relaxed text-muted-foreground">
-                The editor sees PDFs and images directly. Word docs are converted to text.
+              <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
+                Multiple files allowed. Pin each to a region (column / header / footer) or
+                a free-form coordinate. The editor sees PDFs and images directly; Word docs are
+                converted to text.
               </p>
             </Section>
           )}
+
 
           <Section title="Export · this page">
             <div className="grid grid-cols-3 gap-2">
@@ -1510,8 +1516,10 @@ function Index() {
         publicationName={activePublication?.name ?? null}
         selectedPageId={selected.id}
         selectedPageLabel={selected.pageType}
+        pages={pageRefsForStatus}
         attachments={attachments}
       />
+
 
       <StaffPanel
         open={staffOpen}
