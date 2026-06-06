@@ -303,6 +303,10 @@ export function Draggable({
               ? "0 0 0 6px rgba(37,99,235,0.18)"
               : undefined,
             cursor: drag.current ? "grabbing" : "grab",
+            // Lift selected / dragging blocks above siblings and the reference
+            // pin overlay (z-index 5) so the outline + toolbar aren't clipped
+            // when the block moves over other elements.
+            zIndex: drag.current ? 40 : isSelected ? 20 : (style.zIndex as number | undefined),
           }
         : link
           ? { cursor: "pointer" }
