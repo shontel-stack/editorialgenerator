@@ -522,8 +522,8 @@ export function AttachmentsPanel({
             )}
 
           </>
-        )}
       </div>
+      </>)}
     </aside>
   );
 }
