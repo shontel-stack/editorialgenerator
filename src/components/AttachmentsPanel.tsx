@@ -288,7 +288,7 @@ export function AttachmentsPanel({
           }}
           onInsertImage={onInsertImage}
         />
-      ) : (<>
+      ) : (<div className="flex-1 flex flex-col min-h-0">
       <div className="px-4 py-3 border-b border-border space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <label className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground flex flex-col gap-1">
@@ -524,7 +524,7 @@ export function AttachmentsPanel({
           </>
         )}
       </div>
-      </>)}
+      </div>)}
     </aside>
   );
 }
