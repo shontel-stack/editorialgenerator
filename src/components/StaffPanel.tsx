@@ -708,6 +708,11 @@ function StaffChat({
     };
   }, [issueId, publicationId, role.id, role.title]);
 
+  const attachmentsRef = useRef(attachments);
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -720,6 +725,7 @@ function StaffChat({
             messages,
             issueSnapshot: snapshotIssue(issueRef.current),
             selectedPageId: selectedPageIdRef.current,
+            attachments: attachmentsRef.current ?? [],
           },
         }),
       }),
