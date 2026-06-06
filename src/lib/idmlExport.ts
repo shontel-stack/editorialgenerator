@@ -16,6 +16,7 @@ import {
   formatPageNumber,
   renderFolio,
   folioSideForIndex,
+  computePhysicalIndices,
   type ArticleData,
   type CoverData,
   type IssueDoc,
@@ -101,10 +102,11 @@ const collectPageText = (
   page: IssuePageNode,
   issue: IssueDoc,
   pageIndex: number,
+  physicalIndex: number,
 ): PageText => {
   const totalPages = issue.pages.length;
   const pn = formatPageNumber(issue.master, pageIndex + 1, totalPages);
-  const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(pageIndex));
+  const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(physicalIndex));
 
   switch (page.pageType) {
     case "cover": {
@@ -534,8 +536,9 @@ export function buildIdml(issue: IssueDoc, dim?: IdmlDim): Uint8Array {
   const spreads: BuiltSpread[] = [];
   const stories: BuiltStory[] = [];
 
+  const physIdx = computePhysicalIndices(issue.pages);
   issue.pages.forEach((page, i) => {
-    const text = collectPageText(page, issue, i);
+    const text = collectPageText(page, issue, i, physIdx[i]);
     const body = buildStory(text, i);
     stories.push(body);
     const folio = folioStory(text, i);

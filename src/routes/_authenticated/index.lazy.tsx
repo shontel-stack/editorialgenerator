@@ -111,6 +111,7 @@ import {
   pageNumberFor,
   renderFolio,
   folioSideForIndex,
+  computePhysicalIndices,
   normalizeFolioTemplate,
   type AdData,
   type ArticleData,
@@ -746,9 +747,10 @@ function Index() {
   const pagesForRender = useMemo(() => {
     const contentsEntries = deriveContentsEntries(issue);
     const total = issue.pages.length;
+    const physIdx = computePhysicalIndices(issue.pages);
     return issue.pages.map((p, i) => {
       const num = formatPageNumber(issue.master, i + 1, total);
-      const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(i));
+      const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(physIdx[i]));
       switch (p.pageType) {
         case "cover":
           return { ...p, data: { ...p.data, issue: issue.meta.issue, date: issue.meta.date } };
@@ -1601,6 +1603,33 @@ function Index() {
                     </label>
                   </Section>
                 )}
+
+              {selected.pageType !== "cover" && (
+                <Section title="Physical sheet" defaultOpen={false}>
+                  <Field label="Unprinted sheets before this page">
+                    <input
+                      type="number"
+                      min={0}
+                      max={8}
+                      step={1}
+                      value={selected.paritySkip ?? 0}
+                      onChange={(e) => {
+                        const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
+                        updateNode(selected.id, { paritySkip: n || undefined });
+                      }}
+                      className="w-20 rounded-sm border border-border bg-background px-2 py-1 text-xs"
+                    />
+                  </Field>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2">
+                    Tip-ins, blank dividers, or any unprinted insert that
+                    occupies a sheet but carries no folio. Shifts verso/recto
+                    parity for this page and every page after it so the folio
+                    template follows the physical layout. Printed page numbers
+                    are unaffected.
+                  </p>
+                </Section>
+              )}
+
 
               {selected.pageType !== "cover" && selected.pageType !== "back" && (
                 <Section title="References for this page" defaultOpen>

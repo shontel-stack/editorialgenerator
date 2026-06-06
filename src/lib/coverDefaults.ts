@@ -334,6 +334,14 @@ export type IssuePageNode = AnyPageData & {
     rotationTolerance?: number;
     rotationAngles?: number[];
   };
+  /**
+   * Number of *unprinted* physical sheets that occupy positions immediately
+   * before this page (e.g. a tip-in insert, a blank divider, or a folded
+   * outsert that lives in the bound copy but carries no folio). Used to
+   * keep verso/recto parity aligned with the physical sheet position
+   * instead of the array index. Default 0.
+   */
+  paritySkip?: number;
 };
 
 
@@ -476,6 +484,30 @@ export function normalizeFolioTemplate(v: unknown): FolioTemplate {
  */
 export function folioSideForIndex(index0Based: number): "left" | "right" {
   return index0Based % 2 === 0 ? "right" : "left";
+}
+
+/**
+ * Compute the *physical* 0-based sheet index for each page in `pages`,
+ * accounting for `paritySkip` (unprinted inserts that occupy a sheet but
+ * carry no printed page). The returned array has the same length as
+ * `pages`; `result[i]` is the physical position of the i-th printed page.
+ *
+ * Example: pages [cover, article, insert(skip=1), article]
+ *   →     phys [0,     1,       3,                4]
+ *   →    side [right, left,    left,              right]
+ *
+ * Use this in concert with `folioSideForIndex` whenever a renderer needs
+ * verso/recto parity to follow the physical layout.
+ */
+export function computePhysicalIndices(pages: { paritySkip?: number }[]): number[] {
+  const out: number[] = new Array(pages.length);
+  let shift = 0;
+  for (let i = 0; i < pages.length; i++) {
+    const skip = Math.max(0, Math.floor(pages[i].paritySkip ?? 0));
+    shift += skip;
+    out[i] = i + shift;
+  }
+  return out;
 }
 
 /**
