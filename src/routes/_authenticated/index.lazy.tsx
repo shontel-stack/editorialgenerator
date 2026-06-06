@@ -21,6 +21,7 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
+import { useLibraryAttachments } from "@/hooks/useLibraryAttachments";
 import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
