@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
@@ -111,7 +111,7 @@ import {
   type IssuePage,
 } from "@/lib/exportCover";
 
-export const Route = createFileRoute("/_authenticated/")({
+export const Route = createLazyFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "The Arts Today — Issue Builder" },
