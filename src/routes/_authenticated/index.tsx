@@ -224,6 +224,22 @@ function Index() {
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
 
+  // Per-page layout (free-form, two-column, image-top, …) persists in
+  // page_status. The hook auto-creates rows for new pages, subscribes to
+  // realtime updates, and exposes setLayout + layoutOf for the current
+  // selection.
+  const pageRefsForStatus = useMemo(
+    () => issue.pages.map((p) => ({ id: p.id, label: labelForNode(p) })),
+    [issue.pages],
+  );
+  const pageStatus = useIssuePageStatus({
+    userId,
+    issueId: issue.meta.issueId,
+    publicationId: activePublication?.id ?? null,
+    pages: pageRefsForStatus,
+  });
+  const [pendingLayout, setPendingLayout] = useState<PageLayout | null>(null);
+
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const setRef = (id: string) => (el: HTMLDivElement | null) => {
