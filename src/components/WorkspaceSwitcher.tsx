@@ -339,8 +339,8 @@ export function WorkspaceSwitcher() {
               <DropdownMenuItem onClick={handleExportActive}>
                 <Download className="h-3.5 w-3.5 mr-2" /> Save publication to file
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDuplicateActive} disabled={submitting}>
-                <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate for next issue
+              <DropdownMenuItem onClick={openDuplicateDialog} disabled={submitting}>
+                <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate for next issue…
               </DropdownMenuItem>
             </>
           ) : null}
