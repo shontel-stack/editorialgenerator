@@ -10,12 +10,18 @@ import {
   makeNode,
   type ArticleData,
   type ArticleLayout,
+  type FolioTemplate,
   type IssueDoc,
   type IssueFonts,
   type IssueMaster,
   type IssuePageNode,
   normalizeFolioTemplate,
 } from "./coverDefaults";
+
+/** Master patch tolerates partial folioTemplate (left or right only). */
+export type MasterPatch = Partial<Omit<IssueMaster, "folioTemplate">> & {
+  folioTemplate?: Partial<FolioTemplate>;
+};
 
 /** Discriminated union of patches the assistant can return. */
 export type IssuePatch =
