@@ -186,23 +186,27 @@ export async function uploadAttachment(opts: {
     throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
   }
 
-  // Remove any existing attachment with the same unique scope (publication-aware).
-  let existingQ = supabase
-    .from("issue_attachments")
-    .select("id, file_path")
-    .eq("issue_id", issueId)
-    .eq("kind", kind)
-    .filter("page_id", pageId === null ? "is" : "eq", pageId === null ? null : pageId);
-  existingQ = applyPublicationFilter(existingQ as never, publicationId) as typeof existingQ;
-  const existing = await existingQ;
-  if (existing.data?.length) {
-    const paths = existing.data.map((r) => r.file_path);
-    await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
-    await supabase
+  // Templates are unique per (issue, publication) — replace on upload.
+  // References can now have multiple per page; do NOT auto-replace.
+  if (kind === "template") {
+    let existingQ = supabase
       .from("issue_attachments")
-      .delete()
-      .in("id", existing.data.map((r) => r.id));
+      .select("id, file_path")
+      .eq("issue_id", issueId)
+      .eq("kind", kind)
+      .filter("page_id", pageId === null ? "is" : "eq", pageId === null ? null : pageId);
+    existingQ = applyPublicationFilter(existingQ as never, publicationId) as typeof existingQ;
+    const existing = await existingQ;
+    if (existing.data?.length) {
+      const paths = existing.data.map((r) => r.file_path);
+      await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
+      await supabase
+        .from("issue_attachments")
+        .delete()
+        .in("id", existing.data.map((r) => r.id));
+    }
   }
+
 
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
