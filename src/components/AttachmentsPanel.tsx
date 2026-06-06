@@ -246,6 +246,49 @@ export function AttachmentsPanel({
         </div>
       </header>
 
+      {library && (
+        <div className="px-4 pt-3 flex gap-1 border-b border-border">
+          {(["issue", "library"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={
+                "text-[10px] tracking-[0.25em] uppercase px-3 py-2 rounded-t-sm border-b-2 -mb-px " +
+                (tab === t
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground")
+              }
+            >
+              {t === "issue" ? "Issue files" : "Library"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === "library" && library ? (
+        <LibrarySection
+          inputRef={libraryInputRef}
+          publicationName={publicationName ?? null}
+          library={library}
+          busy={libBusy}
+          err={libErr}
+          onPick={async (file) => {
+            if (!file) return;
+            setLibBusy(true);
+            setLibErr(null);
+            try {
+              await library.upload(file);
+            } catch (e) {
+              setLibErr((e as Error).message);
+            } finally {
+              setLibBusy(false);
+              if (libraryInputRef.current) libraryInputRef.current.value = "";
+            }
+          }}
+          onInsertImage={onInsertImage}
+        />
+      ) : (
       <div className="px-4 py-3 border-b border-border space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <label className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground flex flex-col gap-1">
