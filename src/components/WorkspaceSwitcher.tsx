@@ -35,6 +35,14 @@ import {
   getPageMargins,
   matchPresetKey,
 } from "@/lib/coverDefaults";
+import {
+  DEFAULT_SCHEDULE_RULES,
+  loadScheduleRules,
+  normalizeRules,
+  saveScheduleRules,
+  validateIssueDateAgainstRules,
+  type ScheduleRules,
+} from "@/lib/scheduleRules";
 
 export function WorkspaceSwitcher() {
   const { publications, active, select, create, update, loading } = useActivePublication();
@@ -219,33 +227,19 @@ export function WorkspaceSwitcher() {
     }
   };
 
-  // Monthly editorial publishing schedule:
-  // - Issues publish on the 1st–28th of a month (avoids ambiguous month-end
-  //   edge cases like Feb 29, and matches a predictable monthly cadence).
-  // - The issue date must fall within a sensible window: at most 1 month in
-  //   the past (late publishing) and at most 12 months ahead (planning a
-  //   year of issues).
-  const validateIssueDate = (d: Date): string | null => {
-    const day = d.getDate();
-    if (day < 1 || day > 28) {
-      return "Issue date must fall on the 1st–28th of the month (monthly editorial schedule).";
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const minDate = new Date(today);
-    minDate.setMonth(minDate.getMonth() - 1);
-    const maxDate = new Date(today);
-    maxDate.setMonth(maxDate.getMonth() + 12);
-    const picked = new Date(d);
-    picked.setHours(0, 0, 0, 0);
-    if (picked < minDate) {
-      return "Issue date is too far in the past (more than 1 month ago).";
-    }
-    if (picked > maxDate) {
-      return "Issue date is too far ahead (more than 12 months from today).";
-    }
-    return null;
+  // Monthly editorial publishing schedule rules — user-configurable via the
+  // Schedule settings dialog, persisted in localStorage.
+  const [scheduleRules, setScheduleRules] = useState<ScheduleRules>(() => loadScheduleRules());
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
+  const updateScheduleRules = (next: ScheduleRules) => {
+    const normalized = normalizeRules(next);
+    setScheduleRules(normalized);
+    saveScheduleRules(normalized);
   };
+
+  const validateIssueDate = (d: Date): string | null =>
+    validateIssueDateAgainstRules(d, scheduleRules);
 
   const issueDateError = appendIssueDate ? validateIssueDate(issueDate) : null;
 
@@ -690,6 +684,19 @@ export function WorkspaceSwitcher() {
                   {issueDateError}
                 </p>
               ) : null}
+              <div className="pl-6 pt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>
+                  Allowed: day {scheduleRules.minDay}–{scheduleRules.maxDay}, −
+                  {scheduleRules.pastMonths} / +{scheduleRules.futureMonths} months
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setScheduleOpen(true)}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Configure schedule…
+                </button>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -710,6 +717,13 @@ export function WorkspaceSwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SchedulePanel
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        rules={scheduleRules}
+        onChange={updateScheduleRules}
+      />
     </>
   );
 }
@@ -878,5 +892,166 @@ function MarginInput({
         className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
       />
     </div>
+  );
+}
+
+/**
+ * Settings panel for the monthly editorial publishing schedule rules used
+ * to validate the chosen "Issue Date" when duplicating a publication.
+ */
+function SchedulePanel({
+  open,
+  onOpenChange,
+  rules,
+  onChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  rules: ScheduleRules;
+  onChange: (next: ScheduleRules) => void;
+}) {
+  const [draft, setDraft] = useState<ScheduleRules>(rules);
+
+  useEffect(() => {
+    if (open) setDraft(rules);
+  }, [open, rules]);
+
+  const dayError =
+    draft.minDay < 1 || draft.minDay > 31 || draft.maxDay < 1 || draft.maxDay > 31
+      ? "Days must be between 1 and 31."
+      : draft.minDay > draft.maxDay
+      ? "Minimum day cannot be greater than maximum day."
+      : null;
+  const offsetError =
+    draft.pastMonths < 0 || draft.futureMonths < 0
+      ? "Month offsets cannot be negative."
+      : draft.pastMonths > 120 || draft.futureMonths > 120
+      ? "Month offsets must be 120 or less."
+      : null;
+  const invalid = !!dayError || !!offsetError;
+
+  const setField = (k: keyof ScheduleRules, v: string) => {
+    const n = v === "" ? 0 : Number(v);
+    setDraft((d) => ({ ...d, [k]: Number.isFinite(n) ? n : 0 }));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Publishing schedule rules</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            These rules are used to validate the “Issue Date” you pick when
+            duplicating a publication for a new monthly issue.
+          </p>
+
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+              Allowed days of month
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">Earliest day</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={draft.minDay}
+                  onChange={(e) => setField("minDay", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">Latest day</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={draft.maxDay}
+                  onChange={(e) => setField("maxDay", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+            </div>
+            {dayError ? (
+              <p role="alert" className="mt-1 text-[11px] text-destructive">
+                {dayError}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+              Allowed month offset (from today)
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">
+                  Months in the past
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  value={draft.pastMonths}
+                  onChange={(e) => setField("pastMonths", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">
+                  Months in the future
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={120}
+                  value={draft.futureMonths}
+                  onChange={(e) => setField("futureMonths", e.target.value)}
+                  className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+            </div>
+            {offsetError ? (
+              <p role="alert" className="mt-1 text-[11px] text-destructive">
+                {offsetError}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <DialogFooter>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(DEFAULT_SCHEDULE_RULES);
+            }}
+            className="text-xs px-3 py-2 rounded-sm hover:bg-secondary mr-auto"
+          >
+            Reset to defaults
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="text-xs px-3 py-2 rounded-sm hover:bg-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (invalid) return;
+              onChange(draft);
+              onOpenChange(false);
+            }}
+            disabled={invalid}
+            className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
+          >
+            Save
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
