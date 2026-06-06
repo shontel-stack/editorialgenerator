@@ -14,6 +14,14 @@ import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/li
 import { useLayoutEdit } from "./LayoutEdit";
 import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
 import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
+import {
+  getImageBlockDefaults,
+  getVideoBlockDefaults,
+  useImageBlockDefaults,
+  useVideoBlockDefaults,
+  type ImageBlockDefaults,
+  type VideoBlockDefaults,
+} from "@/lib/mediaBlockDefaults";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -68,14 +76,43 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
         color: d.color,
       };
     }
-    case "image":
-      return { ...base, kind: "image", w: 1200, h: 1200, imageUrl: "", imageFit: "cover" };
+    case "image": {
+      const d = getImageBlockDefaults();
+      return {
+        id,
+        kind: "image",
+        x: d.marginX,
+        y: d.marginY,
+        z: 50,
+        w: d.w,
+        h: d.h,
+        imageUrl: "",
+        imageFit: d.imageFit,
+        borderWidth: d.borderWidth,
+        borderColor: d.borderColor,
+        bg: d.bg,
+      };
+    }
     case "shape":
       return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
     case "embed":
       return { ...base, kind: "embed", w: 480, h: 160, embed: "button", url: "https://", label: "Read more", color: "#ffffff", bg: "#6b1320" };
-    case "video":
-      return { ...base, kind: "video", w: 1600, h: 900, url: "", muted: true };
+    case "video": {
+      const d = getVideoBlockDefaults();
+      return {
+        id,
+        kind: "video",
+        x: d.marginX,
+        y: d.marginY,
+        z: 50,
+        w: d.w,
+        h: d.h,
+        url: "",
+        muted: d.muted,
+        loop: d.loop,
+        autoplay: d.autoplay,
+      };
+    }
   }
 }
 
