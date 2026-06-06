@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -1820,11 +1820,38 @@ function Index() {
 
       {/* Canvas ribbon — page-specific controls, sticky alongside the header */}
       <div className="border-t border-foreground/20 bg-foreground text-background px-3 py-1.5 flex items-center gap-2 flex-wrap">
-        <div className="inline-flex items-center gap-2 pr-2 mr-1 border-r border-background/25">
+        <div className="inline-flex items-center gap-1.5 pr-2 mr-1 border-r border-background/25">
           <span className="text-[10px] tracking-[0.3em] uppercase text-background/60">Page</span>
+          <button
+            type="button"
+            onClick={() => {
+              const prev = pagesForRender[selectedIdx - 1];
+              if (prev) setSelectedId(prev.id);
+            }}
+            disabled={selectedIdx <= 0}
+            aria-label="Previous page"
+            title="Previous page"
+            className="p-1 rounded-sm text-background/70 hover:bg-background/10 hover:text-background transition disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
           <span className="px-2 py-0.5 rounded-sm bg-background/15 text-background text-[11px] font-medium tabular-nums">
             {pageNumberFor(issue, selected.id)}
+            <span className="text-background/50"> / {pagesForRender.length}</span>
           </span>
+          <button
+            type="button"
+            onClick={() => {
+              const next = pagesForRender[selectedIdx + 1];
+              if (next) setSelectedId(next.id);
+            }}
+            disabled={selectedIdx < 0 || selectedIdx >= pagesForRender.length - 1}
+            aria-label="Next page"
+            title="Next page"
+            className="p-1 rounded-sm text-background/70 hover:bg-background/10 hover:text-background transition disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
           <span className="text-[11px] text-background/80 max-w-[180px] truncate hidden md:inline" title={labelForNode(selected)}>
             {labelForNode(selected)}
           </span>
@@ -1832,6 +1859,7 @@ function Index() {
             · {selected.pageType}
           </span>
         </div>
+
         <span className="text-[10px] tracking-[0.3em] uppercase text-background/60 hidden sm:inline">View</span>
 
         <div className="inline-flex border border-background/25 rounded-sm overflow-hidden">
