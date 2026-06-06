@@ -286,13 +286,9 @@ export function SnapSettingsPanel({
                         <button
                           type="button"
                           disabled={selectedIds.size === 0}
-                          onClick={() => {
-                            onApplyOverrideToPages(Array.from(selectedIds), {
-                              edgeTolerancePx: effective.edgeTolerancePx,
-                              rotationTolerance: effective.rotationTolerance,
-                              rotationAngles: effective.rotationAngles,
-                            });
-                          }}
+                          onClick={() =>
+                            setPending({ mode: "apply", ids: Array.from(selectedIds) })
+                          }
                           className="flex-1 px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Apply override ({selectedIds.size})
@@ -300,15 +296,16 @@ export function SnapSettingsPanel({
                         <button
                           type="button"
                           disabled={selectedIds.size === 0}
-                          onClick={() => {
-                            onApplyOverrideToPages(Array.from(selectedIds), null);
-                          }}
+                          onClick={() =>
+                            setPending({ mode: "clear", ids: Array.from(selectedIds) })
+                          }
                           className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Remove snap override from selected pages"
                         >
                           Clear
                         </button>
                       </div>
+
                     </div>
                   )}
                 </>
