@@ -32,6 +32,18 @@ import { useSyncQueueDrainer } from "@/hooks/useSyncQueueDrainer";
 import { autosaveKey, loadAutosave } from "@/lib/issueAutosave";
 import { fetchIssueDraft, upsertIssueDraft } from "@/lib/issueDrafts";
 import { enqueueDraft } from "@/lib/syncQueue";
+import {
+  baselineKey,
+  hashOf,
+  loadBaseline,
+  saveBaseline,
+} from "@/lib/issueSyncBaseline";
+import {
+  detectConflict,
+  mergeIssues,
+  type ConflictSide,
+} from "@/lib/issueConflict";
+import { DraftConflictDialog } from "@/components/DraftConflictDialog";
 import { AutosaveIndicator } from "@/components/AutosaveIndicator";
 import {
   PAGE_LAYOUTS,
