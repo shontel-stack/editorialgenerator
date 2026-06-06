@@ -516,6 +516,7 @@ function Index() {
           subject: issue.meta.date,
         },
         `arts-today-${issueSlug}-publication.pdf`,
+        { inches: dimInches, px: dimPx },
       );
     } finally {
       setBusy(null);
