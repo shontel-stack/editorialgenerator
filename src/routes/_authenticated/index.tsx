@@ -1036,24 +1036,19 @@ function Index() {
       </header>
 
 
-      <div className="px-3 py-3">
-      <ResizablePanelGroup
-        orientation="horizontal"
-        className="min-h-[calc(100vh-140px)] gap-0 rounded-sm"
-      >
-        <ResizablePanel
-          panelRef={leftPanelRef}
-          id="ws-left"
-          defaultSize={20}
-          minSize={14}
-          maxSize={35}
-          collapsible
-          collapsedSize={0}
-          onResize={(size) => setLeftCollapsed(size.asPercentage < 1)}
-        >
-        <div className="h-full overflow-y-auto pr-3">
+      <div className="px-3 pt-3 pb-2 flex flex-wrap items-center gap-2 border-b border-border bg-card/40">
+        <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mr-1">Tools</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
+              <Layers className="h-3.5 w-3.5" /> Pages
+              <span className="font-numerals text-foreground/80">{issue.pages.length.toString().padStart(2, "0")}</span>
+              <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-0">
         {/* Page list */}
-        <aside className="space-y-3">
+
           <div className="border border-border bg-card">
             <div className="px-3 py-2.5 border-b border-border flex items-center justify-between gap-2">
               <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
