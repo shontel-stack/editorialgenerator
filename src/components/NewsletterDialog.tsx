@@ -175,6 +175,39 @@ export function NewsletterDialog({
     }
   };
 
+  const onDownloadInteractivePdf = async () => {
+    const node = previewRef.current;
+    if (!node || !data) return;
+    if (!pageNodes || !pageDim) {
+      setError("Interactive PDF requires the issue pages to be mounted.");
+      return;
+    }
+    setBusy("ipdf");
+    setError(null);
+    try {
+      const map = new Map<string, HTMLElement>();
+      pageNodes.forEach((el, id) => {
+        if (el) map.set(id, el);
+      });
+      await exportNewsletterInteractivePdf({
+        newsletterNode: node,
+        pageNodes: map,
+        highlightPageIds: data.highlights.map((h) => h.pageId),
+        pageDim,
+        filename: `${issueSlug || "newsletter"}-interactive.pdf`,
+        meta: {
+          title: `${issue.master.publication || "Newsletter"} — ${issueLabel}`,
+          author: issue.master.publication || "The Arts Today",
+          subject: dateLabel,
+        },
+      });
+    } catch (e) {
+      setError((e as Error).message || "Could not export interactive PDF.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const patch = (p: Partial<NewsletterData>) =>
     setData((d) => (d ? { ...d, ...p } : d));
 
