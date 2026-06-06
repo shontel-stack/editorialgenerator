@@ -50,11 +50,18 @@ function download(filename: string, mime: string, content: Blob | string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function NewsletterDialog({ open, onOpenChange, issue, issueSlug }: Props) {
+export function NewsletterDialog({
+  open,
+  onOpenChange,
+  issue,
+  issueSlug,
+  pageNodes,
+  pageDim,
+}: Props) {
   const generate = useServerFn(generateNewsletterHighlights);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const [busy, setBusy] = useState<"gen" | "pdf" | null>(null);
+  const [busy, setBusy] = useState<"gen" | "pdf" | "ipdf" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [data, setData] = useState<NewsletterData | null>(null);
