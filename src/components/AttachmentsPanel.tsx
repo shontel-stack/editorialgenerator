@@ -81,8 +81,10 @@ export function AttachmentsPanel({
   publicationName,
   selectedPageId,
   selectedPageLabel,
+  pages = [],
   attachments,
 }: Props) {
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
