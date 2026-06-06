@@ -910,15 +910,8 @@ function Index() {
   };
 
   // Resizable workspace panel refs + collapsed state
-  const leftPanelRef = usePanelRef();
   const middlePanelRef = usePanelRef();
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [middleCollapsed, setMiddleCollapsed] = useState(false);
-  const toggleLeftPanel = () => {
-    const p = leftPanelRef.current;
-    if (!p) return;
-    p.isCollapsed() ? p.expand() : p.collapse();
-  };
   const toggleMiddlePanel = () => {
     const p = middlePanelRef.current;
     if (!p) return;
