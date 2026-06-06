@@ -738,9 +738,15 @@ function StaffChat({
     transport,
   });
 
-  // Persist new messages + file any tool-created notes.
+  // Persist new messages + file any tool-created notes + apply placements.
   const persistedRef = useRef<Set<string>>(new Set());
   const filedNotesRef = useRef<Set<string>>(new Set());
+  const appliedPlacementsRef = useRef<Set<string>>(new Set());
+  const onPlaceAttachmentRef = useRef(onPlaceAttachment);
+  useEffect(() => {
+    onPlaceAttachmentRef.current = onPlaceAttachment;
+  }, [onPlaceAttachment]);
+
   useEffect(() => {
     if (!threadId) return;
     if (status !== "ready") return;
@@ -751,6 +757,7 @@ function StaffChat({
 
       const toSaveMsgs: Array<{ id: string; role: string; parts: UIMessage["parts"] }> = [];
       const toFileNotes: Array<NoteToolOutput & { toolCallId: string }> = [];
+      const toApplyPlacements: Array<PlacementToolOutput & { toolCallId: string }> = [];
 
       for (const m of messages) {
         if (!persistedRef.current.has(m.id) && !initial?.some((h) => h.id === m.id)) {
@@ -759,14 +766,27 @@ function StaffChat({
         }
         if (m.role !== "assistant") continue;
         for (const part of m.parts as Array<Record<string, unknown>>) {
-          if (part.type !== "tool-create_note") continue;
+          const partType = part.type;
           if (part.state !== "output-available") continue;
           const callId = String(part.toolCallId ?? "");
-          if (!callId || filedNotesRef.current.has(callId)) continue;
-          const output = part.output as NoteToolOutput | undefined;
-          if (!output || output.kind !== "note") continue;
-          filedNotesRef.current.add(callId);
-          toFileNotes.push({ ...output, toolCallId: callId });
+          if (!callId) continue;
+
+          if (partType === "tool-create_note" && !filedNotesRef.current.has(callId)) {
+            const output = part.output as NoteToolOutput | undefined;
+            if (output && output.kind === "note") {
+              filedNotesRef.current.add(callId);
+              toFileNotes.push({ ...output, toolCallId: callId });
+            }
+          } else if (
+            partType === "tool-place_attachment" &&
+            !appliedPlacementsRef.current.has(callId)
+          ) {
+            const output = part.output as PlacementToolOutput | undefined;
+            if (output && output.kind === "placement") {
+              appliedPlacementsRef.current.add(callId);
+              toApplyPlacements.push({ ...output, toolCallId: callId });
+            }
+          }
         }
       }
 
@@ -800,6 +820,21 @@ function StaffChat({
           })),
         );
         if (noteErr) console.warn("[staff-chat] file note failed:", noteErr.message);
+      }
+
+      if (toApplyPlacements.length && onPlaceAttachmentRef.current) {
+        for (const p of toApplyPlacements) {
+          try {
+            await onPlaceAttachmentRef.current(p.attachment_id, {
+              page_id: p.page_id,
+              region: p.region ?? null,
+              position_x: p.position_x ?? null,
+              position_y: p.position_y ?? null,
+            });
+          } catch (e) {
+            console.warn("[staff-chat] place_attachment failed:", (e as Error).message);
+          }
+        }
       }
     })();
   }, [status, messages, initial, threadId, issueId, publicationId, role.id]);
