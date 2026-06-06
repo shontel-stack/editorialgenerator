@@ -181,6 +181,84 @@ export function SnapSettingsPanel({
                   <p className="text-[10px] leading-relaxed text-muted-foreground">
                     Active only for this page. Other pages keep the global defaults (or their own overrides).
                   </p>
+
+                  {onApplyOverrideToPages && otherPages.length > 0 && (
+                    <div className="space-y-2 border-t border-border pt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+                          Apply to other pages
+                        </span>
+                        <div className="flex gap-2 text-[10px] tracking-[0.2em] uppercase">
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setSelectedIds(new Set(otherPages.map((p) => p.id)))}
+                          >
+                            All
+                          </button>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setSelectedIds(new Set())}
+                          >
+                            None
+                          </button>
+                        </div>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto border border-border rounded-sm divide-y divide-border">
+                        {otherPages.map((p) => {
+                          const checked = selectedIds.has(p.id);
+                          return (
+                            <label
+                              key={p.id}
+                              className="flex items-center gap-2 px-2 py-1 text-xs cursor-pointer hover:bg-secondary/40"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  setSelectedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) next.add(p.id);
+                                    else next.delete(p.id);
+                                    return next;
+                                  });
+                                }}
+                              />
+                              <span className="truncate">{p.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={selectedIds.size === 0}
+                          onClick={() => {
+                            onApplyOverrideToPages(Array.from(selectedIds), {
+                              edgeTolerancePx: effective.edgeTolerancePx,
+                              rotationTolerance: effective.rotationTolerance,
+                              rotationAngles: effective.rotationAngles,
+                            });
+                          }}
+                          className="flex-1 px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Apply override ({selectedIds.size})
+                        </button>
+                        <button
+                          type="button"
+                          disabled={selectedIds.size === 0}
+                          onClick={() => {
+                            onApplyOverrideToPages(Array.from(selectedIds), null);
+                          }}
+                          className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Remove snap override from selected pages"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </fieldset>
