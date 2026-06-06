@@ -239,7 +239,13 @@ function Index() {
     position_x?: number | null;
     position_y?: number | null;
   };
-  type PlacementHistoryEntry = { id: string; before: PlacementPatch; after: PlacementPatch };
+  type PlacementHistoryEntry = {
+    id: string;
+    before: PlacementPatch;
+    after: PlacementPatch;
+    groupKey: string | null;
+    lastAt: number;
+  };
   const undoStackRef = useRef<PlacementHistoryEntry[]>([]);
   const redoStackRef = useRef<PlacementHistoryEntry[]>([]);
   const [historyTick, setHistoryTick] = useState(0);
@@ -248,8 +254,25 @@ function Index() {
     attachmentRowsRef.current = attachments.rows;
   }, [attachments.rows]);
 
+  // Coalescing window for fine adjustments (drag + nudges) on the same
+  // attachment. Edits to the same id within this window are merged into the
+  // previous undo entry so a long drag or a flurry of slider tweaks counts
+  // as a single undo step.
+  const GROUP_WINDOW_MS = 900;
+
+  const flushPlacementGroup = useCallback(() => {
+    // Force the next applyPlacement to start a fresh entry by clearing
+    // the lastAt timestamp on the top of the stack.
+    const top = undoStackRef.current[undoStackRef.current.length - 1];
+    if (top) top.lastAt = 0;
+  }, []);
+
   const applyPlacement = useCallback(
-    async (id: string, patch: PlacementPatch, opts?: { silent?: boolean }) => {
+    async (
+      id: string,
+      patch: PlacementPatch,
+      opts?: { silent?: boolean; groupKey?: string | null },
+    ) => {
       const current = attachmentRowsRef.current.find((r) => r.id === id);
       if (!current) return;
       const before: PlacementPatch = {};
@@ -265,8 +288,30 @@ function Index() {
       if (!changed) return;
       await attachments.updateAssignment(id, patch);
       if (!opts?.silent) {
-        undoStackRef.current.push({ id, before, after });
-        if (undoStackRef.current.length > 100) undoStackRef.current.shift();
+        const now = Date.now();
+        const groupKey = opts?.groupKey ?? null;
+        const top = undoStackRef.current[undoStackRef.current.length - 1];
+        const sameTarget = top && top.id === id;
+        const sameGroup =
+          sameTarget &&
+          (groupKey !== null
+            ? top.groupKey === groupKey
+            : top.groupKey === null && now - top.lastAt <= GROUP_WINDOW_MS);
+        if (sameGroup) {
+          // Merge: keep original `before`, extend `after` with the latest values.
+          for (const k of ["page_id", "region", "position_x", "position_y"] as const) {
+            if (k in after) {
+              (top.after as Record<string, unknown>)[k] = (after as Record<string, unknown>)[k];
+              if (!(k in top.before)) {
+                (top.before as Record<string, unknown>)[k] = (before as Record<string, unknown>)[k];
+              }
+            }
+          }
+          top.lastAt = now;
+        } else {
+          undoStackRef.current.push({ id, before, after, groupKey, lastAt: now });
+          if (undoStackRef.current.length > 100) undoStackRef.current.shift();
+        }
         redoStackRef.current = [];
         setHistoryTick((t) => t + 1);
       }
@@ -279,16 +324,19 @@ function Index() {
     if (!entry) return;
     await attachments.updateAssignment(entry.id, entry.before);
     redoStackRef.current.push(entry);
+    // Break grouping so the next edit starts a new step.
+    flushPlacementGroup();
     setHistoryTick((t) => t + 1);
-  }, [attachments]);
+  }, [attachments, flushPlacementGroup]);
 
   const redoPlacement = useCallback(async () => {
     const entry = redoStackRef.current.pop();
     if (!entry) return;
     await attachments.updateAssignment(entry.id, entry.after);
     undoStackRef.current.push(entry);
+    flushPlacementGroup();
     setHistoryTick((t) => t + 1);
-  }, [attachments]);
+  }, [attachments, flushPlacementGroup]);
 
   const canUndoPlacement = undoStackRef.current.length > 0;
   const canRedoPlacement = redoStackRef.current.length > 0;
