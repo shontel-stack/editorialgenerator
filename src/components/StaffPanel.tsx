@@ -191,6 +191,8 @@ export function StaffPanel({
           issue={issue}
           publicationId={publicationId}
           selectedPageId={selectedPageId}
+          attachments={attachments}
+          onPlaceAttachment={onPlaceAttachment}
         />
       ) : view === "inbox" ? (
         <InboxView
