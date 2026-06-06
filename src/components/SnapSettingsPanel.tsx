@@ -314,9 +314,103 @@ export function SnapSettingsPanel({
           )}
         </div>
       )}
+      <BulkConfirmDialog
+        pending={pending}
+        otherPages={otherPages}
+        effective={effective}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          if (!pending || !onApplyOverrideToPages) return setPending(null);
+          if (pending.mode === "apply") {
+            onApplyOverrideToPages(pending.ids, {
+              edgeTolerancePx: effective.edgeTolerancePx,
+              rotationTolerance: effective.rotationTolerance,
+              rotationAngles: effective.rotationAngles,
+            });
+          } else {
+            onApplyOverrideToPages(pending.ids, null);
+          }
+          setPending(null);
+        }}
+      />
     </div>
   );
 }
+
+function BulkConfirmDialog({
+  pending,
+  otherPages,
+  effective,
+  onCancel,
+  onConfirm,
+}: {
+  pending: { mode: "apply" | "clear"; ids: string[] } | null;
+  otherPages: SnapPageRef[];
+  effective: SnapSettings;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const open = pending !== null;
+  const idSet = new Set(pending?.ids ?? []);
+  const targetPages = otherPages.filter((p) => idSet.has(p.id));
+  const isApply = pending?.mode === "apply";
+  const verb = isApply ? "Apply override" : "Clear override";
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {verb} on {targetPages.length} page{targetPages.length === 1 ? "" : "s"}?
+          </DialogTitle>
+          <DialogDescription>
+            {isApply
+              ? "These pages will receive the current snap override, replacing any existing override they had."
+              : "Snap overrides will be removed from these pages. They will fall back to the global defaults."}
+          </DialogDescription>
+        </DialogHeader>
+        {isApply && (
+          <div className="rounded-sm border border-border bg-secondary/30 px-3 py-2 text-xs space-y-1">
+            <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+              Override to apply
+            </div>
+            <div>Edge tolerance: {effective.edgeTolerancePx}px</div>
+            <div>Rotation tolerance: {effective.rotationTolerance}°</div>
+            <div className="truncate">
+              Angles: {effective.rotationAngles.join(", ")}
+            </div>
+          </div>
+        )}
+        <div className="max-h-56 overflow-y-auto border border-border rounded-sm divide-y divide-border">
+          {targetPages.length === 0 ? (
+            <div className="px-2 py-2 text-xs text-muted-foreground">No pages selected.</div>
+          ) : (
+            targetPages.map((p) => (
+              <div key={p.id} className="px-2 py-1 text-xs truncate">
+                {p.label}
+              </div>
+            ))
+          )}
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <button
+            onClick={onCancel}
+            className="text-xs px-3 py-2 rounded-sm hover:bg-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={targetPages.length === 0}
+            className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {verb}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 /* — small internal helpers — */
 
