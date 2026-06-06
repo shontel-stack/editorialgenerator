@@ -27,7 +27,9 @@ import { useActivePublication } from "@/hooks/useActivePublication";
 import { getLastPositions, setLastPosition, type LastPosition } from "@/lib/publications";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { useAutosave } from "@/hooks/useAutosave";
+import { useCloudSync } from "@/hooks/useCloudSync";
 import { autosaveKey, loadAutosave } from "@/lib/issueAutosave";
+import { fetchIssueDraft, upsertIssueDraft } from "@/lib/issueDrafts";
 import { AutosaveIndicator } from "@/components/AutosaveIndicator";
 import {
   PAGE_LAYOUTS,
@@ -151,25 +153,52 @@ function Index() {
   const [autosaveRestoring, setAutosaveRestoring] = useState(true);
   const restoredKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    // Try to restore the autosaved snapshot for this (user, issueId).
+    // Restore the newest snapshot we can find for this (user, issueId):
+    // compare local autosave vs cloud draft and pick the more recent one.
     if (restoredKeyRef.current === autosaveKeyStr) return;
     restoredKeyRef.current = autosaveKeyStr;
     setAutosaveRestoring(true);
-    try {
-      const rec = loadAutosave<IssueDoc>(autosaveKeyStr);
-      if (rec?.data?.pages?.length && rec.data.meta?.issueId === issue.meta.issueId) {
-        setIssue(rec.data);
-        lastSavedRef.current = JSON.stringify(rec.data);
-        if (!rec.data.pages.some((p: IssuePageNode) => p.id === selectedId)) {
-          setSelectedId(rec.data.pages[0].id);
+    let cancelled = false;
+    (async () => {
+      try {
+        const local = loadAutosave<IssueDoc>(autosaveKeyStr);
+        const localValid =
+          local?.data?.pages?.length && local.data.meta?.issueId === issue.meta.issueId;
+        const localTs = localValid ? local!.savedAt : 0;
+
+        let remote: { data: IssueDoc; ts: number } | null = null;
+        if (userId) {
+          try {
+            const rec = await fetchIssueDraft<IssueDoc>(issue.meta.issueId);
+            if (rec?.data?.pages?.length && rec.data.meta?.issueId === issue.meta.issueId) {
+              remote = { data: rec.data, ts: new Date(rec.client_updated_at).getTime() };
+            }
+          } catch {
+            // ignore cloud fetch errors; fall back to local
+          }
         }
+
+        const winner =
+          remote && remote.ts >= localTs
+            ? remote
+            : localValid
+              ? { data: local!.data as IssueDoc, ts: localTs }
+              : null;
+
+        if (!cancelled && winner) {
+          setIssue(winner.data);
+          lastSavedRef.current = JSON.stringify(winner.data);
+          if (!winner.data.pages.some((p: IssuePageNode) => p.id === selectedId)) {
+            setSelectedId(winner.data.pages[0].id);
+          }
+        }
+      } finally {
+        if (!cancelled) setTimeout(() => setAutosaveRestoring(false), 0);
       }
-    } catch {
-      // ignore restore failures
-    } finally {
-      // Defer un-pausing so the autosave hook sees the restored value as baseline.
-      setTimeout(() => setAutosaveRestoring(false), 0);
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autosaveKeyStr]);
   const autosave = useAutosave(issue, {
@@ -177,6 +206,27 @@ function Index() {
     paused: autosaveRestoring,
     debounceMs: 1500,
     maxIntervalMs: 8000,
+  });
+
+  // ----- Cloud sync: mirror the autosaved draft to issue_drafts -----
+  const cloudKey = userId ? `${userId}:${issue.meta.issueId}` : null;
+  const cloudSync = useCloudSync<IssueDoc>({
+    key: cloudKey,
+    value: issue,
+    paused: autosaveRestoring,
+    debounceMs: 4000,
+    push: async (value) => {
+      if (!userId) throw new Error("Not signed in");
+      const rec = await upsertIssueDraft<IssueDoc>({
+        userId,
+        issueId: value.meta.issueId,
+        publicationId: activePublication?.id ?? null,
+        issueLabel: value.meta.issue ?? null,
+        data: value,
+        clientUpdatedAt: Date.now(),
+      });
+      return new Date(rec.client_updated_at).getTime();
+    },
   });
   // Page dimensions (and margin/bleed) come from the active publication.
   const pageDims = useMemo(() => getPageDimensions(activePublication), [activePublication]);
@@ -1080,6 +1130,10 @@ function Index() {
               status={autosave.status}
               lastSavedAt={autosave.lastSavedAt}
               onSaveNow={autosave.saveNow}
+              cloudStatus={cloudSync.status}
+              cloudLastSyncedAt={cloudSync.lastSyncedAt}
+              cloudError={cloudSync.error}
+              onSyncNow={cloudSync.syncNow}
             />
           </div>
           <div className="flex items-center gap-4">
