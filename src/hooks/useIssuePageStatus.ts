@@ -51,8 +51,12 @@ export function useIssuePageStatus(opts: {
   // Realtime subscription
   useEffect(() => {
     if (!userId || !issueId) return;
+    // Unique channel name per mount avoids reusing an already-subscribed
+    // channel (which would reject new `.on()` callbacks) under StrictMode
+    // double-invocation or rapid remounts.
+    const channelName = `page-status:${issueId}:${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel(`page-status:${issueId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "page_status", filter: `issue_id=eq.${issueId}` },
