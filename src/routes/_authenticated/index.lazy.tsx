@@ -747,9 +747,10 @@ function Index() {
   const pagesForRender = useMemo(() => {
     const contentsEntries = deriveContentsEntries(issue);
     const total = issue.pages.length;
+    const physIdx = computePhysicalIndices(issue.pages);
     return issue.pages.map((p, i) => {
       const num = formatPageNumber(issue.master, i + 1, total);
-      const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(i));
+      const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(physIdx[i]));
       switch (p.pageType) {
         case "cover":
           return { ...p, data: { ...p.data, issue: issue.meta.issue, date: issue.meta.date } };
