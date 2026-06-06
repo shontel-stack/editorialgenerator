@@ -21,7 +21,7 @@ export type Database = {
           file_name: string
           file_path: string
           id: string
-          issue_id: string
+          issue_id: string | null
           kind: string
           mime_type: string
           page_id: string | null
@@ -38,7 +38,7 @@ export type Database = {
           file_name: string
           file_path: string
           id?: string
-          issue_id: string
+          issue_id?: string | null
           kind: string
           mime_type: string
           page_id?: string | null
@@ -55,7 +55,7 @@ export type Database = {
           file_name?: string
           file_path?: string
           id?: string
-          issue_id?: string
+          issue_id?: string | null
           kind?: string
           mime_type?: string
           page_id?: string | null
