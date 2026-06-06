@@ -1020,6 +1020,8 @@ function SchedulePanel({
               </p>
             ) : null}
           </div>
+
+          <SchedulePreview draft={draft} invalid={invalid} />
         </div>
         <DialogFooter>
           <button
