@@ -8,7 +8,7 @@ import {
   type AttachmentWithUrl,
 } from "@/lib/attachments";
 
-type AssignOpts = { silent?: boolean; groupKey?: string | null };
+type AssignOpts = { silent?: boolean; groupKey?: string | null; batchId?: string | null };
 
 type Props = {
   references: AttachmentWithUrl[];
@@ -41,12 +41,29 @@ const NUDGE_STEP_LARGE = 0.02;
 export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Multi-select set. Shift/Meta/Ctrl-click toggles membership; a plain click
+  // replaces the selection with just that pin.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [localPos, setLocalPos] = useState<Record<string, { x: number; y: number }>>({});
+  // Stable batch id for the in-progress nudge group. Cleared on selection
+  // change, mouse drag, or Escape so the next nudge starts a fresh undo step.
+  const nudgeBatchRef = useRef<string | null>(null);
+
+  const selectPin = (id: string, additive: boolean) => {
+    nudgeBatchRef.current = null;
+    setSelectedIds((prev) => {
+      if (!additive) return new Set([id]);
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Drag handling — pointermove updates local state, pointerup commits.
   useEffect(() => {
     if (!dragId) return;
+    nudgeBatchRef.current = null;
     const onMove = (e: PointerEvent) => {
       const host = hostRef.current;
       if (!host) return;
@@ -74,16 +91,18 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
     };
   }, [dragId, localPos, onAssign]);
 
-  // Arrow-key nudging on the currently selected pin.
+  // Arrow-key nudging on the currently selected pins. A single keypress that
+  // moves N pins is committed as one undo step via a shared batchId.
   useEffect(() => {
-    if (!selectedId) return;
+    if (selectedIds.size === 0) return;
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) {
         return;
       }
       if (e.key === "Escape") {
-        setSelectedId(null);
+        setSelectedIds(new Set());
+        nudgeBatchRef.current = null;
         return;
       }
       const isArrow =
@@ -91,30 +110,40 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
       if (!isArrow) return;
       e.preventDefault();
 
-      const ref = references.find((r) => r.id === selectedId);
-      if (!ref) return;
-      const i = references.indexOf(ref);
-      const local = localPos[selectedId];
-      const baseX = local?.x ?? ref.position_x ?? defaultPos(i).x;
-      const baseY = local?.y ?? ref.position_y ?? defaultPos(i).y;
       const step = e.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
-      let nx = baseX;
-      let ny = baseY;
-      if (e.key === "ArrowLeft") nx = Math.max(0, baseX - step);
-      else if (e.key === "ArrowRight") nx = Math.min(1, baseX + step);
-      else if (e.key === "ArrowUp") ny = Math.max(0, baseY - step);
-      else if (e.key === "ArrowDown") ny = Math.min(1, baseY + step);
+      const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+      const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
 
-      setLocalPos((p) => ({ ...p, [selectedId]: { x: nx, y: ny } }));
-      void onAssign(
-        selectedId,
-        { position_x: nx, position_y: ny, region: null },
-        { groupKey: `nudge:${selectedId}` },
-      );
+      // Reuse the in-progress batch id so successive keypresses keep grouping
+      // (per-id coalescing in applyPlacement merges them within its window),
+      // and any new entries that get pushed share the same batchId.
+      if (!nudgeBatchRef.current) {
+        nudgeBatchRef.current = `nudge-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      }
+      const batchId = nudgeBatchRef.current;
+
+      const updates: Record<string, { x: number; y: number }> = {};
+      for (const id of selectedIds) {
+        const ref = references.find((r) => r.id === id);
+        if (!ref) continue;
+        const i = references.indexOf(ref);
+        const local = localPos[id];
+        const baseX = local?.x ?? ref.position_x ?? defaultPos(i).x;
+        const baseY = local?.y ?? ref.position_y ?? defaultPos(i).y;
+        const nx = Math.min(1, Math.max(0, baseX + dx));
+        const ny = Math.min(1, Math.max(0, baseY + dy));
+        updates[id] = { x: nx, y: ny };
+        void onAssign(
+          id,
+          { position_x: nx, position_y: ny, region: null },
+          { groupKey: `nudge:${id}`, batchId },
+        );
+      }
+      setLocalPos((p) => ({ ...p, ...updates }));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, references, localPos, onAssign]);
+  }, [selectedIds, references, localPos, onAssign]);
 
   // Click outside any pin clears selection.
   useEffect(() => {
@@ -123,7 +152,8 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
       if (!host) return;
       const target = e.target as Node | null;
       if (target && host.contains(target)) return;
-      setSelectedId(null);
+      setSelectedIds(new Set());
+      nudgeBatchRef.current = null;
     };
     window.addEventListener("pointerdown", onDocPointer);
     return () => window.removeEventListener("pointerdown", onDocPointer);
@@ -143,7 +173,7 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
         const py = local?.y ?? r.position_y ?? defaultPos(i).y;
         const Icon = iconFor(r.mime_type);
         const isDragging = dragId === r.id;
-        const isSelected = selectedId === r.id;
+        const isSelected = selectedIds.has(r.id);
         return (
           <button
             key={r.id}
@@ -151,12 +181,14 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
             onPointerDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setSelectedId(r.id);
-              setDragId(r.id);
+              const additive = e.shiftKey || e.metaKey || e.ctrlKey;
+              selectPin(r.id, additive);
+              // Only start dragging on a plain click (no modifier) so
+              // Shift/Cmd-click stays a pure selection toggle.
+              if (!additive) setDragId(r.id);
               (e.currentTarget as HTMLButtonElement).focus();
             }}
-            onFocus={() => setSelectedId(r.id)}
-            title={`${r.file_name}${r.region ? ` · ${r.region}` : ""}\nDrag to reposition · Arrow keys to nudge (Shift = larger step)`}
+            title={`${r.file_name}${r.region ? ` · ${r.region}` : ""}\nDrag to move · Arrows to nudge (Shift = larger) · Shift/Cmd-click to multi-select`}
             className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 select-none focus:outline-none"
             style={{
               left: `${px * 100}%`,
