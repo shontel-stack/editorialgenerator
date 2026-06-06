@@ -374,6 +374,11 @@ function Index() {
       }
     },
   });
+  // Keep the conflict-resolution action refs pointed at the latest hook
+  // callbacks so resolving the dialog flushes autosave + cloud + queue now.
+  autosaveSaveNowRef.current = autosave.saveNow;
+  cloudSyncNowRef.current = cloudSync.syncNow;
+  queueDrainNowRef.current = queueDrainer.drainNow;
   // Page dimensions (and margin/bleed) come from the active publication.
   const pageDims = useMemo(() => getPageDimensions(activePublication), [activePublication]);
   const dimPx = pageDims.px;
