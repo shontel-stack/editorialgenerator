@@ -24,6 +24,7 @@ import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
+import { getLastPositions, setLastPosition, type LastPosition } from "@/lib/publications";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import {
   PAGE_LAYOUTS,
@@ -418,6 +419,67 @@ function Index() {
       setSelectedId(issue.pages[0]?.id ?? "");
     }
   }, [issue, selectedId]);
+
+  // Per-publication "where we left off". When the active publication changes
+  // (including initial load), restore the previously-selected page for that
+  // publication. We try the saved pageId first, then fall back to pageIndex
+  // if the issue has changed since it was saved. Save is debounced on every
+  // subsequent selection change.
+  const restoredForRef = useRef<string | null>(null);
+  useEffect(() => {
+    const pubId = activePublication?.id;
+    if (!userId || !pubId) return;
+    if (restoredForRef.current === pubId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = await getLastPositions(userId);
+        const saved = all[pubId];
+        if (cancelled || !saved) {
+          restoredForRef.current = pubId;
+          return;
+        }
+        const byId = saved.pageId && issue.pages.find((p) => p.id === saved.pageId);
+        if (byId) {
+          setSelectedId(byId.id);
+        } else if (
+          typeof saved.pageIndex === "number" &&
+          saved.pageIndex >= 0 &&
+          saved.pageIndex < issue.pages.length
+        ) {
+          setSelectedId(issue.pages[saved.pageIndex].id);
+        }
+        restoredForRef.current = pubId;
+      } catch {
+        restoredForRef.current = pubId;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId, activePublication?.id, issue]);
+
+  // Reset the restore guard when the publication changes so a new pub gets
+  // restored on its first matching effect run.
+  useEffect(() => {
+    restoredForRef.current = null;
+  }, [activePublication?.id]);
+
+  // Debounced save of the current selection for the active publication.
+  useEffect(() => {
+    const pubId = activePublication?.id;
+    if (!userId || !pubId) return;
+    if (restoredForRef.current !== pubId) return; // wait until restore ran
+    const pageIndex = issue.pages.findIndex((p) => p.id === selectedId);
+    const pos: LastPosition = {
+      issueId: issue.meta.issueId ?? null,
+      pageId: selectedId || null,
+      pageIndex: pageIndex >= 0 ? pageIndex : null,
+    };
+    const t = setTimeout(() => {
+      void setLastPosition(userId, pubId, pos).catch(() => { /* non-fatal */ });
+    }, 500);
+    return () => clearTimeout(t);
+  }, [userId, activePublication?.id, selectedId, issue.meta.issueId, issue.pages]);
+
 
   const selected = issue.pages.find((p) => p.id === selectedId) ?? issue.pages[0];
 
