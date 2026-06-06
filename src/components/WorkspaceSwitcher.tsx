@@ -464,3 +464,79 @@ function Field({
     </div>
   );
 }
+
+function MarginsForm({
+  mTop, mRight, mBottom, mLeft, bleed,
+  onTop, onRight, onBottom, onLeft, onBleed,
+}: {
+  mTop: string; mRight: string; mBottom: string; mLeft: string; bleed: string;
+  onTop: (v: string) => void;
+  onRight: (v: string) => void;
+  onBottom: (v: string) => void;
+  onLeft: (v: string) => void;
+  onBleed: (v: string) => void;
+}) {
+  return (
+    <div className="border-t border-border pt-3 space-y-2">
+      <div>
+        <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+          Margins (safe area)
+        </label>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          In inches. Carried into the InDesign IDML page geometry and the Canva README.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <MarginInput label="Top" value={mTop} onChange={onTop} />
+        <MarginInput label="Right" value={mRight} onChange={onRight} />
+        <MarginInput label="Bottom" value={mBottom} onChange={onBottom} />
+        <MarginInput label="Left" value={mLeft} onChange={onLeft} />
+      </div>
+      <div>
+        <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+          Bleed (in, all edges)
+        </label>
+        <input
+          type="number"
+          step="0.0001"
+          min="0"
+          max="2"
+          value={bleed}
+          onChange={(e) => onBleed(e.target.value)}
+          className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Standard print bleed is 0.125 in (3.175 mm). Sets InDesign's
+          DocumentBleed and the Canva crop instructions in the export README.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MarginInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+        {label}
+      </label>
+      <input
+        type="number"
+        step="0.0001"
+        min="0"
+        max="10"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    </div>
+  );
+}
