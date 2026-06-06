@@ -1886,7 +1886,19 @@ function Index() {
           <span className="text-[10px] tracking-[0.2em] uppercase text-background/50 hidden lg:inline">
             · {selected.pageType}
           </span>
+          <button
+            type="button"
+            onClick={() => duplicatePage(selected.id)}
+            disabled={selected.pageType === "cover" || selected.pageType === "back"}
+            aria-label="Duplicate page"
+            title="Duplicate this page"
+            className="ml-1 inline-flex items-center gap-1 px-1.5 py-1 rounded-sm border border-background/25 text-background/80 hover:bg-background/10 hover:text-background transition disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Copy className="h-3 w-3" />
+            <span className="text-[10px] tracking-[0.2em] uppercase hidden md:inline">Duplicate</span>
+          </button>
         </div>
+
 
         <span className="text-[10px] tracking-[0.3em] uppercase text-background/60 hidden sm:inline">View</span>
 
