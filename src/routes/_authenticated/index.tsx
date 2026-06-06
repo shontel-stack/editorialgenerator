@@ -4,7 +4,7 @@ import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, 
 import { PagePreview } from "@/components/PagePreview";
 import { GuidesOverlay } from "@/components/GuidesOverlay";
 import { SnapSettingsPanel } from "@/components/SnapSettingsPanel";
-import { useSnapSettings } from "@/lib/snapSettings";
+import { useSnapSettings, mergeSnapSettings, type SnapSettings } from "@/lib/snapSettings";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
@@ -389,6 +389,15 @@ function Index() {
         p.id === id
           ? ({ ...p, positionOverrides: {}, textScales: {}, blockLinks: {} } as IssuePageNode)
           : p,
+      ),
+    }));
+
+  /** Set or clear per-page snap overrides. Pass `null` to remove the override. */
+  const setSnapOverride = (id: string, patch: Partial<SnapSettings> | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id ? ({ ...p, snapOverride: patch ?? undefined } as IssuePageNode) : p,
       ),
     }));
 
