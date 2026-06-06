@@ -25,7 +25,6 @@ import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
-import { downloadIdml, downloadIdmlPackage } from "@/lib/idmlExport";
 import {
   PAGE_LAYOUTS,
   PAGE_LAYOUT_LABELS,
@@ -112,22 +111,6 @@ import {
 } from "@/lib/exportCover";
 
 export const Route = createLazyFileRoute("/_authenticated/")({
-  head: () => ({
-    meta: [
-      { title: "The Arts Today — Issue Builder" },
-      {
-        name: "description",
-        content:
-          "Build the whole monthly issue of The Arts Today: cover, contents, articles, ads, photo essays. Export print-ready PDFs at 10.6667 × 14.2222 in for InDesign, Canva, and Fresco.",
-      },
-      { property: "og:title", content: "The Arts Today — Issue Builder" },
-      {
-        property: "og:description",
-        content:
-          "Assemble articles, ads, photo essays and cover into a single interactive publication PDF — round-trips with Canva and InDesign.",
-      },
-    ],
-  }),
   component: Index,
 });
 
