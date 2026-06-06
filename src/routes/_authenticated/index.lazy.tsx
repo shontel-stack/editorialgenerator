@@ -28,8 +28,10 @@ import { getLastPositions, setLastPosition, type LastPosition } from "@/lib/publ
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { useSyncQueueDrainer } from "@/hooks/useSyncQueueDrainer";
 import { autosaveKey, loadAutosave } from "@/lib/issueAutosave";
 import { fetchIssueDraft, upsertIssueDraft } from "@/lib/issueDrafts";
+import { enqueueDraft } from "@/lib/syncQueue";
 import { AutosaveIndicator } from "@/components/AutosaveIndicator";
 import {
   PAGE_LAYOUTS,
@@ -217,15 +219,45 @@ function Index() {
     debounceMs: 4000,
     push: async (value) => {
       if (!userId) throw new Error("Not signed in");
-      const rec = await upsertIssueDraft<IssueDoc>({
-        userId,
-        issueId: value.meta.issueId,
-        publicationId: activePublication?.id ?? null,
-        issueLabel: value.meta.issue ?? null,
-        data: value,
-        clientUpdatedAt: Date.now(),
+      const clientUpdatedAt = Date.now();
+      try {
+        const rec = await upsertIssueDraft<IssueDoc>({
+          userId,
+          issueId: value.meta.issueId,
+          publicationId: activePublication?.id ?? null,
+          issueLabel: value.meta.issue ?? null,
+          data: value,
+          clientUpdatedAt,
+        });
+        return new Date(rec.client_updated_at).getTime();
+      } catch (err) {
+        // Network/server failure → persist to the offline sync queue so it
+        // survives reloads and gets uploaded automatically on reconnect.
+        enqueueDraft<IssueDoc>(userId, {
+          issueId: value.meta.issueId,
+          publicationId: activePublication?.id ?? null,
+          issueLabel: value.meta.issue ?? null,
+          data: value,
+          clientUpdatedAt,
+          lastError: (err as Error).message,
+        });
+        throw err;
+      }
+    },
+  });
+
+  // ----- Offline sync queue drainer -----
+  const queueDrainer = useSyncQueueDrainer<IssueDoc>({
+    userId: userId ?? null,
+    push: async (item) => {
+      await upsertIssueDraft<IssueDoc>({
+        userId: userId!,
+        issueId: item.issueId,
+        publicationId: item.publicationId,
+        issueLabel: item.issueLabel,
+        data: item.data,
+        clientUpdatedAt: item.clientUpdatedAt,
       });
-      return new Date(rec.client_updated_at).getTime();
     },
   });
   // Page dimensions (and margin/bleed) come from the active publication.
@@ -1132,8 +1164,14 @@ function Index() {
               onSaveNow={autosave.saveNow}
               cloudStatus={cloudSync.status}
               cloudLastSyncedAt={cloudSync.lastSyncedAt}
-              cloudError={cloudSync.error}
-              onSyncNow={cloudSync.syncNow}
+              cloudError={cloudSync.error ?? queueDrainer.lastError}
+              onSyncNow={() => {
+                cloudSync.syncNow();
+                queueDrainer.drainNow();
+              }}
+              queuePending={queueDrainer.pending}
+              queueDraining={queueDrainer.draining}
+              onRetryQueue={queueDrainer.drainNow}
             />
           </div>
           <div className="flex items-center gap-4">

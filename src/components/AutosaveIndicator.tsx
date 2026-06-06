@@ -12,6 +12,10 @@ export interface AutosaveIndicatorProps {
   cloudLastSyncedAt?: number | null;
   cloudError?: string | null;
   onSyncNow?: () => void;
+  /** Number of offline-queued draft updates waiting to upload. */
+  queuePending?: number;
+  queueDraining?: boolean;
+  onRetryQueue?: () => void;
 }
 
 function formatRelative(ts: number, now: number): string {
@@ -34,6 +38,9 @@ export function AutosaveIndicator({
   cloudLastSyncedAt,
   cloudError,
   onSyncNow,
+  queuePending = 0,
+  queueDraining = false,
+  onRetryQueue,
 }: AutosaveIndicatorProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -150,11 +157,41 @@ export function AutosaveIndicator({
     <span className="px-2 py-1" title={cloudError ?? undefined}>{cloudContent}</span>
   );
 
+  const queueBadge =
+    queuePending > 0 ? (
+      <button
+        type="button"
+        onClick={onRetryQueue}
+        disabled={!onRetryQueue}
+        title={
+          queueDraining
+            ? `Uploading ${queuePending} queued update${queuePending === 1 ? "" : "s"}…`
+            : `${queuePending} draft update${queuePending === 1 ? "" : "s"} queued — click to retry`
+        }
+        className="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-[10px] tracking-[0.25em] uppercase text-amber-600 dark:text-amber-400 hover:bg-secondary transition disabled:opacity-70 disabled:cursor-default"
+      >
+        {queueDraining ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <CloudUpload className="h-3 w-3" />
+        )}
+        <span>
+          {queuePending} queued
+        </span>
+      </button>
+    ) : null;
+
   return (
     <span className="inline-flex items-center gap-1">
       {localBtn}
       <span className="h-3 w-px bg-border" />
       {cloudBtn}
+      {queueBadge ? (
+        <>
+          <span className="h-3 w-px bg-border" />
+          {queueBadge}
+        </>
+      ) : null}
     </span>
   );
 }
