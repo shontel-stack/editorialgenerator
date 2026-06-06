@@ -23,8 +23,12 @@ export type AttachmentRow = {
   mime_type: string;
   size_bytes: number;
   extracted_text: string | null;
+  region: string | null;
+  position_x: number | null;
+  position_y: number | null;
   created_at: string;
 };
+
 
 export type AttachmentWithUrl = AttachmentRow & { signedUrl: string | null };
 
