@@ -4,8 +4,8 @@
  * currently active one.
  */
 
-import { useEffect, useState } from "react";
-import { Building2, Check, ChevronDown, Plus, Settings2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Building2, Check, ChevronDown, Copy, Download, Plus, Settings2, Upload } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,6 +129,94 @@ export function WorkspaceSwitcher() {
     return Math.round(n * 10000) / 10000;
   };
 
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const downloadJson = (filename: string, data: unknown) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportActive = () => {
+    if (!active) return;
+    const { id: _id, user_id: _u, created_at: _c, updated_at: _up, ...settings } = active;
+    const payload = { kind: "pageluxe.publication", version: 1, settings };
+    const slug = active.slug || active.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    downloadJson(`${slug}.publication.json`, payload);
+  };
+
+  const handleDuplicateActive = async () => {
+    if (!active || submitting) return;
+    const proposed = window.prompt("Name for the copy:", `${active.name} (copy)`);
+    if (!proposed || !proposed.trim()) return;
+    setSubmitting(true);
+    try {
+      await create({
+        name: proposed.trim(),
+        tagline: active.tagline ?? undefined,
+        brand_voice: active.brand_voice ?? undefined,
+        masthead: active.masthead ?? undefined,
+        display_font: active.display_font ?? undefined,
+        body_font: active.body_font ?? undefined,
+        palette_key: active.palette_key ?? undefined,
+        page_width_in: active.page_width_in,
+        page_height_in: active.page_height_in,
+        margin_top_in: active.margin_top_in,
+        margin_right_in: active.margin_right_in,
+        margin_bottom_in: active.margin_bottom_in,
+        margin_left_in: active.margin_left_in,
+        bleed_in: active.bleed_in,
+      });
+    } catch (e) {
+      alert(`Could not duplicate publication: ${(e as Error).message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file || submitting) return;
+    setSubmitting(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as { kind?: string; settings?: Record<string, unknown> };
+      const s = (parsed?.settings ?? parsed) as Record<string, unknown>;
+      const rawName = typeof s.name === "string" ? s.name : "Imported publication";
+      const proposed = window.prompt("Name for the imported publication:", rawName);
+      if (!proposed || !proposed.trim()) return;
+      const num = (v: unknown): number | null | undefined =>
+        v === null || v === undefined ? (v as null | undefined) : Number(v);
+      const str = (v: unknown): string | undefined =>
+        typeof v === "string" && v.trim() ? v : undefined;
+      await create({
+        name: proposed.trim(),
+        tagline: str(s.tagline),
+        brand_voice: str(s.brand_voice),
+        masthead: str(s.masthead),
+        display_font: str(s.display_font),
+        body_font: str(s.body_font),
+        palette_key: str(s.palette_key),
+        page_width_in: num(s.page_width_in) as number | null | undefined,
+        page_height_in: num(s.page_height_in) as number | null | undefined,
+        margin_top_in: num(s.margin_top_in) as number | null | undefined,
+        margin_right_in: num(s.margin_right_in) as number | null | undefined,
+        margin_bottom_in: num(s.margin_bottom_in) as number | null | undefined,
+        margin_left_in: num(s.margin_left_in) as number | null | undefined,
+        bleed_in: num(s.bleed_in) as number | null | undefined,
+      });
+    } catch (e) {
+      alert(`Could not import publication: ${(e as Error).message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!name.trim() || submitting) return;
     const dims = parseDims(widthIn, heightIn);
@@ -231,15 +319,44 @@ export function WorkspaceSwitcher() {
           )}
           <DropdownMenuSeparator />
           {active ? (
-            <DropdownMenuItem onClick={() => setEditOpen(true)}>
-              <Settings2 className="h-3.5 w-3.5 mr-2" /> Edit page size…
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                <Settings2 className="h-3.5 w-3.5 mr-2" /> Edit page size…
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportActive}>
+                <Download className="h-3.5 w-3.5 mr-2" /> Save publication to file
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDuplicateActive} disabled={submitting}>
+                <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate for next issue
+              </DropdownMenuItem>
+            </>
           ) : null}
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              importInputRef.current?.click();
+            }}
+            disabled={submitting}
+          >
+            <Upload className="h-3.5 w-3.5 mr-2" /> Import publication from file…
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setOpen(true)}>
             <Plus className="h-3.5 w-3.5 mr-2" /> New publication
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="application/json"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          void handleImportFile(file);
+        }}
+      />
 
       {/* New publication */}
       <Dialog
