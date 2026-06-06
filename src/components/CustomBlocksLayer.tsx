@@ -838,9 +838,31 @@ function VideoDefaultsForm() {
         <Field label="Box height (px)"><input type="number" min={40} value={defaults.h} onChange={(e) => set("h", num(e.target.value, defaults.h))} style={defaultsInputStyle} /></Field>
         <Field label="Margin X (px)"><input type="number" min={0} value={defaults.marginX} onChange={(e) => set("marginX", num(e.target.value, defaults.marginX))} style={defaultsInputStyle} /></Field>
         <Field label="Margin Y (px)"><input type="number" min={0} value={defaults.marginY} onChange={(e) => set("marginY", num(e.target.value, defaults.marginY))} style={defaultsInputStyle} /></Field>
+        <Field label="Poster URL">
+          <input type="url" placeholder="https://…/thumb.jpg" value={defaults.poster} onChange={(e) => set("poster", e.target.value)} style={defaultsInputStyle} />
+        </Field>
+        <Field label={`Volume (${Math.round(defaults.volume * 100)}%)`}>
+          <input type="range" min={0} max={1} step={0.05} value={defaults.volume} onChange={(e) => set("volume", Number(e.target.value))} style={{ width: "100%" }} />
+        </Field>
+        <Field label="Controls">
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.controls} onChange={(e) => set("controls", e.target.checked)} /> Show controls</label>
+        </Field>
+        <Field label="Playback">
+          <select value={defaults.preload} onChange={(e) => set("preload", e.target.value as VideoBlockDefaults["preload"])} style={defaultsInputStyle}>
+            <option value="none">Preload: none</option>
+            <option value="metadata">Preload: metadata</option>
+            <option value="auto">Preload: auto</option>
+          </select>
+        </Field>
+        <Field label="Inline (iOS)">
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.playsInline} onChange={(e) => set("playsInline", e.target.checked)} /> Play inline</label>
+        </Field>
         <Field label="Muted"><label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.muted} onChange={(e) => set("muted", e.target.checked)} /> Muted</label></Field>
         <Field label="Loop"><label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.loop} onChange={(e) => set("loop", e.target.checked)} /> Loop</label></Field>
         <Field label="Autoplay"><label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.autoplay} onChange={(e) => set("autoplay", e.target.checked)} /> Autoplay</label></Field>
+      </div>
+      <div style={{ marginTop: 8, fontSize: 10, color: "#888" }}>
+        Browsers require <strong>Muted</strong> for autoplay to actually start. Volume and inline playback only apply to direct video files, not YouTube/Vimeo embeds.
       </div>
       <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={reset} style={btnStyle("normal")}>Reset</button></div>
     </>
