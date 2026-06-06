@@ -14,6 +14,14 @@ import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/li
 import { useLayoutEdit } from "./LayoutEdit";
 import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
 import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
+import {
+  getImageBlockDefaults,
+  getVideoBlockDefaults,
+  useImageBlockDefaults,
+  useVideoBlockDefaults,
+  type ImageBlockDefaults,
+  type VideoBlockDefaults,
+} from "@/lib/mediaBlockDefaults";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -68,14 +76,43 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
         color: d.color,
       };
     }
-    case "image":
-      return { ...base, kind: "image", w: 1200, h: 1200, imageUrl: "", imageFit: "cover" };
+    case "image": {
+      const d = getImageBlockDefaults();
+      return {
+        id,
+        kind: "image",
+        x: d.marginX,
+        y: d.marginY,
+        z: 50,
+        w: d.w,
+        h: d.h,
+        imageUrl: "",
+        imageFit: d.imageFit,
+        borderWidth: d.borderWidth,
+        borderColor: d.borderColor,
+        bg: d.bg,
+      };
+    }
     case "shape":
       return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
     case "embed":
       return { ...base, kind: "embed", w: 480, h: 160, embed: "button", url: "https://", label: "Read more", color: "#ffffff", bg: "#6b1320" };
-    case "video":
-      return { ...base, kind: "video", w: 1600, h: 900, url: "", muted: true };
+    case "video": {
+      const d = getVideoBlockDefaults();
+      return {
+        id,
+        kind: "video",
+        x: d.marginX,
+        y: d.marginY,
+        z: 50,
+        w: d.w,
+        h: d.h,
+        url: "",
+        muted: d.muted,
+        loop: d.loop,
+        autoplay: d.autoplay,
+      };
+    }
   }
 }
 
@@ -661,23 +698,17 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
         <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
         <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
         <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
-        <PaletteBtn label="Text defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
+        <PaletteBtn label="Defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
       </div>
-      {defaultsOpen && <TextDefaultsPanel onClose={() => setDefaultsOpen(false)} />}
+      {defaultsOpen && <BlockDefaultsPanel onClose={() => setDefaultsOpen(false)} />}
     </>
   );
 }
 
-function TextDefaultsPanel({ onClose }: { onClose: () => void }) {
+function BlockDefaultsPanel({ onClose }: { onClose: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
-  const { defaults, update, reset } = useTextBlockDefaults();
-  const num = (v: string, fallback: number) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : fallback;
-  };
-  const set = <K extends keyof TextBlockDefaults>(k: K, v: TextBlockDefaults[K]) =>
-    update({ [k]: v } as Partial<TextBlockDefaults>);
+  const [tab, setTab] = useState<"text" | "image" | "video">("text");
   return (
     <div
       onPointerDown={(e) => e.stopPropagation()}
@@ -691,7 +722,7 @@ function TextDefaultsPanel({ onClose }: { onClose: () => void }) {
         border: "2px solid #0a0a0a",
         borderRadius: 8,
         padding: 16,
-        width: 340,
+        width: 360,
         boxShadow: "0 12px 36px rgba(0,0,0,0.25)",
         zIndex: 350,
         fontFamily: "system-ui, sans-serif",
@@ -700,11 +731,31 @@ function TextDefaultsPanel({ onClose }: { onClose: () => void }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <strong style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase" }}>Text block defaults</strong>
+        <strong style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase" }}>New block defaults</strong>
         <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#666" }}>
           <X size={16} />
         </button>
       </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {(["text", "image", "video"] as const).map((t) => (
+          <button key={t} type="button" onClick={() => setTab(t)} style={{ ...btnStyle(tab === t ? "active" : "normal"), fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" }}>{t}</button>
+        ))}
+      </div>
+      {tab === "text" && <TextDefaultsForm />}
+      {tab === "image" && <ImageDefaultsForm />}
+      {tab === "video" && <VideoDefaultsForm />}
+      <div style={{ marginTop: 10, color: "#888", fontSize: 10 }}>Page = 3200 × 4267 px (300 DPI).</div>
+    </div>
+  );
+}
+
+function num(v: string, fallback: number) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
+
+function TextDefaultsForm() {
+  const { defaults, update, reset } = useTextBlockDefaults();
+  const set = <K extends keyof TextBlockDefaults>(k: K, v: TextBlockDefaults[K]) => update({ [k]: v } as Partial<TextBlockDefaults>);
+  return (
+    <>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Field label="Font family">
           <select value={defaults.fontFamily} onChange={(e) => set("fontFamily", e.target.value as TextBlockDefaults["fontFamily"])} style={defaultsInputStyle}>
@@ -720,44 +771,70 @@ function TextDefaultsPanel({ onClose }: { onClose: () => void }) {
             <option value="right">Right</option>
           </select>
         </Field>
-        <Field label="Font size (px)">
-          <input type="number" min={8} value={defaults.fontSize} onChange={(e) => set("fontSize", num(e.target.value, defaults.fontSize))} style={defaultsInputStyle} />
-        </Field>
+        <Field label="Font size (px)"><input type="number" min={8} value={defaults.fontSize} onChange={(e) => set("fontSize", num(e.target.value, defaults.fontSize))} style={defaultsInputStyle} /></Field>
         <Field label="Weight">
           <select value={defaults.fontWeight} onChange={(e) => set("fontWeight", Number(e.target.value))} style={defaultsInputStyle}>
-            {[300, 400, 500, 600, 700, 800, 900].map((w) => (
-              <option key={w} value={w}>{w}</option>
-            ))}
+            {[300, 400, 500, 600, 700, 800, 900].map((w) => <option key={w} value={w}>{w}</option>)}
           </select>
         </Field>
-        <Field label="Italic">
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <input type="checkbox" checked={defaults.italic} onChange={(e) => set("italic", e.target.checked)} /> Italic
-          </label>
-        </Field>
-        <Field label="Color">
-          <input type="color" value={defaults.color} onChange={(e) => set("color", e.target.value)} style={{ ...defaultsInputStyle, padding: 0, height: 28 }} />
-        </Field>
-        <Field label="Box width (px)">
-          <input type="number" min={40} value={defaults.w} onChange={(e) => set("w", num(e.target.value, defaults.w))} style={defaultsInputStyle} />
-        </Field>
-        <Field label="Box height (px)">
-          <input type="number" min={40} value={defaults.h} onChange={(e) => set("h", num(e.target.value, defaults.h))} style={defaultsInputStyle} />
-        </Field>
-        <Field label="Margin X (px)">
-          <input type="number" min={0} value={defaults.marginX} onChange={(e) => set("marginX", num(e.target.value, defaults.marginX))} style={defaultsInputStyle} />
-        </Field>
-        <Field label="Margin Y (px)">
-          <input type="number" min={0} value={defaults.marginY} onChange={(e) => set("marginY", num(e.target.value, defaults.marginY))} style={defaultsInputStyle} />
-        </Field>
+        <Field label="Italic"><label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.italic} onChange={(e) => set("italic", e.target.checked)} /> Italic</label></Field>
+        <Field label="Color"><input type="color" value={defaults.color} onChange={(e) => set("color", e.target.value)} style={{ ...defaultsInputStyle, padding: 0, height: 28 }} /></Field>
+        <Field label="Box width (px)"><input type="number" min={40} value={defaults.w} onChange={(e) => set("w", num(e.target.value, defaults.w))} style={defaultsInputStyle} /></Field>
+        <Field label="Box height (px)"><input type="number" min={40} value={defaults.h} onChange={(e) => set("h", num(e.target.value, defaults.h))} style={defaultsInputStyle} /></Field>
+        <Field label="Margin X (px)"><input type="number" min={0} value={defaults.marginX} onChange={(e) => set("marginX", num(e.target.value, defaults.marginX))} style={defaultsInputStyle} /></Field>
+        <Field label="Margin Y (px)"><input type="number" min={0} value={defaults.marginY} onChange={(e) => set("marginY", num(e.target.value, defaults.marginY))} style={defaultsInputStyle} /></Field>
       </div>
-      <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "#888", fontSize: 10 }}>Page = 3200 × 4267 px (300 DPI).</span>
-        <button type="button" onClick={reset} style={btnStyle("normal")}>Reset</button>
-      </div>
-    </div>
+      <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={reset} style={btnStyle("normal")}>Reset</button></div>
+    </>
   );
 }
+
+function ImageDefaultsForm() {
+  const { defaults, update, reset } = useImageBlockDefaults();
+  const set = <K extends keyof ImageBlockDefaults>(k: K, v: ImageBlockDefaults[K]) => update({ [k]: v } as Partial<ImageBlockDefaults>);
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <Field label="Box width (px)"><input type="number" min={40} value={defaults.w} onChange={(e) => set("w", num(e.target.value, defaults.w))} style={defaultsInputStyle} /></Field>
+        <Field label="Box height (px)"><input type="number" min={40} value={defaults.h} onChange={(e) => set("h", num(e.target.value, defaults.h))} style={defaultsInputStyle} /></Field>
+        <Field label="Margin X (px)"><input type="number" min={0} value={defaults.marginX} onChange={(e) => set("marginX", num(e.target.value, defaults.marginX))} style={defaultsInputStyle} /></Field>
+        <Field label="Margin Y (px)"><input type="number" min={0} value={defaults.marginY} onChange={(e) => set("marginY", num(e.target.value, defaults.marginY))} style={defaultsInputStyle} /></Field>
+        <Field label="Fit">
+          <select value={defaults.imageFit} onChange={(e) => set("imageFit", e.target.value as ImageBlockDefaults["imageFit"])} style={defaultsInputStyle}>
+            <option value="cover">Cover (fill)</option>
+            <option value="contain">Contain (letterbox)</option>
+          </select>
+        </Field>
+        <Field label="Border width (px)"><input type="number" min={0} value={defaults.borderWidth} onChange={(e) => set("borderWidth", num(e.target.value, defaults.borderWidth))} style={defaultsInputStyle} /></Field>
+        <Field label="Border color"><input type="color" value={defaults.borderColor} onChange={(e) => set("borderColor", e.target.value)} style={{ ...defaultsInputStyle, padding: 0, height: 28 }} /></Field>
+        <Field label="Background"><input type="color" value={defaults.bg} onChange={(e) => set("bg", e.target.value)} style={{ ...defaultsInputStyle, padding: 0, height: 28 }} /></Field>
+      </div>
+      <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={reset} style={btnStyle("normal")}>Reset</button></div>
+    </>
+  );
+}
+
+function VideoDefaultsForm() {
+  const { defaults, update, reset } = useVideoBlockDefaults();
+  const set = <K extends keyof VideoBlockDefaults>(k: K, v: VideoBlockDefaults[K]) => update({ [k]: v } as Partial<VideoBlockDefaults>);
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <Field label="Box width (px)"><input type="number" min={40} value={defaults.w} onChange={(e) => set("w", num(e.target.value, defaults.w))} style={defaultsInputStyle} /></Field>
+        <Field label="Box height (px)"><input type="number" min={40} value={defaults.h} onChange={(e) => set("h", num(e.target.value, defaults.h))} style={defaultsInputStyle} /></Field>
+        <Field label="Margin X (px)"><input type="number" min={0} value={defaults.marginX} onChange={(e) => set("marginX", num(e.target.value, defaults.marginX))} style={defaultsInputStyle} /></Field>
+        <Field label="Margin Y (px)"><input type="number" min={0} value={defaults.marginY} onChange={(e) => set("marginY", num(e.target.value, defaults.marginY))} style={defaultsInputStyle} /></Field>
+        <Field label="Muted"><label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.muted} onChange={(e) => set("muted", e.target.checked)} /> Muted</label></Field>
+        <Field label="Loop"><label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.loop} onChange={(e) => set("loop", e.target.checked)} /> Loop</label></Field>
+        <Field label="Autoplay"><label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={defaults.autoplay} onChange={(e) => set("autoplay", e.target.checked)} /> Autoplay</label></Field>
+      </div>
+      <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}><button type="button" onClick={reset} style={btnStyle("normal")}>Reset</button></div>
+    </>
+  );
+}
+
+
+
 
 const defaultsInputStyle: CSSProperties = {
   width: "100%",
