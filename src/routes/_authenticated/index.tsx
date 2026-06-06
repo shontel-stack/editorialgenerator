@@ -745,6 +745,34 @@ function Index() {
     (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
     (selected.textScales && Object.keys(selected.textScales).length > 0) ||
     (selected.blockLinks && Object.keys(selected.blockLinks).length > 0);
+  const selectedCustomBlockCount = selected.customBlocks?.length ?? 0;
+  const selectedLayout: PageLayout =
+    pageStatus.layoutOf(selected.id) ?? DEFAULT_PAGE_LAYOUT;
+
+  /** Apply a new layout; reset block positions so the new template can take
+   * over. Used after the user confirms in the reflow dialog (or directly
+   * when the page has no overrides / custom blocks to disturb). */
+  const commitLayoutChange = async (next: PageLayout) => {
+    try {
+      await pageStatus.setLayout(selected.id, next);
+      // Clear positionOverrides / textScales / blockLinks so blocks reflow
+      // into the new template. CustomBlocks are kept (the user added them
+      // intentionally) but their offsets are reset above via resetOverrides.
+      if (next !== "free-form") resetOverrides(selected.id);
+    } catch (e) {
+      console.error("Failed to set page layout", e);
+    }
+  };
+
+  /** Entry point from the ribbon / edit panel pickers. Pops a confirmation
+   * dialog when the page already has hand-placed content that would shift. */
+  const requestLayoutChange = (next: PageLayout) => {
+    if (next === selectedLayout) return;
+    const needsConfirm =
+      next !== "free-form" && (selectedHasOverrides || selectedCustomBlockCount > 0);
+    if (needsConfirm) setPendingLayout(next);
+    else void commitLayoutChange(next);
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground">
