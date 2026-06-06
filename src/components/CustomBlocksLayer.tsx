@@ -111,6 +111,11 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
         muted: d.muted,
         loop: d.loop,
         autoplay: d.autoplay,
+        poster: d.poster || undefined,
+        volume: d.volume,
+        controls: d.controls,
+        playsInline: d.playsInline,
+        preload: d.preload,
       };
     }
   }
@@ -599,14 +604,23 @@ function VideoPreview({ block }: { block: Extract<CustomBlock, { kind: "video" }
       />
     );
   }
+  const showControls = block.controls ?? true;
+  const playsInline = block.playsInline ?? true;
   return (
     <video
       src={url}
-      controls
+      poster={block.poster || undefined}
+      controls={showControls}
       muted={block.muted}
       autoPlay={block.autoplay}
       loop={block.loop}
-      playsInline
+      playsInline={playsInline}
+      preload={block.preload ?? "metadata"}
+      ref={(el) => {
+        if (el && typeof block.volume === "number") {
+          el.volume = Math.max(0, Math.min(1, block.volume));
+        }
+      }}
       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", background: "#000" }}
     />
   );
