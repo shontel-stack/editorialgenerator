@@ -1,13 +1,14 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
   type PointerEvent as RPointerEvent,
 } from "react";
-import { Link2, Type } from "lucide-react";
+import { Link2, Move, Type } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
 
@@ -50,7 +51,13 @@ type Ctx = {
   onRequestEdit?: () => void;
 };
 
-const LayoutEditContext = createContext<Ctx | null>(null);
+type CtxValue = Ctx & {
+  /** Block key currently selected for editing (outline + toolbar). */
+  selectedKey: string | null;
+  setSelectedKey: (key: string | null) => void;
+};
+
+const LayoutEditContext = createContext<CtxValue | null>(null);
 
 export function useLayoutEdit() {
   return useContext(LayoutEditContext);
@@ -74,6 +81,26 @@ export function LayoutEditProvider({
   onRequestEdit,
   children,
 }: Ctx & { children: ReactNode }) {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  // Clear selection whenever this page leaves edit mode so re-entering starts
+  // with nothing selected.
+  useEffect(() => {
+    if (!editing) setSelectedKey(null);
+  }, [editing]);
+
+  // Escape clears selection while editing.
+  useEffect(() => {
+    if (!editing || !selectedKey) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      if (e.key === "Escape") setSelectedKey(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing, selectedKey]);
+
   return (
     <LayoutEditContext.Provider
       value={{
@@ -92,6 +119,8 @@ export function LayoutEditProvider({
         guides,
         snapSettings,
         onRequestEdit,
+        selectedKey,
+        setSelectedKey,
       }}
     >
       {children}
@@ -165,6 +194,7 @@ export function Draggable({
   const saved = ctx?.overrides[blockKey];
   const textScale = ctx?.textScales?.[blockKey] ?? 1;
   const link = ctx?.blockLinks?.[blockKey] ?? "";
+  const isSelected = editing && ctx?.selectedKey === blockKey;
 
   const preview = ctx?.previewOverrides?.[blockKey];
   const previewScale = ctx?.previewScales?.[blockKey];
@@ -203,6 +233,7 @@ export function Draggable({
     if (!editing || !ctx) return;
     e.preventDefault();
     e.stopPropagation();
+    ctx.setSelectedKey(blockKey);
     const el = e.currentTarget;
     const root = el.closest("[data-cover-root]") as HTMLElement | null;
     const s = ctx.scale || 1;
@@ -262,10 +293,15 @@ export function Draggable({
         }
       : editing
         ? {
-            outline: link
-              ? "3px solid rgba(37,99,235,0.7)"
-              : "3px dashed rgba(107,19,32,0.7)",
-            outlineOffset: 4,
+            outline: isSelected
+              ? "3px solid rgba(37,99,235,0.95)"
+              : link
+                ? "2px solid rgba(37,99,235,0.45)"
+                : "2px dashed rgba(107,19,32,0.45)",
+            outlineOffset: isSelected ? 4 : 2,
+            boxShadow: isSelected
+              ? "0 0 0 6px rgba(37,99,235,0.18)"
+              : undefined,
             cursor: drag.current ? "grabbing" : "grab",
           }
         : link
@@ -349,7 +385,7 @@ export function Draggable({
           {typeof previewScale === "number" ? ` · ${Math.round(previewScale * 100)}%` : ""}
         </div>
       )}
-      {editing && ctx && (
+      {isSelected && ctx && (
         <div
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -364,7 +400,7 @@ export function Draggable({
             gap: 6,
             background: "white",
             color: "#0a0a0a",
-            border: "1px solid #6b1320",
+            border: "1px solid #2563eb",
             borderRadius: 4,
             padding: "4px 6px",
             fontSize: 11,
@@ -375,6 +411,22 @@ export function Draggable({
             pointerEvents: "auto",
           }}
         >
+          <span
+            title="Drag to move"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "2px 4px",
+              color: "#2563eb",
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Move size={12} />
+            <span>Selected</span>
+          </span>
           <button
             type="button"
             title="Resize text"
