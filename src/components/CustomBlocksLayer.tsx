@@ -864,6 +864,7 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
 }
 
 function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "image" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+  const snap = useSnapSettings();
   return (
     <>
       <label style={btnStyle("normal")}>
@@ -887,7 +888,7 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
       </select>
       <label style={labelStyle}>
         Rotate
-        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotation(Number(e.target.value)) })} style={{ ...inputStyle, width: 56 }} />
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotationWith(Number(e.target.value), snap) })} style={{ ...inputStyle, width: 56 }} />
       </label>
       <label style={labelStyle}>
         Border
@@ -909,6 +910,7 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
 }
 
 function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "video" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+  const snap = useSnapSettings();
   return (
     <>
       <label style={labelStyle}>
@@ -932,7 +934,7 @@ function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind
       </button>
       <label style={labelStyle}>
         Rotate
-        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotation(Number(e.target.value)) })} style={{ ...inputStyle, width: 56 }} />
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotationWith(Number(e.target.value), snap) })} style={{ ...inputStyle, width: 56 }} />
       </label>
     </>
   );
