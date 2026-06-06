@@ -133,6 +133,7 @@ export const Route = createFileRoute("/_authenticated/")({
 function Index() {
   const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
+  const [newsletterOpen, setNewsletterOpen] = useState(false);
   useUnsavedGuard(
     () =>
       JSON.stringify(issue) !== lastSavedRef.current
