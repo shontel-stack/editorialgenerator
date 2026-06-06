@@ -111,6 +111,7 @@ import {
   pageNumberFor,
   renderFolio,
   folioSideForIndex,
+  computePhysicalIndices,
   normalizeFolioTemplate,
   type AdData,
   type ArticleData,
