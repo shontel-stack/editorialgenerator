@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2 } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
 import { PagePreview } from "@/components/PagePreview";
@@ -229,6 +229,71 @@ function Index() {
     return out;
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
+
+  // ----- Placement undo / redo history -----
+  // Records changes made via drag-on-canvas, sidebar pin edits, AttachmentsPanel
+  // reassignments, and AI staff `place_attachment` calls so they can be reverted.
+  type PlacementPatch = {
+    page_id?: string | null;
+    region?: string | null;
+    position_x?: number | null;
+    position_y?: number | null;
+  };
+  type PlacementHistoryEntry = { id: string; before: PlacementPatch; after: PlacementPatch };
+  const undoStackRef = useRef<PlacementHistoryEntry[]>([]);
+  const redoStackRef = useRef<PlacementHistoryEntry[]>([]);
+  const [historyTick, setHistoryTick] = useState(0);
+  const attachmentRowsRef = useRef(attachments.rows);
+  useEffect(() => {
+    attachmentRowsRef.current = attachments.rows;
+  }, [attachments.rows]);
+
+  const applyPlacement = useCallback(
+    async (id: string, patch: PlacementPatch, opts?: { silent?: boolean }) => {
+      const current = attachmentRowsRef.current.find((r) => r.id === id);
+      if (!current) return;
+      const before: PlacementPatch = {};
+      const after: PlacementPatch = {};
+      let changed = false;
+      for (const k of ["page_id", "region", "position_x", "position_y"] as const) {
+        if (k in patch && patch[k] !== current[k]) {
+          (before as Record<string, unknown>)[k] = current[k];
+          (after as Record<string, unknown>)[k] = patch[k];
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      await attachments.updateAssignment(id, patch);
+      if (!opts?.silent) {
+        undoStackRef.current.push({ id, before, after });
+        if (undoStackRef.current.length > 100) undoStackRef.current.shift();
+        redoStackRef.current = [];
+        setHistoryTick((t) => t + 1);
+      }
+    },
+    [attachments],
+  );
+
+  const undoPlacement = useCallback(async () => {
+    const entry = undoStackRef.current.pop();
+    if (!entry) return;
+    await attachments.updateAssignment(entry.id, entry.before);
+    redoStackRef.current.push(entry);
+    setHistoryTick((t) => t + 1);
+  }, [attachments]);
+
+  const redoPlacement = useCallback(async () => {
+    const entry = redoStackRef.current.pop();
+    if (!entry) return;
+    await attachments.updateAssignment(entry.id, entry.after);
+    undoStackRef.current.push(entry);
+    setHistoryTick((t) => t + 1);
+  }, [attachments]);
+
+  const canUndoPlacement = undoStackRef.current.length > 0;
+  const canRedoPlacement = redoStackRef.current.length > 0;
+  // Keep historyTick in the dep graph so the buttons re-render on stack changes.
+  void historyTick;
 
   // Per-page layout (free-form, two-column, image-top, …) persists in
   // page_status. The hook auto-creates rows for new pages, subscribes to
@@ -1274,7 +1339,7 @@ function Index() {
                   attachments.upload({ pageId: selected.id, kind: "reference", file })
                 }
                 onRemove={(row) => attachments.remove(row)}
-                onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                onAssign={(id, patch) => applyPlacement(id, patch)}
               />
               <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
                 Multiple files allowed. Pin each to a region (column / header / footer) or
@@ -1359,6 +1424,25 @@ function Index() {
               </button>
             )}
             <div className="h-5 w-px bg-border mx-1" />
+            <button
+              onClick={() => void undoPlacement()}
+              disabled={!canUndoPlacement}
+              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition disabled:opacity-30 disabled:hover:bg-transparent"
+              title="Undo last attachment placement"
+              aria-label="Undo placement"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => void redoPlacement()}
+              disabled={!canRedoPlacement}
+              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition disabled:opacity-30 disabled:hover:bg-transparent"
+              title="Redo attachment placement"
+              aria-label="Redo placement"
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
+            <div className="h-5 w-px bg-border mx-1" />
             <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden lg:inline">
               Layout
             </span>
@@ -1438,7 +1522,7 @@ function Index() {
                 references={attachments.referencesByPage.get(spread.left.id) ?? []}
                 dim={dimPx}
                 scale={scale}
-                onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                onAssign={(id, patch) => applyPlacement(id, patch)}
               />
             </div>
             {spreadView && spread.right && (
@@ -1477,7 +1561,7 @@ function Index() {
                   references={attachments.referencesByPage.get(spread.right.id) ?? []}
                   dim={dimPx}
                   scale={scale}
-                  onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                  onAssign={(id, patch) => applyPlacement(id, patch)}
                 />
               </div>
             )}
@@ -1530,7 +1614,7 @@ function Index() {
         selectedPageId={selected.id}
         selectedPageLabel={selected.pageType}
         pages={pageRefsForStatus}
-        attachments={attachments}
+        attachments={{ ...attachments, updateAssignment: applyPlacement }}
       />
 
 
@@ -1551,7 +1635,7 @@ function Index() {
           position_x: r.position_x,
           position_y: r.position_y,
         }))}
-        onPlaceAttachment={(id, patch) => attachments.updateAssignment(id, patch)}
+        onPlaceAttachment={(id, patch) => applyPlacement(id, patch)}
       />
 
       <ProductionChecklist
