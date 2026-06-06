@@ -1914,8 +1914,9 @@ function Index() {
         <section
           ref={stageRef}
           className="relative bg-secondary/60 border border-border overflow-hidden flex-1"
-          style={{ minHeight: "70vh", aspectRatio: `${stageW / dimPx.h}` }}
+          style={{ minHeight: `calc(70vh - ${stickyH}px)`, aspectRatio: `${stageW / dimPx.h}`, scrollMarginTop: stickyH }}
         >
+
           <div
             className="absolute left-1/2 top-1/2 origin-center"
             style={{
