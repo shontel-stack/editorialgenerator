@@ -17,6 +17,7 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
+import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { downloadIdml, downloadIdmlPackage } from "@/lib/idmlExport";
