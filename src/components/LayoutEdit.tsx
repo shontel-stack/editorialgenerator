@@ -49,6 +49,9 @@ type Ctx = {
   /** Optional: ask the host to enter edit mode for this page (used when the
    *  add-element palette is shown outside edit mode). */
   onRequestEdit?: () => void;
+  /** Block key currently selected for editing (outline + toolbar). */
+  selectedKey?: string | null;
+  setSelectedKey?: (key: string | null) => void;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
