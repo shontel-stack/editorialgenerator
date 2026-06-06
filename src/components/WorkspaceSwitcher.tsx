@@ -151,14 +151,26 @@ export function WorkspaceSwitcher() {
     downloadJson(`${slug}.publication.json`, payload);
   };
 
-  const handleDuplicateActive = async () => {
+  // Duplicate-for-next-issue dialog state. Using an in-app dialog instead of
+  // window.prompt so users get a proper rename step (with the suggested name
+  // pre-filled, selected, and editable).
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState("");
+
+  const openDuplicateDialog = () => {
     if (!active || submitting) return;
-    const proposed = window.prompt("Name for the copy:", `${active.name} (copy)`);
-    if (!proposed || !proposed.trim()) return;
+    setDuplicateName(`${active.name} (copy)`);
+    setDuplicateOpen(true);
+  };
+
+  const confirmDuplicate = async () => {
+    if (!active || submitting) return;
+    const proposed = duplicateName.trim();
+    if (!proposed) return;
     setSubmitting(true);
     try {
       await create({
-        name: proposed.trim(),
+        name: proposed,
         tagline: active.tagline ?? undefined,
         brand_voice: active.brand_voice ?? undefined,
         masthead: active.masthead ?? undefined,
@@ -173,6 +185,7 @@ export function WorkspaceSwitcher() {
         margin_left_in: active.margin_left_in,
         bleed_in: active.bleed_in,
       });
+      setDuplicateOpen(false);
     } catch (e) {
       alert(`Could not duplicate publication: ${(e as Error).message}`);
     } finally {
@@ -326,8 +339,8 @@ export function WorkspaceSwitcher() {
               <DropdownMenuItem onClick={handleExportActive}>
                 <Download className="h-3.5 w-3.5 mr-2" /> Save publication to file
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDuplicateActive} disabled={submitting}>
-                <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate for next issue
+              <DropdownMenuItem onClick={openDuplicateDialog} disabled={submitting}>
+                <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate for next issue…
               </DropdownMenuItem>
             </>
           ) : null}
@@ -483,6 +496,57 @@ export function WorkspaceSwitcher() {
               className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
             >
               {editSubmitting ? "Saving…" : "Save"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate for next issue — rename step */}
+      <Dialog open={duplicateOpen} onOpenChange={(o) => !submitting && setDuplicateOpen(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicate publication</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Create a copy of <span className="font-medium text-foreground">{active?.name}</span> for
+              your next issue. All settings (fonts, palette, page size, margins) are carried over.
+              Issues themselves are not copied.
+            </p>
+            <div>
+              <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                New publication name
+              </label>
+              <input
+                autoFocus
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && duplicateName.trim() && !submitting) {
+                    e.preventDefault();
+                    void confirmDuplicate();
+                  }
+                }}
+                placeholder="e.g. The Arts Today — March 2026"
+                className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setDuplicateOpen(false)}
+              disabled={submitting}
+              className="text-xs px-3 py-2 rounded-sm hover:bg-secondary disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => void confirmDuplicate()}
+              disabled={!duplicateName.trim() || submitting}
+              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
+            >
+              {submitting ? "Duplicating…" : "Duplicate"}
             </button>
           </DialogFooter>
         </DialogContent>
