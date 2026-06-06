@@ -5,6 +5,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { usePanelRef } from "react-resizable-panels";
 import { PagePreview } from "@/components/PagePreview";
 import { GuidesOverlay } from "@/components/GuidesOverlay";
+import { ReferencePinsOverlay } from "@/components/ReferencePinsOverlay";
 import { ColumnTuningControls } from "@/components/ColumnTuningControls";
 import { SnapSettingsPanel } from "@/components/SnapSettingsPanel";
 import { useSnapSettings, mergeSnapSettings, type SnapSettings } from "@/lib/snapSettings";
@@ -1433,6 +1434,12 @@ function Index() {
                   gutterIn={pageStatus.gutterOf(spread.left.id)}
                 />
               )}
+              <ReferencePinsOverlay
+                references={attachments.referencesByPage.get(spread.left.id) ?? []}
+                dim={dimPx}
+                scale={scale}
+                onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+              />
             </div>
             {spreadView && spread.right && (
               <div
@@ -1466,6 +1473,12 @@ function Index() {
                     gutterIn={pageStatus.gutterOf(spread.right!.id)}
                   />
                 )}
+                <ReferencePinsOverlay
+                  references={attachments.referencesByPage.get(spread.right.id) ?? []}
+                  dim={dimPx}
+                  scale={scale}
+                  onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                />
               </div>
             )}
           </div>
