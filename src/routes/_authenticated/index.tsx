@@ -32,9 +32,6 @@ import {
 } from "@/components/ui/select";
 import {
   ARTICLE_LAYOUTS,
-  COVER_INCHES,
-  COVER_PX,
-  COVER_RATIO,
   DEFAULT_AD,
   DEFAULT_ARTICLE,
   DEFAULT_BACK,
