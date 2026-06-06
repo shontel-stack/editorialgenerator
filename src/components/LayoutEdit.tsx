@@ -1,13 +1,14 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
   type PointerEvent as RPointerEvent,
 } from "react";
-import { Link2, Type } from "lucide-react";
+import { Link2, Move, Type } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
 
