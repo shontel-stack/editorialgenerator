@@ -62,6 +62,24 @@ export function setSnapSettings(next: SnapSettings): void {
   window.dispatchEvent(new CustomEvent(EVENT, { detail: next }));
 }
 
+/** Merge a partial per-page override on top of base global settings. */
+export function mergeSnapSettings(
+  base: SnapSettings,
+  override?: Partial<SnapSettings> | null,
+): SnapSettings {
+  if (!override) return base;
+  return {
+    edgeTolerancePx:
+      typeof override.edgeTolerancePx === "number" ? override.edgeTolerancePx : base.edgeTolerancePx,
+    rotationTolerance:
+      typeof override.rotationTolerance === "number" ? override.rotationTolerance : base.rotationTolerance,
+    rotationAngles:
+      Array.isArray(override.rotationAngles) && override.rotationAngles.length > 0
+        ? override.rotationAngles
+        : base.rotationAngles,
+  };
+}
+
 /** Snap a rotation (degrees) to the nearest configured angle within tolerance. */
 export function snapRotationWith(deg: number, s: SnapSettings): number {
   if (!Number.isFinite(deg)) return 0;

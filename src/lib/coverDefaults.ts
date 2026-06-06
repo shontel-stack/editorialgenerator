@@ -317,6 +317,13 @@ export type IssuePageNode = AnyPageData & {
   blockLinks?: Record<string, string>;
   /** Free-form blocks added on top of the template (text/image/shape/embed). */
   customBlocks?: CustomBlock[];
+  /** Per-page override for snap settings (rotation angles, tolerances). When
+   *  any field is set, it wins over the global user setting for this page. */
+  snapOverride?: {
+    edgeTolerancePx?: number;
+    rotationTolerance?: number;
+    rotationAngles?: number[];
+  };
 };
 
 

@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Link2, Type } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
+import type { SnapSettings } from "@/lib/snapSettings";
 
 export type Overrides = Record<string, { dx: number; dy: number }>;
 export type ScaleMap = Record<string, number>;
@@ -42,6 +43,8 @@ type Ctx = {
   setCustomBlocks?: (next: CustomBlock[]) => void;
   /** Optional snap targets (margin / bleed / trim / center). */
   guides?: SnapGuides;
+  /** Effective snap settings for this page (global merged with page override). */
+  snapSettings?: SnapSettings;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
@@ -64,6 +67,7 @@ export function LayoutEditProvider({
   customBlocks,
   setCustomBlocks,
   guides,
+  snapSettings,
   children,
 }: Ctx & { children: ReactNode }) {
   return (
@@ -82,6 +86,7 @@ export function LayoutEditProvider({
         customBlocks,
         setCustomBlocks,
         guides,
+        snapSettings,
       }}
     >
       {children}

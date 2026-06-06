@@ -4,7 +4,7 @@ import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, 
 import { PagePreview } from "@/components/PagePreview";
 import { GuidesOverlay } from "@/components/GuidesOverlay";
 import { SnapSettingsPanel } from "@/components/SnapSettingsPanel";
-import { useSnapSettings } from "@/lib/snapSettings";
+import { useSnapSettings, mergeSnapSettings, type SnapSettings } from "@/lib/snapSettings";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
@@ -132,9 +132,9 @@ function Index() {
   const dimInches = pageDims.inches;
   const pageMargins = useMemo(() => getPageMargins(activePublication), [activePublication]);
   const snapSettings = useSnapSettings();
-  // Snap targets: bleed (outside trim), trim edges, margin (safe area), centers.
-  // Coords are in page-px at 300 DPI to match the editor canvas.
-  const snapGuides = useMemo(() => {
+  // Snap guide x/y axis arrays (in page-px @ 300 DPI). Threshold is set
+  // per-page below using the effective (global + per-page override) settings.
+  const snapAxes = useMemo(() => {
     const DPI = 300;
     const bleed = Math.max(0, pageMargins.bleed * DPI);
     const mT = pageMargins.top * DPI;
@@ -144,9 +144,19 @@ function Index() {
     return {
       xs: [-bleed, 0, mL, dimPx.w / 2, dimPx.w - mR, dimPx.w, dimPx.w + bleed],
       ys: [-bleed, 0, mT, dimPx.h / 2, dimPx.h - mB, dimPx.h, dimPx.h + bleed],
-      threshold: snapSettings.edgeTolerancePx,
     };
-  }, [pageMargins, dimPx.w, dimPx.h, snapSettings.edgeTolerancePx]);
+  }, [pageMargins, dimPx.w, dimPx.h]);
+
+  /** Resolve the effective snap config for a given page (global ⊕ override). */
+  const effectiveSnapFor = (page: IssuePageNode | null | undefined) =>
+    mergeSnapSettings(snapSettings, page?.snapOverride);
+
+  /** Build a complete guide packet for a given page using its effective settings. */
+  const guidesFor = (page: IssuePageNode | null | undefined) => ({
+    xs: snapAxes.xs,
+    ys: snapAxes.ys,
+    threshold: effectiveSnapFor(page).edgeTolerancePx,
+  });
   // Full IDML/Canva geometry packet — width/height + margins + bleed.
   const idmlDim = useMemo(
     () => ({
@@ -389,6 +399,15 @@ function Index() {
         p.id === id
           ? ({ ...p, positionOverrides: {}, textScales: {}, blockLinks: {} } as IssuePageNode)
           : p,
+      ),
+    }));
+
+  /** Set or clear per-page snap overrides. Pass `null` to remove the override. */
+  const setSnapOverride = (id: string, patch: Partial<SnapSettings> | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id ? ({ ...p, snapOverride: patch ?? undefined } as IssuePageNode) : p,
       ),
     }));
 
@@ -844,7 +863,11 @@ function Index() {
             </p>
           )}
 
-          <SnapSettingsPanel />
+          <SnapSettingsPanel
+            pageLabel={selected.pageType}
+            override={selected.snapOverride ?? null}
+            onChangeOverride={(next) => setSnapOverride(selected.id, next)}
+          />
 
 
 
@@ -1117,7 +1140,8 @@ function Index() {
                 previewScales={pendingByPage[spread.left.id]?.scales}
                 customBlocks={spread.left.customBlocks ?? []}
                 setCustomBlocks={(next) => setCustomBlocks(spread.left.id, next)}
-                guides={showGuides ? snapGuides : undefined}
+                guides={showGuides ? guidesFor(spread.left) : undefined}
+                snapSettings={effectiveSnapFor(spread.left)}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
@@ -1141,7 +1165,8 @@ function Index() {
                   previewScales={pendingByPage[spread.right.id]?.scales}
                   customBlocks={spread.right.customBlocks ?? []}
                   setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
-                  guides={showGuides ? snapGuides : undefined}
+                  guides={showGuides ? guidesFor(spread.right) : undefined}
+                  snapSettings={effectiveSnapFor(spread.right)}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>

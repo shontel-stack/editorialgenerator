@@ -864,7 +864,9 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
 }
 
 function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "image" }>; onChange: (p: Partial<CustomBlock>) => void }) {
-  const snap = useSnapSettings();
+  const ctx = useLayoutEdit();
+  const global = useSnapSettings();
+  const snap = ctx?.snapSettings ?? global;
   return (
     <>
       <label style={btnStyle("normal")}>
@@ -910,7 +912,9 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
 }
 
 function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "video" }>; onChange: (p: Partial<CustomBlock>) => void }) {
-  const snap = useSnapSettings();
+  const ctx = useLayoutEdit();
+  const global = useSnapSettings();
+  const snap = ctx?.snapSettings ?? global;
   return (
     <>
       <label style={labelStyle}>
