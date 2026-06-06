@@ -1020,6 +1020,8 @@ function SchedulePanel({
               </p>
             ) : null}
           </div>
+
+          <SchedulePreview draft={draft} invalid={invalid} />
         </div>
         <DialogFooter>
           <button
@@ -1058,5 +1060,70 @@ function SchedulePanel({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Live preview of which day-of-month values and which date window the
+ * current (draft) schedule rules allow. Updates as the user edits inputs.
+ */
+function SchedulePreview({ draft, invalid }: { draft: ScheduleRules; invalid: boolean }) {
+  if (invalid) {
+    return (
+      <div className="border border-dashed border-input rounded-sm p-3 text-[11px] text-muted-foreground">
+        Fix the errors above to see a preview of allowed dates.
+      </div>
+    );
+  }
+
+  const days: number[] = [];
+  for (let d = draft.minDay; d <= draft.maxDay; d += 1) days.push(d);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const minDate = new Date(today);
+  minDate.setMonth(minDate.getMonth() - draft.pastMonths);
+  const maxDate = new Date(today);
+  maxDate.setMonth(maxDate.getMonth() + draft.futureMonths);
+
+  const fmtDate = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const fmtMonth = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+
+  return (
+    <div className="border border-input rounded-sm p-3 space-y-3 bg-secondary/40">
+      <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+        Live preview
+      </div>
+
+      <div>
+        <div className="text-[11px] text-muted-foreground mb-1.5">
+          Allowed days of month ({days.length})
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {days.map((d) => (
+            <span
+              key={d}
+              className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 text-[10px] font-medium rounded-sm bg-background border border-input text-foreground"
+            >
+              {d}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[11px] text-muted-foreground mb-1.5">Allowed date window</div>
+        <div className="text-xs text-foreground">
+          <span className="font-medium">{fmtDate(minDate)}</span>{" "}
+          <span className="text-muted-foreground">→</span>{" "}
+          <span className="font-medium">{fmtDate(maxDate)}</span>
+        </div>
+        <div className="mt-1 text-[11px] text-muted-foreground">
+          {fmtMonth(minDate)} through {fmtMonth(maxDate)} ({draft.pastMonths + draft.futureMonths + 1} months)
+        </div>
+      </div>
+    </div>
   );
 }
