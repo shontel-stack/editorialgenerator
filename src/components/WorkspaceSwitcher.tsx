@@ -151,14 +151,26 @@ export function WorkspaceSwitcher() {
     downloadJson(`${slug}.publication.json`, payload);
   };
 
-  const handleDuplicateActive = async () => {
+  // Duplicate-for-next-issue dialog state. Using an in-app dialog instead of
+  // window.prompt so users get a proper rename step (with the suggested name
+  // pre-filled, selected, and editable).
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState("");
+
+  const openDuplicateDialog = () => {
     if (!active || submitting) return;
-    const proposed = window.prompt("Name for the copy:", `${active.name} (copy)`);
-    if (!proposed || !proposed.trim()) return;
+    setDuplicateName(`${active.name} (copy)`);
+    setDuplicateOpen(true);
+  };
+
+  const confirmDuplicate = async () => {
+    if (!active || submitting) return;
+    const proposed = duplicateName.trim();
+    if (!proposed) return;
     setSubmitting(true);
     try {
       await create({
-        name: proposed.trim(),
+        name: proposed,
         tagline: active.tagline ?? undefined,
         brand_voice: active.brand_voice ?? undefined,
         masthead: active.masthead ?? undefined,
@@ -173,6 +185,7 @@ export function WorkspaceSwitcher() {
         margin_left_in: active.margin_left_in,
         bleed_in: active.bleed_in,
       });
+      setDuplicateOpen(false);
     } catch (e) {
       alert(`Could not duplicate publication: ${(e as Error).message}`);
     } finally {
