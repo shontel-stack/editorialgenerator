@@ -152,11 +152,16 @@ export type Database = {
       }
       publications: {
         Row: {
+          bleed_in: number | null
           body_font: string | null
           brand_voice: string | null
           created_at: string
           display_font: string | null
           id: string
+          margin_bottom_in: number | null
+          margin_left_in: number | null
+          margin_right_in: number | null
+          margin_top_in: number | null
           masthead: string | null
           name: string
           page_height_in: number | null
@@ -168,11 +173,16 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bleed_in?: number | null
           body_font?: string | null
           brand_voice?: string | null
           created_at?: string
           display_font?: string | null
           id?: string
+          margin_bottom_in?: number | null
+          margin_left_in?: number | null
+          margin_right_in?: number | null
+          margin_top_in?: number | null
           masthead?: string | null
           name: string
           page_height_in?: number | null
@@ -184,11 +194,16 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bleed_in?: number | null
           body_font?: string | null
           brand_voice?: string | null
           created_at?: string
           display_font?: string | null
           id?: string
+          margin_bottom_in?: number | null
+          margin_left_in?: number | null
+          margin_right_in?: number | null
+          margin_top_in?: number | null
           masthead?: string | null
           name?: string
           page_height_in?: number | null
