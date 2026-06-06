@@ -194,6 +194,7 @@ export function Draggable({
   const saved = ctx?.overrides[blockKey];
   const textScale = ctx?.textScales?.[blockKey] ?? 1;
   const link = ctx?.blockLinks?.[blockKey] ?? "";
+  const isSelected = editing && ctx?.selectedKey === blockKey;
 
   const preview = ctx?.previewOverrides?.[blockKey];
   const previewScale = ctx?.previewScales?.[blockKey];
