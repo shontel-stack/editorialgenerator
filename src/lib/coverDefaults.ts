@@ -22,6 +22,24 @@ export const DEFAULT_PAGE_DIMENSIONS: PageDimensions = {
   ratio: COVER_RATIO,
 };
 
+/** Per-edge margins (safe area) and uniform bleed (crop), in inches. */
+export type PageMargins = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+  bleed: number;
+};
+
+/** Industry-standard defaults: 0.75 in margins, 0.125 in bleed. */
+export const DEFAULT_PAGE_MARGINS: PageMargins = {
+  top: 0.75,
+  right: 0.75,
+  bottom: 0.75,
+  left: 0.75,
+  bleed: 0.125,
+};
+
 /** Curated print presets, in inches. The "custom" entry signals the UI to
  *  reveal width/height inputs and is not a real size on its own. */
 export const DIMENSION_PRESETS: { key: string; label: string; w: number; h: number }[] = [
@@ -48,6 +66,30 @@ export function getPageDimensions(
     inches: { w, h },
     px: { w: Math.round(w * COVER_DPI), h: Math.round(h * COVER_DPI) },
     ratio: w / h,
+  };
+}
+
+/** Resolve margin/bleed (in inches) from publication row, with sane defaults. */
+export function getPageMargins(
+  source:
+    | {
+        margin_top_in?: number | null;
+        margin_right_in?: number | null;
+        margin_bottom_in?: number | null;
+        margin_left_in?: number | null;
+        bleed_in?: number | null;
+      }
+    | null
+    | undefined,
+): PageMargins {
+  const pick = (v: number | null | undefined, d: number) =>
+    typeof v === "number" && isFinite(v) && v >= 0 ? v : d;
+  return {
+    top: pick(source?.margin_top_in, DEFAULT_PAGE_MARGINS.top),
+    right: pick(source?.margin_right_in, DEFAULT_PAGE_MARGINS.right),
+    bottom: pick(source?.margin_bottom_in, DEFAULT_PAGE_MARGINS.bottom),
+    left: pick(source?.margin_left_in, DEFAULT_PAGE_MARGINS.left),
+    bleed: pick(source?.bleed_in, DEFAULT_PAGE_MARGINS.bleed),
   };
 }
 

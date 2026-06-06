@@ -39,6 +39,7 @@ import {
   DEFAULT_COVER,
   DEFAULT_FONTS,
   getPageDimensions,
+  getPageMargins,
   makeDefaultIssue,
   newIssueId,
   DEFAULT_MASTER,
@@ -121,10 +122,24 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
-  // Page dimensions come from the active publication (with fall-back defaults).
+  // Page dimensions (and margin/bleed) come from the active publication.
   const pageDims = useMemo(() => getPageDimensions(activePublication), [activePublication]);
   const dimPx = pageDims.px;
   const dimInches = pageDims.inches;
+  const pageMargins = useMemo(() => getPageMargins(activePublication), [activePublication]);
+  // Full IDML/Canva geometry packet — width/height + margins + bleed.
+  const idmlDim = useMemo(
+    () => ({
+      w: dimInches.w,
+      h: dimInches.h,
+      marginTop: pageMargins.top,
+      marginRight: pageMargins.right,
+      marginBottom: pageMargins.bottom,
+      marginLeft: pageMargins.left,
+      bleed: pageMargins.bleed,
+    }),
+    [dimInches.w, dimInches.h, pageMargins],
+  );
 
   /** Pending spatial proposals from the assistant (move_block / scale_block).
    *  Keyed by toolCallId so the chat card can resolve them. */
@@ -910,7 +925,7 @@ function Index() {
               </label>
             </div>
             <button
-              onClick={() => downloadIdml(issue, issueSlug || "issue", dimInches)}
+              onClick={() => downloadIdml(issue, issueSlug || "issue", idmlDim)}
               className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
               title="Download a .zip containing the InDesign-editable IDML file"
             >
@@ -924,7 +939,7 @@ function Index() {
                   const { fetched, skipped } = await downloadIdmlPackage(
                     issue,
                     issueSlug || "issue",
-                    dimInches,
+                    idmlDim,
                   );
                   if (skipped.length) {
                     alert(

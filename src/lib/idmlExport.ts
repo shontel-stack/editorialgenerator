@@ -22,21 +22,48 @@ import {
 } from "@/lib/coverDefaults";
 
 // --- page geometry (in PostScript points; 72 pt = 1 inch) -----------------
-// Defaults to US Letter; `buildIdml` / `buildIdmlPackage` / `downloadIdml`
-// / `downloadIdmlPackage` accept a `dim` argument (inches) so each
-// publication's chosen page size flows through the IDML and README.
+// Defaults to US Letter with 0.75" margins and 0.125" bleed.
+// All IDML / package / README entry points accept a `dim` argument (inches)
+// so each publication's chosen page size + margin/bleed flow through.
 const PT_PER_IN = 72;
 const DEFAULT_INCHES = { w: 8.5, h: 11 };
-const MARGIN = 54; // 0.75"
+const DEFAULT_MARGIN_IN = 0.75;
+const DEFAULT_BLEED_IN = 0.125;
 
-export type IdmlDim = { w: number; h: number }; // inches
+export type IdmlDim = {
+  w: number; // inches
+  h: number; // inches
+  marginTop?: number;    // inches
+  marginRight?: number;  // inches
+  marginBottom?: number; // inches
+  marginLeft?: number;   // inches
+  bleed?: number;        // inches (uniform on all four edges)
+};
 
-type Geom = { PAGE_W: number; PAGE_H: number };
+type Geom = {
+  PAGE_W: number;
+  PAGE_H: number;
+  MT: number;   // margin top (pt)
+  MR: number;   // margin right (pt)
+  MB: number;   // margin bottom (pt)
+  ML: number;   // margin left (pt)
+  BLEED: number; // bleed (pt)
+};
+
+const pickIn = (v: number | undefined, d: number) =>
+  typeof v === "number" && isFinite(v) && v >= 0 ? v : d;
+
 const geomFromInches = (dim?: IdmlDim): Geom => {
-  const inches = dim && dim.w > 0 && dim.h > 0 ? dim : DEFAULT_INCHES;
+  const w = dim && dim.w > 0 ? dim.w : DEFAULT_INCHES.w;
+  const h = dim && dim.h > 0 ? dim.h : DEFAULT_INCHES.h;
   return {
-    PAGE_W: +(inches.w * PT_PER_IN).toFixed(4),
-    PAGE_H: +(inches.h * PT_PER_IN).toFixed(4),
+    PAGE_W: +(w * PT_PER_IN).toFixed(4),
+    PAGE_H: +(h * PT_PER_IN).toFixed(4),
+    MT: +(pickIn(dim?.marginTop,    DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    MR: +(pickIn(dim?.marginRight,  DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    MB: +(pickIn(dim?.marginBottom, DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    ML: +(pickIn(dim?.marginLeft,   DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    BLEED: +(pickIn(dim?.bleed,     DEFAULT_BLEED_IN)  * PT_PER_IN).toFixed(4),
   };
 };
 
@@ -242,13 +269,13 @@ const graphicXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <StrokeStyle Self="StrokeStyle/$ID/Solid" Name="$ID/Solid"/>
 </idPkg:Graphic>`;
 
-const preferencesXml = ({ PAGE_W, PAGE_H }: Geom): string => {
+const preferencesXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML, BLEED }: Geom): string => {
   const orientation = PAGE_W > PAGE_H ? "Landscape" : "Portrait";
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
 <idPkg:Preferences xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
-  <DocumentPreference Self="dpref" PageHeight="${PAGE_H}" PageWidth="${PAGE_W}" PageOrientation="${orientation}" PagesPerDocument="1" FacingPages="false" AllowPageShuffle="true" DocumentBleedBottomOffset="0" DocumentBleedTopOffset="0" DocumentBleedInsideOrLeftOffset="0" DocumentBleedOutsideOrRightOffset="0" SlugBottomOffset="0" SlugTopOffset="0" SlugInsideOrLeftOffset="0" SlugRightOrOutsideOffset="0" DocumentBleedUniformSize="true" DocumentSlugUniformSize="false" PreserveLayoutWhenShuffling="true" ColumnDirection="Horizontal" ColumnGuideColor="PurpleRed"/>
-  <MarginPreference Self="mpref" ColumnCount="1" ColumnGutter="12" Top="${MARGIN}" Bottom="${MARGIN}" Left="${MARGIN}" Right="${MARGIN}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - 2 * MARGIN}"/>
+  <DocumentPreference Self="dpref" PageHeight="${PAGE_H}" PageWidth="${PAGE_W}" PageOrientation="${orientation}" PagesPerDocument="1" FacingPages="false" AllowPageShuffle="true" DocumentBleedBottomOffset="${BLEED}" DocumentBleedTopOffset="${BLEED}" DocumentBleedInsideOrLeftOffset="${BLEED}" DocumentBleedOutsideOrRightOffset="${BLEED}" SlugBottomOffset="0" SlugTopOffset="0" SlugInsideOrLeftOffset="0" SlugRightOrOutsideOffset="0" DocumentBleedUniformSize="true" DocumentSlugUniformSize="false" PreserveLayoutWhenShuffling="true" ColumnDirection="Horizontal" ColumnGuideColor="PurpleRed"/>
+  <MarginPreference Self="mpref" ColumnCount="1" ColumnGutter="12" Top="${MT}" Bottom="${MB}" Left="${ML}" Right="${MR}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - ML - MR}"/>
   <TransparencyDefaultContainerObject Self="TransparencyDefaultContainer">
     <TransparencyDefault Self="TransparencyDefault"/>
   </TransparencyDefaultContainerObject>
@@ -256,7 +283,7 @@ const preferencesXml = ({ PAGE_W, PAGE_H }: Geom): string => {
 </idPkg:Preferences>`;
 };
 
-const masterSpreadXml = ({ PAGE_W, PAGE_H }: Geom): string => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+const masterSpreadXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML }: Geom): string => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
 <idPkg:MasterSpread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
   <MasterSpread Self="uMaster" Name="A-Master" NamePrefix="A" BaseName="Master" ShowMasterItems="true" PageCount="1" OverriddenPageItemProps="">
@@ -264,7 +291,7 @@ const masterSpreadXml = ({ PAGE_W, PAGE_H }: Geom): string => `<?xml version="1.
       <Properties>
         <PageColor type="enumeration">UseMasterColor</PageColor>
       </Properties>
-      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MARGIN}" Bottom="${MARGIN}" Left="${MARGIN}" Right="${MARGIN}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - 2 * MARGIN}"/>
+      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MT}" Bottom="${MB}" Left="${ML}" Right="${MR}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - ML - MR}"/>
     </Page>
   </MasterSpread>
 </idPkg:MasterSpread>`;
@@ -348,7 +375,7 @@ const buildSpread = (
   folio: BuiltStory | null,
   geom: Geom,
 ): BuiltSpread => {
-  const { PAGE_W, PAGE_H } = geom;
+  const { PAGE_W, PAGE_H, MT, MR, MB, ML } = geom;
   const spreadSelf = `uSpread_${pageIndex + 1}`;
   const pageSelf = `uPage_${pageIndex + 1}`;
 
@@ -357,10 +384,10 @@ const buildSpread = (
 
   // Main text frame: fills the live area (inside margins).
   const tfId = nextSelfId("uTF");
-  const left = MARGIN;
-  const top = MARGIN;
-  const right = PAGE_W - MARGIN;
-  const bottom = PAGE_H - MARGIN - 24; // leave room for folio
+  const left = ML;
+  const top = MT;
+  const right = PAGE_W - MR;
+  const bottom = PAGE_H - MB - 24; // leave room for folio
   // GeometricBounds: y1 x1 y2 x2 (top left bottom right)
   items.push(
     `      <TextFrame Self="${tfId}" ParentStory="${bodyStory.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${top} ${left} ${bottom} ${right}" ItemTransform="1 0 0 1 0 0">
@@ -383,8 +410,8 @@ const buildSpread = (
   // Image placeholder frame (top of page, half height) when an image is referenced.
   if (text.imageUrl) {
     const imgId = nextSelfId("uIMG");
-    const imgTop = MARGIN;
-    const imgBottom = MARGIN + (PAGE_H - 2 * MARGIN) * 0.45;
+    const imgTop = MT;
+    const imgBottom = MT + (PAGE_H - MT - MB) * 0.45;
     items.push(
       `      <Rectangle Self="${imgId}" ContentType="GraphicType" GeometricBounds="${imgTop} ${left} ${imgBottom} ${right}" ItemTransform="1 0 0 1 0 0" Label="${xmlEscape(text.imageUrl)}">
         <Properties>
@@ -409,8 +436,8 @@ const buildSpread = (
   // Folio frame at the bottom.
   if (folio) {
     const folId = nextSelfId("uFOL");
-    const fTop = PAGE_H - MARGIN - 18;
-    const fBottom = PAGE_H - MARGIN;
+    const fTop = PAGE_H - MB - 18;
+    const fBottom = PAGE_H - MB;
     items.push(
       `      <TextFrame Self="${folId}" ParentStory="${folio.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${fTop} ${left} ${fBottom} ${right}" ItemTransform="1 0 0 1 0 0">
         <Properties>
@@ -451,7 +478,7 @@ const buildSpread = (
         </Descriptor>
         <PageColor type="enumeration">UseMasterColor</PageColor>
       </Properties>
-      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MARGIN}" Bottom="${MARGIN}" Left="${MARGIN}" Right="${MARGIN}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - 2 * MARGIN}"/>
+      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MT}" Bottom="${MB}" Left="${ML}" Right="${MR}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - ML - MR}"/>
     </Page>
 ${items.join("\n")}
   </Spread>
@@ -730,6 +757,12 @@ function buildReadme(
   const hPx = Math.round(hIn * 300);
   const wPt = +(wIn * 72).toFixed(2);
   const hPt = +(hIn * 72).toFixed(2);
+  const mt = pickIn(dim?.marginTop,    DEFAULT_MARGIN_IN);
+  const mr = pickIn(dim?.marginRight,  DEFAULT_MARGIN_IN);
+  const mb = pickIn(dim?.marginBottom, DEFAULT_MARGIN_IN);
+  const ml = pickIn(dim?.marginLeft,   DEFAULT_MARGIN_IN);
+  const bl = pickIn(dim?.bleed,        DEFAULT_BLEED_IN);
+  const inToMm = (n: number) => +(n * 25.4).toFixed(2);
   const lines: string[] = [
     `${issue.master.publication} — ${issue.meta.issue}`,
     `InDesign package`,
@@ -845,20 +878,26 @@ function buildReadme(
     `          reads back as ${wIn.toFixed(2)} × ${hIn.toFixed(2)} in (Canva rounds the display only).`,
     "",
     `  MARGINS, BLEED & PASTEBOARD IN CANVA`,
-    `    Canva has no true pasteboard; the workspace around the page is just`,
-    `    scratch space and is not exported. Configure the print-safe zones via`,
-    `    File → View settings:`,
-    `      [ ] Show margins → ON. Canva uses a fixed ~0.25 in (6.35 mm) safe`,
-    `          margin. Keep all critical text/logos inside this guide.`,
-    `      [ ] Show print bleed → ON. Canva adds a fixed 0.125 in (3.175 mm)`,
-    `          bleed on every edge. Extend background colors/images into it.`,
-    `      [ ] Show rulers and guides → ON, then drag guides to mirror any`,
-    `          custom InDesign margins (top/bottom/inside/outside) shown in`,
-    `          ${idmlName}'s page setup.`,
-    `    Canva cannot change the bleed or safe-margin values themselves — if`,
-    `    your InDesign doc uses non-standard bleed, compensate by enlarging`,
-    `    the Canva page by 2× the extra bleed and re-positioning content.`,
+    `    This publication is configured with:`,
+    `      • Margins (safe area):  Top ${mt} in (${inToMm(mt)} mm) · Right ${mr} in (${inToMm(mr)} mm)`,
+    `                              Bottom ${mb} in (${inToMm(mb)} mm) · Left ${ml} in (${inToMm(ml)} mm)`,
+    `      • Bleed (crop region):  ${bl} in (${inToMm(bl)} mm) on all four edges`,
+    `    The IDML already carries these values, so InDesign opens with the`,
+    `    correct margin and bleed guides preset. Canva has no true pasteboard;`,
+    `    configure print-safe zones via File → View settings:`,
+    `      [ ] Show margins → ON. Canva's built-in safe margin is a fixed`,
+    `          ~0.25 in (6.35 mm). If our margins differ, drag manual guides`,
+    `          at ${mt} in (top), ${mr} in (right), ${mb} in (bottom), ${ml} in (left)`,
+    `          to mirror the InDesign safe area exactly.`,
+    `      [ ] Show print bleed → ON. Canva uses a fixed 0.125 in (3.175 mm)`,
+    `          bleed. Our bleed is ${bl} in (${inToMm(bl)} mm); if it differs from`,
+    `          0.125 in, enlarge the Canva page by 2 × the difference and`,
+    `          re-position content so the bleed and trim still align.`,
+    `      [ ] Show rulers and guides → ON for precise placement.`,
+    `    Extend background colors and any full-bleed images all the way into`,
+    `    the bleed area; keep critical text and logos inside the safe margin.`,
     "",
+
 
     `  Rebuild:`,
     `    [ ] Recreate frames page-by-page using ${idmlName} (opened in InDesign`,

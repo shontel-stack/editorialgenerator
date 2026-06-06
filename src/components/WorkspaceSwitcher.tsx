@@ -25,7 +25,9 @@ import { useActivePublication } from "@/hooks/useActivePublication";
 import { confirmDiscardUnsaved } from "@/lib/unsavedGuards";
 import {
   COVER_INCHES,
+  DEFAULT_PAGE_MARGINS,
   DIMENSION_PRESETS,
+  getPageMargins,
   matchPresetKey,
 } from "@/lib/coverDefaults";
 
@@ -44,12 +46,22 @@ export function WorkspaceSwitcher() {
   const [presetKey, setPresetKey] = useState<string>("pageluxe");
   const [widthIn, setWidthIn] = useState<string>(String(COVER_INCHES.w));
   const [heightIn, setHeightIn] = useState<string>(String(COVER_INCHES.h));
+  const [mTop, setMTop] = useState<string>(String(DEFAULT_PAGE_MARGINS.top));
+  const [mRight, setMRight] = useState<string>(String(DEFAULT_PAGE_MARGINS.right));
+  const [mBottom, setMBottom] = useState<string>(String(DEFAULT_PAGE_MARGINS.bottom));
+  const [mLeft, setMLeft] = useState<string>(String(DEFAULT_PAGE_MARGINS.left));
+  const [bleed, setBleed] = useState<string>(String(DEFAULT_PAGE_MARGINS.bleed));
 
   // dimensions for the edit dialog (separate state so opening it doesn't
   // clobber the new-publication form)
   const [editPreset, setEditPreset] = useState<string>("pageluxe");
   const [editWidth, setEditWidth] = useState<string>("");
   const [editHeight, setEditHeight] = useState<string>("");
+  const [editMTop, setEditMTop] = useState<string>("");
+  const [editMRight, setEditMRight] = useState<string>("");
+  const [editMBottom, setEditMBottom] = useState<string>("");
+  const [editMLeft, setEditMLeft] = useState<string>("");
+  const [editBleed, setEditBleed] = useState<string>("");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const resetCreateForm = () => {
@@ -60,6 +72,11 @@ export function WorkspaceSwitcher() {
     setPresetKey("pageluxe");
     setWidthIn(String(COVER_INCHES.w));
     setHeightIn(String(COVER_INCHES.h));
+    setMTop(String(DEFAULT_PAGE_MARGINS.top));
+    setMRight(String(DEFAULT_PAGE_MARGINS.right));
+    setMBottom(String(DEFAULT_PAGE_MARGINS.bottom));
+    setMLeft(String(DEFAULT_PAGE_MARGINS.left));
+    setBleed(String(DEFAULT_PAGE_MARGINS.bleed));
   };
 
   // When the edit dialog opens, seed its inputs from the active publication.
@@ -70,6 +87,12 @@ export function WorkspaceSwitcher() {
     setEditWidth(String(w));
     setEditHeight(String(h));
     setEditPreset(matchPresetKey(w, h));
+    const m = getPageMargins(active);
+    setEditMTop(String(m.top));
+    setEditMRight(String(m.right));
+    setEditMBottom(String(m.bottom));
+    setEditMLeft(String(m.left));
+    setEditBleed(String(m.bleed));
   }, [editOpen, active]);
 
   const onPresetChange = (
@@ -100,6 +123,12 @@ export function WorkspaceSwitcher() {
     };
   };
 
+  const parseMargin = (v: string, fallback: number): number => {
+    const n = parseFloat(v);
+    if (!isFinite(n) || n < 0 || n > 10) return fallback;
+    return Math.round(n * 10000) / 10000;
+  };
+
   const handleCreate = async () => {
     if (!name.trim() || submitting) return;
     const dims = parseDims(widthIn, heightIn);
@@ -115,6 +144,11 @@ export function WorkspaceSwitcher() {
         brand_voice: voice.trim() || undefined,
         masthead: masthead.trim() || undefined,
         ...dims,
+        margin_top_in:    parseMargin(mTop,    DEFAULT_PAGE_MARGINS.top),
+        margin_right_in:  parseMargin(mRight,  DEFAULT_PAGE_MARGINS.right),
+        margin_bottom_in: parseMargin(mBottom, DEFAULT_PAGE_MARGINS.bottom),
+        margin_left_in:   parseMargin(mLeft,   DEFAULT_PAGE_MARGINS.left),
+        bleed_in:         parseMargin(bleed,   DEFAULT_PAGE_MARGINS.bleed),
       });
       setOpen(false);
       resetCreateForm();
@@ -132,7 +166,14 @@ export function WorkspaceSwitcher() {
     }
     setEditSubmitting(true);
     try {
-      await update(active.id, dims);
+      await update(active.id, {
+        ...dims,
+        margin_top_in:    parseMargin(editMTop,    DEFAULT_PAGE_MARGINS.top),
+        margin_right_in:  parseMargin(editMRight,  DEFAULT_PAGE_MARGINS.right),
+        margin_bottom_in: parseMargin(editMBottom, DEFAULT_PAGE_MARGINS.bottom),
+        margin_left_in:   parseMargin(editMLeft,   DEFAULT_PAGE_MARGINS.left),
+        bleed_in:         parseMargin(editBleed,   DEFAULT_PAGE_MARGINS.bleed),
+      });
       setEditOpen(false);
     } catch (e) {
       alert(`Could not save dimensions: ${(e as Error).message}`);
@@ -252,6 +293,11 @@ export function WorkspaceSwitcher() {
                 setPresetKey("custom");
               }}
             />
+            <MarginsForm
+              mTop={mTop} mRight={mRight} mBottom={mBottom} mLeft={mLeft} bleed={bleed}
+              onTop={setMTop} onRight={setMRight} onBottom={setMBottom}
+              onLeft={setMLeft} onBleed={setBleed}
+            />
           </div>
           <DialogFooter>
             <button
@@ -299,6 +345,12 @@ export function WorkspaceSwitcher() {
                 setEditHeight(v);
                 setEditPreset("custom");
               }}
+            />
+            <MarginsForm
+              mTop={editMTop} mRight={editMRight} mBottom={editMBottom}
+              mLeft={editMLeft} bleed={editBleed}
+              onTop={setEditMTop} onRight={setEditMRight} onBottom={setEditMBottom}
+              onLeft={setEditMLeft} onBleed={setEditBleed}
             />
           </div>
           <DialogFooter>
@@ -407,6 +459,82 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    </div>
+  );
+}
+
+function MarginsForm({
+  mTop, mRight, mBottom, mLeft, bleed,
+  onTop, onRight, onBottom, onLeft, onBleed,
+}: {
+  mTop: string; mRight: string; mBottom: string; mLeft: string; bleed: string;
+  onTop: (v: string) => void;
+  onRight: (v: string) => void;
+  onBottom: (v: string) => void;
+  onLeft: (v: string) => void;
+  onBleed: (v: string) => void;
+}) {
+  return (
+    <div className="border-t border-border pt-3 space-y-2">
+      <div>
+        <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+          Margins (safe area)
+        </label>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          In inches. Carried into the InDesign IDML page geometry and the Canva README.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <MarginInput label="Top" value={mTop} onChange={onTop} />
+        <MarginInput label="Right" value={mRight} onChange={onRight} />
+        <MarginInput label="Bottom" value={mBottom} onChange={onBottom} />
+        <MarginInput label="Left" value={mLeft} onChange={onLeft} />
+      </div>
+      <div>
+        <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+          Bleed (in, all edges)
+        </label>
+        <input
+          type="number"
+          step="0.0001"
+          min="0"
+          max="2"
+          value={bleed}
+          onChange={(e) => onBleed(e.target.value)}
+          className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Standard print bleed is 0.125 in (3.175 mm). Sets InDesign's
+          DocumentBleed and the Canva crop instructions in the export README.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MarginInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+        {label}
+      </label>
+      <input
+        type="number"
+        step="0.0001"
+        min="0"
+        max="10"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
       />
     </div>
