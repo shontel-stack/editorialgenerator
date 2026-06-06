@@ -17,6 +17,7 @@ import {
 import { generateNewsletterHighlights } from "@/lib/newsletter.functions";
 import { snapshotIssue } from "@/lib/issue-snapshot";
 import type { ExportDim } from "@/lib/exportCover";
+import { loadHtmlToImage, loadJsPdf } from "@/lib/browser-export-deps";
 
 type Props = {
   open: boolean;
@@ -146,8 +147,8 @@ export function NewsletterDialog({
       const widthPx = Math.max(600, Math.round(rect.width));
       const heightPx = Math.max(800, Math.round(rect.height));
       const [{ toJpeg }, { jsPDF }] = await Promise.all([
-        import("html-to-image"),
-        import("jspdf"),
+        loadHtmlToImage(),
+        loadJsPdf(),
       ]);
       const jpeg = await toJpeg(node, {
         width: widthPx,

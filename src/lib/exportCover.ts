@@ -1,5 +1,6 @@
 import { COVER_INCHES, COVER_PX, type PageType } from "./coverDefaults";
 import type { PDFDocument, PDFRef, PDFDict } from "pdf-lib";
+import { loadHtmlToImage, loadJsPdf, loadPdfLib } from "./browser-export-deps";
 
 type PdfLib = typeof import("pdf-lib");
 
@@ -18,7 +19,7 @@ const DEFAULT_DIM: ExportDim = {
 /* -------- single-page exports -------- */
 
 async function renderNodeToPng(node: HTMLElement, dim: ExportDim): Promise<string> {
-  const { toPng } = await import("html-to-image");
+  const { toPng } = await loadHtmlToImage();
   return toPng(node, {
     width: dim.px.w,
     height: dim.px.h,
@@ -29,7 +30,7 @@ async function renderNodeToPng(node: HTMLElement, dim: ExportDim): Promise<strin
 }
 
 async function renderNodeToJpeg(node: HTMLElement, dim: ExportDim): Promise<string> {
-  const { toJpeg } = await import("html-to-image");
+  const { toJpeg } = await loadHtmlToImage();
   return toJpeg(node, {
     width: dim.px.w,
     height: dim.px.h,
@@ -75,7 +76,7 @@ export async function exportJpeg(node: HTMLElement, filename: string, dim: Expor
 
 export async function exportPdf(node: HTMLElement, filename: string, dim: ExportDim = DEFAULT_DIM) {
   const url = await renderNodeToJpeg(node, dim);
-  const { jsPDF } = await import("jspdf");
+  const { jsPDF } = await loadJsPdf();
   const pdf = new jsPDF({
     unit: "in",
     format: [dim.inches.w, dim.inches.h],
@@ -112,7 +113,7 @@ export async function exportIssuePdf(
   const PAGE_W = dim.inches.w * PT_PER_IN;
   const PAGE_H = dim.inches.h * PT_PER_IN;
 
-  const pdfLib = await import("pdf-lib");
+  const pdfLib = await loadPdfLib();
   const { PDFDocument, PDFName } = pdfLib;
   const doc = await PDFDocument.create();
   doc.setTitle(meta.title);

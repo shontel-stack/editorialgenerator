@@ -30,7 +30,9 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_authenticated/index.lazy').then((d) => d.Route),
+)
 const ApiStaffChatRoute = ApiStaffChatRouteImport.update({
   id: '/api/staff-chat',
   path: '/api/staff-chat',
