@@ -912,6 +912,39 @@ function StaffChat({
                       </div>
                     );
                   }
+                  if (
+                    part.type === "tool-place_attachment" &&
+                    (part as { state?: string }).state === "output-available"
+                  ) {
+                    const out = (part as { output?: PlacementToolOutput }).output;
+                    if (!out) return null;
+                    const att = attachments?.find((a) => a.id === out.attachment_id);
+                    const where =
+                      out.region
+                        ? `region ${out.region}`
+                        : out.position_x != null && out.position_y != null
+                          ? `pin ${Math.round(out.position_x * 100)}% / ${Math.round(out.position_y * 100)}%`
+                          : "page";
+                    return (
+                      <div
+                        key={idx}
+                        className="mt-2 rounded-sm border border-border bg-secondary/40 px-3 py-2 text-xs flex items-start gap-2"
+                      >
+                        <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
+                            Placed on page · {out.page_id} · {where}
+                          </div>
+                          <div className="font-medium truncate">
+                            {att?.file_name ?? out.attachment_id}
+                          </div>
+                          {out.rationale && (
+                            <div className="text-muted-foreground mt-0.5">{out.rationale}</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
                   return null;
                 })}
               </MessageContent>
