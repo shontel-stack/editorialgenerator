@@ -1387,7 +1387,7 @@ function Index() {
                   attachments.upload({ pageId: selected.id, kind: "reference", file })
                 }
                 onRemove={(row) => attachments.remove(row)}
-                onAssign={(id, patch) => applyPlacement(id, patch)}
+                onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
               />
               <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
                 Multiple files allowed. Pin each to a region (column / header / footer) or
@@ -1570,7 +1570,7 @@ function Index() {
                 references={attachments.referencesByPage.get(spread.left.id) ?? []}
                 dim={dimPx}
                 scale={scale}
-                onAssign={(id, patch) => applyPlacement(id, patch)}
+                onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
               />
             </div>
             {spreadView && spread.right && (
@@ -1609,7 +1609,7 @@ function Index() {
                   references={attachments.referencesByPage.get(spread.right.id) ?? []}
                   dim={dimPx}
                   scale={scale}
-                  onAssign={(id, patch) => applyPlacement(id, patch)}
+                  onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
                 />
               </div>
             )}
