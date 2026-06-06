@@ -60,8 +60,18 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
         ),
       };
     }
-    case "update_master":
-      return { ...issue, master: { ...issue.master, ...patch.patch } };
+    case "update_master": {
+      const p = patch.patch;
+      const merged: IssueMaster = { ...issue.master, ...p };
+      if (p.folioTemplate) {
+        const current = normalizeFolioTemplate(issue.master.folioTemplate);
+        merged.folioTemplate = {
+          left: p.folioTemplate.left ?? current.left,
+          right: p.folioTemplate.right ?? current.right,
+        };
+      }
+      return { ...issue, master: merged };
+    }
     case "set_fonts": {
       const fonts: IssueFonts = {
         display: fontStack(patch.display, "display") ?? issue.master.fonts?.display ?? DEFAULT_FONTS.display,
