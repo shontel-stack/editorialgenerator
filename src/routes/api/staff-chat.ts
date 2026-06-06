@@ -103,6 +103,7 @@ export const Route = createFileRoute("/api/staff-chat")({
           role.prompt,
           `You are speaking with the user about issue: ${body.issueId ?? "(unknown)"}.`,
           `INBOX: When you have an actionable item the user should be able to track and resolve later (a specific edit suggestion, a fact to verify, a production status change, a blocker, or any concrete to-do), call the create_note tool in addition to your reply. Keep the note title under ~12 words. Use page_id from the snapshot. Do not create notes for chit-chat or for the user's own questions.`,
+          `PLACEMENT: When the user asks you to place, pin, move, or assign an uploaded file (image / document / pdf / text reference) to a page or region, call the place_attachment tool. Use attachment_id from the attachments list. Region must be 'header', 'footer', or 'column-N' (matching the page's layout column count). Use position_x / position_y (0..1) for a free-form pin, or omit them when using a region. Do not invent attachment ids. If the user is vague, pick the most recently uploaded matching file and explain your choice.`,
         ];
         if (body.selectedPageId) {
           systemParts.push(`Currently selected page in the editor: ${body.selectedPageId}`);
@@ -116,6 +117,15 @@ export const Route = createFileRoute("/api/staff-chat")({
             )}\n\`\`\``,
           );
         }
+        if (body.attachments && body.attachments.length > 0) {
+          systemParts.push(
+            `Uploaded attachments available for placement (JSON — use these exact ids):\n\`\`\`json\n${JSON.stringify(
+              body.attachments,
+              null,
+              2,
+            )}\n\`\`\``,
+          );
+        }
 
         const tools = {
           create_note: tool({
@@ -123,6 +133,12 @@ export const Route = createFileRoute("/api/staff-chat")({
               "File an actionable note into the shared inbox. Use for edit suggestions, fact-check flags, status changes, and production blockers.",
             inputSchema: createNoteSchema,
             execute: async (args) => ({ kind: "note", ...args }),
+          }),
+          place_attachment: tool({
+            description:
+              "Assign or pin an uploaded attachment (image, PDF, document, text reference) to a specific page, region, or free-form coordinate on the layout. The client applies the placement immediately.",
+            inputSchema: placeAttachmentSchema,
+            execute: async (args) => ({ kind: "placement", ...args }),
           }),
         };
 
