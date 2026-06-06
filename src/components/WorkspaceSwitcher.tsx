@@ -551,6 +551,18 @@ export function WorkspaceSwitcher() {
                 className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
+            <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={appendIssueDate}
+                onChange={(e) => toggleAppendIssueDate(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 accent-foreground cursor-pointer"
+              />
+              <span>
+                Append current issue date{" "}
+                <span className="text-foreground">({issueDateSuffix()})</span> to the name
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <button
