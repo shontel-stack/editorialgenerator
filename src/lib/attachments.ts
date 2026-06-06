@@ -263,7 +263,12 @@ export async function updateAttachmentAssignment(
   id: string,
   patch: AttachmentAssignment,
 ): Promise<void> {
-  const payload: Record<string, unknown> = {};
+  const payload: {
+    page_id?: string | null;
+    region?: string | null;
+    position_x?: number | null;
+    position_y?: number | null;
+  } = {};
   if (patch.page_id !== undefined) payload.page_id = patch.page_id;
   if (patch.region !== undefined) payload.region = patch.region;
   if (patch.position_x !== undefined) {
@@ -275,6 +280,7 @@ export async function updateAttachmentAssignment(
       patch.position_y === null ? null : Math.min(1, Math.max(0, patch.position_y));
   }
   if (Object.keys(payload).length === 0) return;
+
   const { error } = await supabase.from("issue_attachments").update(payload).eq("id", id);
   if (error) throw error;
 }
