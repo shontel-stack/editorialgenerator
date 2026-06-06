@@ -14,6 +14,16 @@ export type Overrides = Record<string, { dx: number; dy: number }>;
 export type ScaleMap = Record<string, number>;
 export type LinkMap = Record<string, string>;
 
+/**
+ * Snap guides for the editor — lists of page-px coordinates that block edges
+ * (and centers) snap to while dragging. Threshold is in page-px (300 DPI).
+ */
+export type SnapGuides = {
+  xs: number[];
+  ys: number[];
+  threshold: number;
+};
+
 type Ctx = {
   editing: boolean;
   scale: number;
@@ -30,6 +40,8 @@ type Ctx = {
   /** Custom (user-added) blocks for this page. */
   customBlocks?: CustomBlock[];
   setCustomBlocks?: (next: CustomBlock[]) => void;
+  /** Optional snap targets (margin / bleed / trim / center). */
+  guides?: SnapGuides;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
@@ -51,6 +63,7 @@ export function LayoutEditProvider({
   previewScales,
   customBlocks,
   setCustomBlocks,
+  guides,
   children,
 }: Ctx & { children: ReactNode }) {
   return (
@@ -68,6 +81,7 @@ export function LayoutEditProvider({
         previewScales,
         customBlocks,
         setCustomBlocks,
+        guides,
       }}
     >
       {children}
@@ -77,6 +91,55 @@ export function LayoutEditProvider({
 
 const SNAP = 40;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
+
+/** Snap a single coord to the nearest guide within threshold. Returns the
+ *  adjustment delta (snapped - value) or 0 if no guide is close enough. */
+function snapDelta(value: number, guides: number[], threshold: number): number {
+  let best = 0;
+  let bestDist = threshold;
+  for (const g of guides) {
+    const d = g - value;
+    const ad = Math.abs(d);
+    if (ad < bestDist) {
+      bestDist = ad;
+      best = d;
+    }
+  }
+  return best;
+}
+
+/** Try snapping a block (with left/top/width/height after move) to guides.
+ *  Considers the block's leading edge, center, and trailing edge on each axis,
+ *  and returns the adjustments to apply to dx,dy. */
+function snapToGuides(
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+  guides: SnapGuides,
+): { ax: number; ay: number } {
+  const candX = [left, left + width / 2, left + width];
+  const candY = [top, top + height / 2, top + height];
+  let ax = 0;
+  let axBest = guides.threshold;
+  for (const c of candX) {
+    const d = snapDelta(c, guides.xs, guides.threshold);
+    if (d !== 0 && Math.abs(d) < axBest) {
+      axBest = Math.abs(d);
+      ax = d;
+    }
+  }
+  let ay = 0;
+  let ayBest = guides.threshold;
+  for (const c of candY) {
+    const d = snapDelta(c, guides.ys, guides.threshold);
+    if (d !== 0 && Math.abs(d) < ayBest) {
+      ayBest = Math.abs(d);
+      ay = d;
+    }
+  }
+  return { ax, ay };
+}
 
 export function Draggable({
   blockKey,
