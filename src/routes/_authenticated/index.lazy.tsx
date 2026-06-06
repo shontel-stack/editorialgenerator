@@ -208,6 +208,7 @@ function Index() {
     setAutosaveRestoring(true);
     setConflict(null);
     let cancelled = false;
+    let needsUserChoice = false;
     (async () => {
       try {
         const local = loadAutosave<IssueDoc>(autosaveKeyStr);
@@ -238,6 +239,7 @@ function Index() {
 
         if (detection.kind === "conflict" && localSide && remoteSide) {
           // Pause autosave/cloud sync until the user resolves the conflict.
+          needsUserChoice = true;
           setConflict({ local: localSide, remote: remoteSide });
           return;
         }
@@ -252,7 +254,7 @@ function Index() {
           adoptSnapshot(detection.winner.data, baselineTs);
         }
       } finally {
-        if (!cancelled && !conflict) {
+        if (!cancelled && !needsUserChoice) {
           setTimeout(() => setAutosaveRestoring(false), 0);
         }
       }
