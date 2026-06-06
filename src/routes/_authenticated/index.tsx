@@ -940,7 +940,13 @@ function Index() {
               label: `${String(i + 1).padStart(2, "0")} · ${p.pageType}${p.snapOverride ? " ●" : ""}`,
             }))}
             onApplyOverrideToPages={applySnapOverrideToPages}
+            onUndoOverrides={undoSnapOverrides}
+            onRedoOverrides={redoSnapOverrides}
+            canUndoOverrides={snapPastRef.current.length > 0}
+            canRedoOverrides={snapFutureRef.current.length > 0}
+            historyTick={snapHistoryTick}
           />
+
 
 
 
