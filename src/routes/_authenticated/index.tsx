@@ -263,7 +263,7 @@ function Index() {
         }
       }
       if (!changed) return;
-      await attachments.updateAssignment(id, patch);
+      await applyPlacement(id, patch);
       if (!opts?.silent) {
         undoStackRef.current.push({ id, before, after });
         if (undoStackRef.current.length > 100) undoStackRef.current.shift();
@@ -1339,7 +1339,7 @@ function Index() {
                   attachments.upload({ pageId: selected.id, kind: "reference", file })
                 }
                 onRemove={(row) => attachments.remove(row)}
-                onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                onAssign={(id, patch) => applyPlacement(id, patch)}
               />
               <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
                 Multiple files allowed. Pin each to a region (column / header / footer) or
@@ -1503,7 +1503,7 @@ function Index() {
                 references={attachments.referencesByPage.get(spread.left.id) ?? []}
                 dim={dimPx}
                 scale={scale}
-                onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                onAssign={(id, patch) => applyPlacement(id, patch)}
               />
             </div>
             {spreadView && spread.right && (
@@ -1542,7 +1542,7 @@ function Index() {
                   references={attachments.referencesByPage.get(spread.right.id) ?? []}
                   dim={dimPx}
                   scale={scale}
-                  onAssign={(id, patch) => attachments.updateAssignment(id, patch)}
+                  onAssign={(id, patch) => applyPlacement(id, patch)}
                 />
               </div>
             )}
@@ -1616,7 +1616,7 @@ function Index() {
           position_x: r.position_x,
           position_y: r.position_y,
         }))}
-        onPlaceAttachment={(id, patch) => attachments.updateAssignment(id, patch)}
+        onPlaceAttachment={(id, patch) => applyPlacement(id, patch)}
       />
 
       <ProductionChecklist
