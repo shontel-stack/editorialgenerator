@@ -22,6 +22,15 @@ type PageOverrideProps = {
   currentPageId?: string;
   /** Bulk-apply the current override to a list of page ids. */
   onApplyOverrideToPages?: (ids: string[], override: Partial<SnapSettings> | null) => void;
+  /** Undo the most recent snap-override apply/clear/edit across the document. */
+  onUndoOverrides?: () => void;
+  /** Redo the most recently undone snap-override change. */
+  onRedoOverrides?: () => void;
+  canUndoOverrides?: boolean;
+  canRedoOverrides?: boolean;
+  /** Bump to force the panel to re-evaluate undo/redo button state. */
+  historyTick?: number;
+
 };
 
 /**
@@ -39,7 +48,12 @@ export function SnapSettingsPanel({
   pages,
   currentPageId,
   onApplyOverrideToPages,
+  onUndoOverrides,
+  onRedoOverrides,
+  canUndoOverrides,
+  canRedoOverrides,
 }: PageOverrideProps = {}) {
+
   const global = useSnapSettings();
   const [open, setOpen] = useState(false);
   const [pageOpen, setPageOpen] = useState(Boolean(override));
@@ -93,6 +107,31 @@ export function SnapSettingsPanel({
       </button>
       {open && (
         <div className="px-3 pb-3 pt-1 space-y-4">
+          {(onUndoOverrides || onRedoOverrides) && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground flex-1">
+                Override history
+              </span>
+              <button
+                type="button"
+                onClick={onUndoOverrides}
+                disabled={!canUndoOverrides}
+                className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Undo last snap-override change"
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={onRedoOverrides}
+                disabled={!canRedoOverrides}
+                className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Redo last undone snap-override change"
+              >
+                Redo
+              </button>
+            </div>
+          )}
           {/* GLOBAL DEFAULTS */}
           <fieldset className="space-y-3">
             <legend className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">

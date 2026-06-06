@@ -402,18 +402,72 @@ function Index() {
       ),
     }));
 
+  // — Undo/redo stacks for snap-override mutations only. Each entry is a
+  // snapshot of every page's `snapOverride` keyed by page id, captured
+  // BEFORE a mutation is applied.
+  type SnapSnapshot = Array<[string, Partial<SnapSettings> | undefined]>;
+  const snapPastRef = useRef<SnapSnapshot[]>([]);
+  const snapFutureRef = useRef<SnapSnapshot[]>([]);
+  const [snapHistoryTick, setSnapHistoryTick] = useState(0);
+  const snapshotSnapOverrides = (d: IssueDoc): SnapSnapshot =>
+    d.pages.map((p) => [p.id, p.snapOverride ? { ...p.snapOverride } : undefined]);
+  const restoreSnapSnapshot = (snap: SnapSnapshot) => {
+    const map = new Map(snap);
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        map.has(p.id)
+          ? ({ ...p, snapOverride: map.get(p.id) ?? undefined } as IssuePageNode)
+          : p,
+      ),
+    }));
+  };
+  const pushSnapHistory = () => {
+    setIssue((d) => {
+      snapPastRef.current.push(snapshotSnapOverrides(d));
+      // Cap history so memory stays bounded.
+      if (snapPastRef.current.length > 100) snapPastRef.current.shift();
+      snapFutureRef.current = [];
+      return d;
+    });
+    setSnapHistoryTick((n) => n + 1);
+  };
+  const undoSnapOverrides = () => {
+    const prev = snapPastRef.current.pop();
+    if (!prev) return;
+    setIssue((d) => {
+      snapFutureRef.current.push(snapshotSnapOverrides(d));
+      return d;
+    });
+    restoreSnapSnapshot(prev);
+    setSnapHistoryTick((n) => n + 1);
+  };
+  const redoSnapOverrides = () => {
+    const next = snapFutureRef.current.pop();
+    if (!next) return;
+    setIssue((d) => {
+      snapPastRef.current.push(snapshotSnapOverrides(d));
+      return d;
+    });
+    restoreSnapSnapshot(next);
+    setSnapHistoryTick((n) => n + 1);
+  };
+
   /** Set or clear per-page snap overrides. Pass `null` to remove the override. */
-  const setSnapOverride = (id: string, patch: Partial<SnapSettings> | null) =>
+  const setSnapOverride = (id: string, patch: Partial<SnapSettings> | null) => {
+    pushSnapHistory();
     setIssue((d) => ({
       ...d,
       pages: d.pages.map((p) =>
         p.id === id ? ({ ...p, snapOverride: patch ?? undefined } as IssuePageNode) : p,
       ),
     }));
+  };
 
   /** Apply (or clear) the same snap override across many pages in one shot. */
   const applySnapOverrideToPages = (ids: string[], patch: Partial<SnapSettings> | null) => {
     if (ids.length === 0) return;
+    pushSnapHistory();
     const idSet = new Set(ids);
     setIssue((d) => ({
       ...d,
@@ -422,6 +476,7 @@ function Index() {
       ),
     }));
   };
+
 
   const movePage = (id: string, dir: -1 | 1) =>
     setIssue((d) => {
@@ -885,7 +940,13 @@ function Index() {
               label: `${String(i + 1).padStart(2, "0")} · ${p.pageType}${p.snapOverride ? " ●" : ""}`,
             }))}
             onApplyOverrideToPages={applySnapOverrideToPages}
+            onUndoOverrides={undoSnapOverrides}
+            onRedoOverrides={redoSnapOverrides}
+            canUndoOverrides={snapPastRef.current.length > 0}
+            canRedoOverrides={snapFutureRef.current.length > 0}
+            historyTick={snapHistoryTick}
           />
+
 
 
 
