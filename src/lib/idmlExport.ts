@@ -478,7 +478,7 @@ const buildSpread = (
         </Descriptor>
         <PageColor type="enumeration">UseMasterColor</PageColor>
       </Properties>
-      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MARGIN}" Bottom="${MARGIN}" Left="${MARGIN}" Right="${MARGIN}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - 2 * MARGIN}"/>
+      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MT}" Bottom="${MB}" Left="${ML}" Right="${MR}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - ML - MR}"/>
     </Page>
 ${items.join("\n")}
   </Spread>
