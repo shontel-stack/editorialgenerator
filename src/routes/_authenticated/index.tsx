@@ -16,9 +16,27 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
+import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { downloadIdml, downloadIdmlPackage } from "@/lib/idmlExport";
+import {
+  PAGE_LAYOUTS,
+  PAGE_LAYOUT_LABELS,
+  PAGE_LAYOUT_DESCRIPTIONS,
+  DEFAULT_PAGE_LAYOUT,
+  type PageLayout,
+} from "@/lib/pageLayouts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -205,6 +223,22 @@ function Index() {
     return out;
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
+
+  // Per-page layout (free-form, two-column, image-top, …) persists in
+  // page_status. The hook auto-creates rows for new pages, subscribes to
+  // realtime updates, and exposes setLayout + layoutOf for the current
+  // selection.
+  const pageRefsForStatus = useMemo(
+    () => issue.pages.map((p) => ({ id: p.id, label: labelForNode(p) })),
+    [issue.pages],
+  );
+  const pageStatus = useIssuePageStatus({
+    userId,
+    issueId: issue.meta.issueId,
+    publicationId: activePublication?.id ?? null,
+    pages: pageRefsForStatus,
+  });
+  const [pendingLayout, setPendingLayout] = useState<PageLayout | null>(null);
 
   // Hidden off-screen render stage holds a div ref for every page node.
   const refs = useRef<Map<string, HTMLDivElement | null>>(new Map());
@@ -711,6 +745,34 @@ function Index() {
     (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
     (selected.textScales && Object.keys(selected.textScales).length > 0) ||
     (selected.blockLinks && Object.keys(selected.blockLinks).length > 0);
+  const selectedCustomBlockCount = selected.customBlocks?.length ?? 0;
+  const selectedLayout: PageLayout =
+    pageStatus.layoutOf(selected.id) ?? DEFAULT_PAGE_LAYOUT;
+
+  /** Apply a new layout; reset block positions so the new template can take
+   * over. Used after the user confirms in the reflow dialog (or directly
+   * when the page has no overrides / custom blocks to disturb). */
+  const commitLayoutChange = async (next: PageLayout) => {
+    try {
+      await pageStatus.setLayout(selected.id, next);
+      // Clear positionOverrides / textScales / blockLinks so blocks reflow
+      // into the new template. CustomBlocks are kept (the user added them
+      // intentionally) but their offsets are reset above via resetOverrides.
+      if (next !== "free-form") resetOverrides(selected.id);
+    } catch (e) {
+      console.error("Failed to set page layout", e);
+    }
+  };
+
+  /** Entry point from the ribbon / edit panel pickers. Pops a confirmation
+   * dialog when the page already has hand-placed content that would shift. */
+  const requestLayoutChange = (next: PageLayout) => {
+    if (next === selectedLayout) return;
+    const needsConfirm =
+      next !== "free-form" && (selectedHasOverrides || selectedCustomBlockCount > 0);
+    if (needsConfirm) setPendingLayout(next);
+    else void commitLayoutChange(next);
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -1098,6 +1160,30 @@ function Index() {
         <div className="h-full overflow-y-auto px-3">
         {/* Editor for selected page */}
         <aside className="space-y-6">
+          <Section title="Page layout">
+            <div className="space-y-2">
+              <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_LAYOUTS.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      <span className="flex flex-col">
+                        <span className="text-sm">{PAGE_LAYOUT_LABELS[l]}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {PAGE_LAYOUT_DESCRIPTIONS[l]}
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                {PAGE_LAYOUT_DESCRIPTIONS[selectedLayout]} Saved per page.
+              </p>
+            </div>
+          </Section>
           {selected.pageType === "cover" && (
             <CoverEditor
               data={selected.data as CoverData}
@@ -1241,6 +1327,25 @@ function Index() {
                 Reset
               </button>
             )}
+            <div className="h-5 w-px bg-border mx-1" />
+            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden lg:inline">
+              Layout
+            </span>
+            <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
+              <SelectTrigger
+                className="h-7 w-[170px] text-xs"
+                title="Choose a layout template for this page"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_LAYOUTS.map((l) => (
+                  <SelectItem key={l} value={l} className="text-xs">
+                    {PAGE_LAYOUT_LABELS[l]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="ml-auto text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden md:inline">
               {dimInches.w}″ × {dimInches.h}″
             </span>
@@ -1432,6 +1537,47 @@ function Index() {
           });
         }}
       />
+
+      {/* Confirm reflow when switching to a templated layout on a page that
+          already has hand-placed blocks or repositioned content. */}
+      <AlertDialog
+        open={pendingLayout !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingLayout(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Switch to “{pendingLayout ? PAGE_LAYOUT_LABELS[pendingLayout] : ""}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This page has{" "}
+              {selectedCustomBlockCount > 0
+                ? `${selectedCustomBlockCount} custom block${selectedCustomBlockCount === 1 ? "" : "s"}`
+                : "manually positioned content"}
+              . Applying a new layout will reset block positions so they reflow
+              into the new template. Custom blocks you added are kept, but
+              their offsets will return to the template defaults. This action
+              cannot be undone for layout changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingLayout(null)}>
+              Keep current layout
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const next = pendingLayout;
+                setPendingLayout(null);
+                if (next) void commitLayoutChange(next);
+              }}
+            >
+              Apply and reflow
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

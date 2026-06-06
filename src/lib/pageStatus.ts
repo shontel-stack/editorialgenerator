@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { DEFAULT_PAGE_LAYOUT, type PageLayout } from "@/lib/pageLayouts";
 
 export const PAGE_STATUSES = [
   "idea",
@@ -49,6 +50,7 @@ export type PageStatusRow = {
   due_date: string | null;
   notes: string | null;
   position: number;
+  layout: PageLayout;
   created_at: string;
   updated_at: string;
 };
@@ -88,6 +90,7 @@ export async function upsertPageStatus(input: {
   dueDate?: string | null;
   notes?: string | null;
   position?: number;
+  layout?: PageLayout;
 }): Promise<PageStatusRow> {
   const payload = {
     user_id: input.userId,
@@ -100,6 +103,7 @@ export async function upsertPageStatus(input: {
     due_date: input.dueDate ?? null,
     notes: input.notes ?? null,
     position: input.position ?? 0,
+    layout: input.layout ?? DEFAULT_PAGE_LAYOUT,
   };
   const { data, error } = await supabase
     .from("page_status")
@@ -112,7 +116,12 @@ export async function upsertPageStatus(input: {
 
 export async function updatePageStatus(
   id: string,
-  patch: Partial<Pick<PageStatusRow, "status" | "assignee_role" | "due_date" | "notes" | "position" | "page_label">>,
+  patch: Partial<
+    Pick<
+      PageStatusRow,
+      "status" | "assignee_role" | "due_date" | "notes" | "position" | "page_label" | "layout"
+    >
+  >,
 ): Promise<void> {
   const { error } = await supabase.from("page_status").update(patch).eq("id", id);
   if (error) throw error;

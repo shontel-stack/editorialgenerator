@@ -101,6 +101,7 @@ export type Database = {
           due_date: string | null
           id: string
           issue_id: string
+          layout: string
           notes: string | null
           page_id: string
           page_label: string | null
@@ -116,6 +117,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           issue_id: string
+          layout?: string
           notes?: string | null
           page_id: string
           page_label?: string | null
@@ -131,6 +133,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           issue_id?: string
+          layout?: string
           notes?: string | null
           page_id?: string
           page_label?: string | null

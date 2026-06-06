@@ -12,6 +12,7 @@ import {
   type PageStatusRow,
   type PageStatusValue,
 } from "@/lib/pageStatus";
+import { DEFAULT_PAGE_LAYOUT, type PageLayout } from "@/lib/pageLayouts";
 
 type PageRef = { id: string; label: string };
 
@@ -141,5 +142,28 @@ export function useIssuePageStatus(opts: {
     [byPage, pages, userId, publicationId, issueId],
   );
 
-  return { rows, byPage, loading, reload, setStatus, setAssignee, setDueDate };
+  const setLayout = useCallback(
+    async (pageId: string, layout: PageLayout) => {
+      const existing = byPage[pageId];
+      const label = pages.find((p) => p.id === pageId)?.label ?? null;
+      if (existing) await updatePageStatus(existing.id, { layout });
+      else if (userId)
+        await upsertPageStatus({
+          userId,
+          publicationId,
+          issueId,
+          pageId,
+          pageLabel: label,
+          layout,
+        });
+    },
+    [byPage, pages, userId, publicationId, issueId],
+  );
+
+  const layoutOf = useCallback(
+    (pageId: string): PageLayout => byPage[pageId]?.layout ?? DEFAULT_PAGE_LAYOUT,
+    [byPage],
+  );
+
+  return { rows, byPage, loading, reload, setStatus, setAssignee, setDueDate, setLayout, layoutOf };
 }
