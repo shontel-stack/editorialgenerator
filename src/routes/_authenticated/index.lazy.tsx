@@ -160,7 +160,7 @@ function Index() {
       if (rec?.data?.pages?.length && rec.data.meta?.issueId === issue.meta.issueId) {
         setIssue(rec.data);
         lastSavedRef.current = JSON.stringify(rec.data);
-        if (!rec.data.pages.some((p) => p.id === selectedId)) {
+        if (!rec.data.pages.some((p: IssuePageNode) => p.id === selectedId)) {
           setSelectedId(rec.data.pages[0].id);
         }
       }
