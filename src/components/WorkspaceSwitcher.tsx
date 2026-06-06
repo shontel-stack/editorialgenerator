@@ -164,12 +164,10 @@ export function WorkspaceSwitcher() {
   const [appendIssueDate, setAppendIssueDate] = useState(false);
   type DateFormat = "month-year" | "year-month" | "iso-date";
   const [dateFormat, setDateFormat] = useState<DateFormat>("month-year");
+  const [issueDate, setIssueDate] = useState<Date>(() => new Date());
 
-  // Human-readable suffix for the chosen format. Using today's date as the
-  // issue date — duplicating a publication is normally done when starting
-  // work on the next issue.
-  const formatIssueDate = (fmt: DateFormat): string => {
-    const d = new Date();
+  // Human-readable suffix for the chosen format and selected issue date.
+  const formatIssueDate = (fmt: DateFormat, d: Date): string => {
     switch (fmt) {
       case "month-year":
         return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
@@ -192,23 +190,32 @@ export function WorkspaceSwitcher() {
     setDuplicateName(`${active.name} (copy)`);
     setAppendIssueDate(false);
     setDateFormat("month-year");
+    setIssueDate(new Date());
     setDuplicateOpen(true);
   };
 
-  const applyDateSuffix = (base: string, append: boolean, fmt: DateFormat): string => {
+  const applyDateSuffix = (base: string, append: boolean, fmt: DateFormat, d: Date): string => {
     const cleaned = stripDateSuffix(base);
-    return append ? `${cleaned} — ${formatIssueDate(fmt)}` : cleaned;
+    return append ? `${cleaned} — ${formatIssueDate(fmt, d)}` : cleaned;
   };
 
   const toggleAppendIssueDate = (next: boolean) => {
     setAppendIssueDate(next);
-    setDuplicateName((prev) => applyDateSuffix(prev, next, dateFormat));
+    setDuplicateName((prev) => applyDateSuffix(prev, next, dateFormat, issueDate));
   };
 
   const changeDateFormat = (next: DateFormat) => {
     setDateFormat(next);
     if (appendIssueDate) {
-      setDuplicateName((prev) => applyDateSuffix(prev, true, next));
+      setDuplicateName((prev) => applyDateSuffix(prev, true, next, issueDate));
+    }
+  };
+
+  const changeIssueDate = (next: Date | undefined) => {
+    if (!next) return;
+    setIssueDate(next);
+    if (appendIssueDate) {
+      setDuplicateName((prev) => applyDateSuffix(prev, true, dateFormat, next));
     }
   };
 
