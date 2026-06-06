@@ -681,6 +681,14 @@ export function WorkspaceSwitcher() {
                   </select>
                 </div>
               </div>
+              {issueDateError ? (
+                <p
+                  role="alert"
+                  className="pl-6 text-[11px] leading-relaxed text-destructive"
+                >
+                  {issueDateError}
+                </p>
+              ) : null}
             </div>
           </div>
           <DialogFooter>
@@ -693,7 +701,7 @@ export function WorkspaceSwitcher() {
             </button>
             <button
               onClick={() => void confirmDuplicate()}
-              disabled={!duplicateName.trim() || submitting}
+              disabled={!duplicateName.trim() || submitting || !!issueDateError}
               className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
             >
               {submitting ? "Duplicating…" : "Duplicate"}
