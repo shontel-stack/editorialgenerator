@@ -1805,93 +1805,93 @@ function Index() {
           </PopoverContent>
         </Popover>
       </div>
+
+      {/* Canvas ribbon — page-specific controls, sticky alongside the header */}
+      <div className="border-t border-foreground/20 bg-foreground text-background px-3 py-1.5 flex items-center gap-2 flex-wrap">
+        <span className="text-[10px] tracking-[0.3em] uppercase text-background/60 hidden sm:inline">View</span>
+        <div className="inline-flex border border-background/25 rounded-sm overflow-hidden">
+          <button
+            onClick={() => setSpreadView(false)}
+            className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase transition ${!spreadView ? "bg-background/25 text-background" : "text-background/70 hover:bg-background/10"}`}
+          >
+            Single
+          </button>
+          <button
+            onClick={() => setSpreadView(true)}
+            className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase transition ${spreadView ? "bg-background/25 text-background" : "text-background/70 hover:bg-background/10"}`}
+          >
+            Spread
+          </button>
+        </div>
+        <button
+          onClick={() => setShowGuides((v) => !v)}
+          className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-background/25 rounded-sm transition ${showGuides ? "bg-background/25 text-background" : "text-background/70 hover:bg-background/10"}`}
+          title="Toggle non-printing margin & bleed guides"
+        >
+          {showGuides ? "Guides on" : "Guides off"}
+        </button>
+        <button
+          onClick={() => setEditLayout((v) => !v)}
+          className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-background/25 rounded-sm transition ${editLayout ? "bg-background/25 text-background" : "text-background/70 hover:bg-background/10"}`}
+          title="Drag blocks to reposition them on the page"
+        >
+          {editLayout ? "Done" : "Drag blocks"}
+        </button>
+        {editLayout && selectedHasOverrides && (
+          <button
+            onClick={() => resetOverrides(selected.id)}
+            className="px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-background/25 rounded-sm text-background/70 hover:bg-background/10"
+            title="Reset all block positions on this page"
+          >
+            Reset
+          </button>
+        )}
+        <div className="h-5 w-px bg-background/25 mx-1" />
+        <button
+          onClick={() => void undoPlacement()}
+          disabled={!canUndoPlacement}
+          className="p-1.5 rounded-sm text-background/70 hover:bg-background/10 hover:text-background transition disabled:opacity-30 disabled:hover:bg-transparent"
+          title="Undo last attachment placement"
+          aria-label="Undo placement"
+        >
+          <Undo2 className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => void redoPlacement()}
+          disabled={!canRedoPlacement}
+          className="p-1.5 rounded-sm text-background/70 hover:bg-background/10 hover:text-background transition disabled:opacity-30 disabled:hover:bg-transparent"
+          title="Redo attachment placement"
+          aria-label="Redo placement"
+        >
+          <Redo2 className="h-4 w-4" />
+        </button>
+        <div className="h-5 w-px bg-background/25 mx-1" />
+        <span className="text-[10px] tracking-[0.3em] uppercase text-background/60 hidden lg:inline">
+          Layout
+        </span>
+        <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
+          <SelectTrigger
+            className="h-7 w-[170px] text-xs bg-background/10 border-background/25 text-background hover:bg-background/15"
+            title="Choose a layout template for this page"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_LAYOUTS.map((l) => (
+              <SelectItem key={l} value={l} className="text-xs">
+                {PAGE_LAYOUT_LABELS[l]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="ml-auto text-[10px] tracking-[0.3em] uppercase text-background/60 hidden md:inline">
+          {dimInches.w}″ × {dimInches.h}″
+        </span>
+      </div>
       </div>
 
       <div className="px-3 pt-1 pb-3">
         <div className="pl-3 flex flex-col gap-3">
-
-          {/* Canvas ribbon — most-used controls + panel collapse toggles */}
-          <div className="border border-border bg-card rounded-sm px-2 py-1.5 flex items-center gap-2 flex-wrap sticky top-0 z-10">
-            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden sm:inline">View</span>
-            <div className="inline-flex border border-border rounded-sm overflow-hidden">
-              <button
-                onClick={() => setSpreadView(false)}
-                className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase transition ${!spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-              >
-                Single
-              </button>
-              <button
-                onClick={() => setSpreadView(true)}
-                className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase transition ${spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-              >
-                Spread
-              </button>
-            </div>
-            <button
-              onClick={() => setShowGuides((v) => !v)}
-              className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${showGuides ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-              title="Toggle non-printing margin & bleed guides"
-            >
-              {showGuides ? "Guides on" : "Guides off"}
-            </button>
-            <button
-              onClick={() => setEditLayout((v) => !v)}
-              className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${editLayout ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-              title="Drag blocks to reposition them on the page"
-            >
-              {editLayout ? "Done" : "Drag blocks"}
-            </button>
-            {editLayout && selectedHasOverrides && (
-              <button
-                onClick={() => resetOverrides(selected.id)}
-                className="px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary"
-                title="Reset all block positions on this page"
-              >
-                Reset
-              </button>
-            )}
-            <div className="h-5 w-px bg-border mx-1" />
-            <button
-              onClick={() => void undoPlacement()}
-              disabled={!canUndoPlacement}
-              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition disabled:opacity-30 disabled:hover:bg-transparent"
-              title="Undo last attachment placement"
-              aria-label="Undo placement"
-            >
-              <Undo2 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => void redoPlacement()}
-              disabled={!canRedoPlacement}
-              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition disabled:opacity-30 disabled:hover:bg-transparent"
-              title="Redo attachment placement"
-              aria-label="Redo placement"
-            >
-              <Redo2 className="h-4 w-4" />
-            </button>
-            <div className="h-5 w-px bg-border mx-1" />
-            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden lg:inline">
-              Layout
-            </span>
-            <Select value={selectedLayout} onValueChange={(v) => requestLayoutChange(v as PageLayout)}>
-              <SelectTrigger
-                className="h-7 w-[170px] text-xs"
-                title="Choose a layout template for this page"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_LAYOUTS.map((l) => (
-                  <SelectItem key={l} value={l} className="text-xs">
-                    {PAGE_LAYOUT_LABELS[l]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="ml-auto text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden md:inline">
-              {dimInches.w}″ × {dimInches.h}″
-            </span>
-          </div>
           {editLayout && (
             <p className="text-[10px] leading-relaxed text-muted-foreground px-1">
               Drag any outlined block on the page. Use the <strong>+ Add</strong> palette in the top-right of the page to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
