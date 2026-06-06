@@ -607,11 +607,15 @@ function StaffChat({
   issue,
   publicationId,
   selectedPageId,
+  attachments,
+  onPlaceAttachment,
 }: {
   role: StaffRole;
   issue: IssueDoc;
   publicationId: string | null;
   selectedPageId: string;
+  attachments?: AttachmentBrief[];
+  onPlaceAttachment?: (id: string, patch: PlacementPatch) => Promise<void> | void;
 }) {
   const issueId = issue.meta.issueId;
   const [initial, setInitial] = useState<UIMessage[] | null>(null);
