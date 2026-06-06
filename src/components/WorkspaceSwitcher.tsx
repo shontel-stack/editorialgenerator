@@ -1025,11 +1025,16 @@ function SchedulePanel({
           <button
             type="button"
             onClick={() => {
+              // One-click undo: apply defaults to the draft, persist them
+              // immediately, and reflect that in the parent state. The user
+              // can still tweak further before closing.
               setDraft(DEFAULT_SCHEDULE_RULES);
+              onChange(DEFAULT_SCHEDULE_RULES);
             }}
-            className="text-xs px-3 py-2 rounded-sm hover:bg-secondary mr-auto"
+            className="text-xs px-3 py-2 rounded-sm hover:bg-secondary mr-auto border border-input"
+            title="Restore the default day range and month offsets"
           >
-            Reset to defaults
+            Reset schedule to defaults
           </button>
           <button
             type="button"
