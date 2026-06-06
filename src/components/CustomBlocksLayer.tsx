@@ -11,6 +11,7 @@ import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCo
 import type { CustomBlock } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
+import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
