@@ -293,10 +293,15 @@ export function Draggable({
         }
       : editing
         ? {
-            outline: link
-              ? "3px solid rgba(37,99,235,0.7)"
-              : "3px dashed rgba(107,19,32,0.7)",
-            outlineOffset: 4,
+            outline: isSelected
+              ? "3px solid rgba(37,99,235,0.95)"
+              : link
+                ? "2px solid rgba(37,99,235,0.45)"
+                : "2px dashed rgba(107,19,32,0.45)",
+            outlineOffset: isSelected ? 4 : 2,
+            boxShadow: isSelected
+              ? "0 0 0 6px rgba(37,99,235,0.18)"
+              : undefined,
             cursor: drag.current ? "grabbing" : "grab",
           }
         : link
