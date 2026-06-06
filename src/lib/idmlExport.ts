@@ -777,11 +777,22 @@ function buildReadme(
     );
   }
   lines.push(
+    "FINAL EXPORT CHECKLIST (before sharing this zip)",
+    `  [ ] ${idmlName} sits at the zip root (not inside a subfolder).`,
+    `  [ ] Links/ folder is present and contains ${fetchedCount} image file(s).`,
+    `  [ ] relink-manifest.txt is present at the zip root.`,
+    `  [ ] relink-images.jsx is present at the zip root.`,
+    `  [ ] README.txt (this file) is present at the zip root.`,
+    `  [ ] Skipped images in relink-manifest.txt have been reviewed${skipped.length ? ` (${skipped.length} this export)` : ""}.`,
+    `  [ ] Test-open ${idmlName} in InDesign and run relink-images.jsx — confirm`,
+    `      the summary alert reports 0 "notFound" and 0 "failed".`,
+    "",
     "TIP",
     `  Keep this zip as the handoff artifact. Re-export from the web editor`,
     `  any time the content changes — the Links/ folder will refresh too.`,
     "",
   );
+
   return lines.join("\n");
 }
 
