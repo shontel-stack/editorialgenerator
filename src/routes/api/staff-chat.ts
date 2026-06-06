@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, stepCountIs, tool, type UIMessage } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { requireAuthFromRequest } from "@/lib/require-auth.server";
 import { getRole } from "@/lib/staffRoles";
 import type { IssueSnapshot } from "@/lib/issue-snapshot";
 
@@ -76,6 +77,9 @@ export const Route = createFileRoute("/api/staff-chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const auth = await requireAuthFromRequest(request);
+        if (auth instanceof Response) return auth;
+
         let body: StaffChatBody;
         try {
           body = (await request.json()) as StaffChatBody;
