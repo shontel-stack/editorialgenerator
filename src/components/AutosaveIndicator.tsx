@@ -38,6 +38,9 @@ export function AutosaveIndicator({
   cloudLastSyncedAt,
   cloudError,
   onSyncNow,
+  queuePending = 0,
+  queueDraining = false,
+  onRetryQueue,
 }: AutosaveIndicatorProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
