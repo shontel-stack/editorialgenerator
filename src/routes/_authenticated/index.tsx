@@ -1857,6 +1857,8 @@ function Index() {
         onOpenChange={setNewsletterOpen}
         issue={issue}
         issueSlug={issueSlug}
+        pageNodes={refs.current}
+        pageDim={{ inches: dimInches, px: dimPx }}
       />
     </main>
   );
