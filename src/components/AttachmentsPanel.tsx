@@ -437,10 +437,8 @@ export function AttachmentsPanel({
                 <option value="header" />
                 <option value="footer" />
               </datalist>
-
-                );
-              })}
             </ul>
+
             <div ref={sentinelRef} className="h-2" aria-hidden />
             {hasMore && (
               <div className="px-4 py-3 flex justify-center">
