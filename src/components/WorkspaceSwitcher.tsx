@@ -346,6 +346,18 @@ export function WorkspaceSwitcher() {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="application/json"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          void handleImportFile(file);
+        }}
+      />
+
       {/* New publication */}
       <Dialog
         open={open}
