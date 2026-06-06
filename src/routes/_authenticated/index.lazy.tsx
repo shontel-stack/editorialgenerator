@@ -166,48 +166,95 @@ function Index() {
   );
   const [autosaveRestoring, setAutosaveRestoring] = useState(true);
   const restoredKeyRef = useRef<string | null>(null);
+  // Pending conflict between local autosave and cloud draft, awaiting user choice.
+  const [conflict, setConflict] = useState<{
+    local: ConflictSide;
+    remote: ConflictSide;
+  } | null>(null);
+  const baselineKeyStr = useMemo(
+    () => baselineKey(userId ?? null, issue.meta.issueId),
+    [userId, issue.meta.issueId],
+  );
+  const baselineKeyRef = useRef(baselineKeyStr);
+  baselineKeyRef.current = baselineKeyStr;
+
+  /** Adopt a resolved snapshot (winner of restore / conflict choice). */
+  const adoptSnapshot = useCallback(
+    (next: IssueDoc, baselineTs: number | null) => {
+      setIssue(next);
+      lastSavedRef.current = JSON.stringify(next);
+      if (!next.pages.some((p: IssuePageNode) => p.id === selectedId)) {
+        setSelectedId(next.pages[0].id);
+      }
+      // baselineTs === null means "this snapshot still needs to be pushed"
+      // (e.g. a merge result, or the user picked local-with-edits). In that
+      // case we don't set a baseline so cloudSync will write it next.
+      if (baselineTs != null) {
+        saveBaseline(baselineKeyRef.current, {
+          syncedAt: baselineTs,
+          hash: hashOf(next),
+        });
+      }
+    },
+    [selectedId],
+  );
+
   useEffect(() => {
     // Restore the newest snapshot we can find for this (user, issueId):
-    // compare local autosave vs cloud draft and pick the more recent one.
+    // compare local autosave vs cloud draft. If BOTH changed since the last
+    // synced baseline, surface a conflict dialog instead of silently picking.
     if (restoredKeyRef.current === autosaveKeyStr) return;
     restoredKeyRef.current = autosaveKeyStr;
     setAutosaveRestoring(true);
+    setConflict(null);
     let cancelled = false;
     (async () => {
       try {
         const local = loadAutosave<IssueDoc>(autosaveKeyStr);
         const localValid =
           local?.data?.pages?.length && local.data.meta?.issueId === issue.meta.issueId;
-        const localTs = localValid ? local!.savedAt : 0;
+        const localSide: ConflictSide | null = localValid
+          ? { data: local!.data as IssueDoc, ts: local!.savedAt }
+          : null;
 
-        let remote: { data: IssueDoc; ts: number } | null = null;
+        let remoteSide: ConflictSide | null = null;
         if (userId) {
           try {
             const rec = await fetchIssueDraft<IssueDoc>(issue.meta.issueId);
             if (rec?.data?.pages?.length && rec.data.meta?.issueId === issue.meta.issueId) {
-              remote = { data: rec.data, ts: new Date(rec.client_updated_at).getTime() };
+              remoteSide = {
+                data: rec.data,
+                ts: new Date(rec.client_updated_at).getTime(),
+              };
             }
           } catch {
             // ignore cloud fetch errors; fall back to local
           }
         }
 
-        const winner =
-          remote && remote.ts >= localTs
-            ? remote
-            : localValid
-              ? { data: local!.data as IssueDoc, ts: localTs }
-              : null;
+        const baseline = loadBaseline(baselineKeyStr);
+        const detection = detectConflict(localSide, remoteSide, baseline?.hash ?? null);
+        if (cancelled) return;
 
-        if (!cancelled && winner) {
-          setIssue(winner.data);
-          lastSavedRef.current = JSON.stringify(winner.data);
-          if (!winner.data.pages.some((p: IssuePageNode) => p.id === selectedId)) {
-            setSelectedId(winner.data.pages[0].id);
-          }
+        if (detection.kind === "conflict" && localSide && remoteSide) {
+          // Pause autosave/cloud sync until the user resolves the conflict.
+          setConflict({ local: localSide, remote: remoteSide });
+          return;
+        }
+
+        if (detection.winner) {
+          // For local-only the cloud is still at baseline (we'll push the
+          // local edits). For remote-only the cloud IS the new baseline.
+          const baselineTs =
+            detection.kind === "remote-only" || detection.kind === "agree"
+              ? detection.winner.ts
+              : null;
+          adoptSnapshot(detection.winner.data, baselineTs);
         }
       } finally {
-        if (!cancelled) setTimeout(() => setAutosaveRestoring(false), 0);
+        if (!cancelled && !conflict) {
+          setTimeout(() => setAutosaveRestoring(false), 0);
+        }
       }
     })();
     return () => {
@@ -215,6 +262,27 @@ function Index() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autosaveKeyStr]);
+
+  const handleConflictResolve = useCallback(
+    (choice: "local" | "remote" | "merge") => {
+      if (!conflict) return;
+      const { local, remote } = conflict;
+      if (choice === "remote") {
+        adoptSnapshot(remote.data, remote.ts);
+      } else if (choice === "local") {
+        // Cloud will be overwritten on next push; no baseline yet.
+        adoptSnapshot(local.data, null);
+      } else {
+        const preferNewer = local.ts >= remote.ts ? "local" : "remote";
+        const merged = mergeIssues(local.data, remote.data, preferNewer);
+        adoptSnapshot(merged, null);
+      }
+      setConflict(null);
+      setTimeout(() => setAutosaveRestoring(false), 0);
+    },
+    [conflict, adoptSnapshot],
+  );
+
   const autosave = useAutosave(issue, {
     key: autosaveKeyStr,
     paused: autosaveRestoring,
@@ -241,7 +309,14 @@ function Index() {
           data: value,
           clientUpdatedAt,
         });
-        return new Date(rec.client_updated_at).getTime();
+        const serverTs = new Date(rec.client_updated_at).getTime();
+        // Record the new last-known-good baseline so future restores can tell
+        // local-only / remote-only drift apart from a real conflict.
+        saveBaseline(baselineKeyRef.current, {
+          syncedAt: serverTs,
+          hash: hashOf(value),
+        });
+        return serverTs;
       } catch (err) {
         // Network/server failure → persist to the offline sync queue so it
         // survives reloads and gets uploaded automatically on reconnect.
@@ -270,6 +345,14 @@ function Index() {
         data: item.data,
         clientUpdatedAt: item.clientUpdatedAt,
       });
+      // Drained queue entries also advance the baseline so we don't false-
+      // positive a conflict on the next restore of the same issue.
+      if (userId && item.issueId === issue.meta.issueId) {
+        saveBaseline(baselineKey(userId, item.issueId), {
+          syncedAt: item.clientUpdatedAt,
+          hash: hashOf(item.data),
+        });
+      }
     },
   });
   // Page dimensions (and margin/bleed) come from the active publication.
