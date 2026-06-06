@@ -230,6 +230,71 @@ function Index() {
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
 
+  // ----- Placement undo / redo history -----
+  // Records changes made via drag-on-canvas, sidebar pin edits, AttachmentsPanel
+  // reassignments, and AI staff `place_attachment` calls so they can be reverted.
+  type PlacementPatch = {
+    page_id?: string | null;
+    region?: string | null;
+    position_x?: number | null;
+    position_y?: number | null;
+  };
+  type PlacementHistoryEntry = { id: string; before: PlacementPatch; after: PlacementPatch };
+  const undoStackRef = useRef<PlacementHistoryEntry[]>([]);
+  const redoStackRef = useRef<PlacementHistoryEntry[]>([]);
+  const [historyTick, setHistoryTick] = useState(0);
+  const attachmentRowsRef = useRef(attachments.rows);
+  useEffect(() => {
+    attachmentRowsRef.current = attachments.rows;
+  }, [attachments.rows]);
+
+  const applyPlacement = useCallback(
+    async (id: string, patch: PlacementPatch, opts?: { silent?: boolean }) => {
+      const current = attachmentRowsRef.current.find((r) => r.id === id);
+      if (!current) return;
+      const before: PlacementPatch = {};
+      const after: PlacementPatch = {};
+      let changed = false;
+      for (const k of ["page_id", "region", "position_x", "position_y"] as const) {
+        if (k in patch && patch[k] !== current[k]) {
+          (before as Record<string, unknown>)[k] = current[k];
+          (after as Record<string, unknown>)[k] = patch[k];
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      await attachments.updateAssignment(id, patch);
+      if (!opts?.silent) {
+        undoStackRef.current.push({ id, before, after });
+        if (undoStackRef.current.length > 100) undoStackRef.current.shift();
+        redoStackRef.current = [];
+        setHistoryTick((t) => t + 1);
+      }
+    },
+    [attachments],
+  );
+
+  const undoPlacement = useCallback(async () => {
+    const entry = undoStackRef.current.pop();
+    if (!entry) return;
+    await attachments.updateAssignment(entry.id, entry.before);
+    redoStackRef.current.push(entry);
+    setHistoryTick((t) => t + 1);
+  }, [attachments]);
+
+  const redoPlacement = useCallback(async () => {
+    const entry = redoStackRef.current.pop();
+    if (!entry) return;
+    await attachments.updateAssignment(entry.id, entry.after);
+    undoStackRef.current.push(entry);
+    setHistoryTick((t) => t + 1);
+  }, [attachments]);
+
+  const canUndoPlacement = undoStackRef.current.length > 0;
+  const canRedoPlacement = redoStackRef.current.length > 0;
+  // Keep historyTick in the dep graph so the buttons re-render on stack changes.
+  void historyTick;
+
   // Per-page layout (free-form, two-column, image-top, …) persists in
   // page_status. The hook auto-creates rows for new pages, subscribes to
   // realtime updates, and exposes setLayout + layoutOf for the current
