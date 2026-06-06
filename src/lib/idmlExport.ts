@@ -21,10 +21,25 @@ import {
   type IssuePageNode,
 } from "@/lib/coverDefaults";
 
-// --- page geometry (US Letter, points) -------------------------------------
-const PAGE_W = 612; // 8.5"
-const PAGE_H = 792; // 11"
-const MARGIN = 54;  // 0.75"
+// --- page geometry (in PostScript points; 72 pt = 1 inch) -----------------
+// Defaults to US Letter; `buildIdml` / `buildIdmlPackage` / `downloadIdml`
+// / `downloadIdmlPackage` accept a `dim` argument (inches) so each
+// publication's chosen page size flows through the IDML and README.
+const PT_PER_IN = 72;
+const DEFAULT_INCHES = { w: 8.5, h: 11 };
+const MARGIN = 54; // 0.75"
+
+export type IdmlDim = { w: number; h: number }; // inches
+
+type Geom = { PAGE_W: number; PAGE_H: number };
+const geomFromInches = (dim?: IdmlDim): Geom => {
+  const inches = dim && dim.w > 0 && dim.h > 0 ? dim : DEFAULT_INCHES;
+  return {
+    PAGE_W: +(inches.w * PT_PER_IN).toFixed(4),
+    PAGE_H: +(inches.h * PT_PER_IN).toFixed(4),
+  };
+};
+
 
 // --- helpers ---------------------------------------------------------------
 const xmlEscape = (s: string): string =>
