@@ -678,7 +678,7 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData; dim?: { w
   const showHeaderFolio = L !== "full-image-overlay";
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       {showHeaderFolio && <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />}
       {blocks}
       {L !== "full-image-overlay" && <ArticleFooter data={data} pal={pal} />}
@@ -697,7 +697,7 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData; dim?: { w: nu
   const isFramed = data.layout === "framed";
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       <Draggable
         blockKey="image"
         style={{
@@ -869,7 +869,7 @@ const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData; dim?: {
   const pal = PALETTES[data.palette];
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
 
       <Draggable
@@ -1064,7 +1064,7 @@ const AdPreview = forwardRef<HTMLDivElement, { data: AdData; dim?: { w: number; 
   const isFramed = data.layout === "framed";
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       {/* Image */}
       <Draggable
         blockKey="image"
@@ -1231,7 +1231,7 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData; dim?:
   const pal = PALETTES[data.palette];
 
   return (
-    <Page innerRef={ref} pal={pal}>
+    <Page innerRef={ref} pal={pal} dim={dim}>
       {/* Optional background image */}
       {data.imageUrl && (
         <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
