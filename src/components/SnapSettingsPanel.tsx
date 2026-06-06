@@ -7,6 +7,8 @@ import {
   type SnapSettings,
 } from "@/lib/snapSettings";
 
+export type SnapPageRef = { id: string; label: string };
+
 type PageOverrideProps = {
   /** Label shown for the per-page section (e.g. page type or folio). */
   pageLabel?: string;
@@ -14,6 +16,12 @@ type PageOverrideProps = {
   override?: Partial<SnapSettings> | null;
   /** Persist override (pass null to clear). */
   onChangeOverride?: (next: Partial<SnapSettings> | null) => void;
+  /** Other pages in the document, used for the "apply to selected pages" UI. */
+  pages?: SnapPageRef[];
+  /** Currently selected page id — excluded from the multi-select list. */
+  currentPageId?: string;
+  /** Bulk-apply the current override to a list of page ids. */
+  onApplyOverrideToPages?: (ids: string[], override: Partial<SnapSettings> | null) => void;
 };
 
 /**
@@ -24,10 +32,19 @@ type PageOverrideProps = {
  *   selected page uses its own rotation snap angles / tolerances regardless
  *   of the global defaults. When disabled, the page falls back to global.
  */
-export function SnapSettingsPanel({ pageLabel, override, onChangeOverride }: PageOverrideProps = {}) {
+export function SnapSettingsPanel({
+  pageLabel,
+  override,
+  onChangeOverride,
+  pages,
+  currentPageId,
+  onApplyOverrideToPages,
+}: PageOverrideProps = {}) {
   const global = useSnapSettings();
   const [open, setOpen] = useState(false);
   const [pageOpen, setPageOpen] = useState(Boolean(override));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const otherPages = (pages ?? []).filter((p) => p.id !== currentPageId);
   const [anglesText, setAnglesText] = useState<string>(global.rotationAngles.join(", "));
   const overrideEnabled = Boolean(override);
   const effective: SnapSettings = {
@@ -164,6 +181,84 @@ export function SnapSettingsPanel({ pageLabel, override, onChangeOverride }: Pag
                   <p className="text-[10px] leading-relaxed text-muted-foreground">
                     Active only for this page. Other pages keep the global defaults (or their own overrides).
                   </p>
+
+                  {onApplyOverrideToPages && otherPages.length > 0 && (
+                    <div className="space-y-2 border-t border-border pt-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+                          Apply to other pages
+                        </span>
+                        <div className="flex gap-2 text-[10px] tracking-[0.2em] uppercase">
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setSelectedIds(new Set(otherPages.map((p) => p.id)))}
+                          >
+                            All
+                          </button>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setSelectedIds(new Set())}
+                          >
+                            None
+                          </button>
+                        </div>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto border border-border rounded-sm divide-y divide-border">
+                        {otherPages.map((p) => {
+                          const checked = selectedIds.has(p.id);
+                          return (
+                            <label
+                              key={p.id}
+                              className="flex items-center gap-2 px-2 py-1 text-xs cursor-pointer hover:bg-secondary/40"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  setSelectedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) next.add(p.id);
+                                    else next.delete(p.id);
+                                    return next;
+                                  });
+                                }}
+                              />
+                              <span className="truncate">{p.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={selectedIds.size === 0}
+                          onClick={() => {
+                            onApplyOverrideToPages(Array.from(selectedIds), {
+                              edgeTolerancePx: effective.edgeTolerancePx,
+                              rotationTolerance: effective.rotationTolerance,
+                              rotationAngles: effective.rotationAngles,
+                            });
+                          }}
+                          className="flex-1 px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Apply override ({selectedIds.size})
+                        </button>
+                        <button
+                          type="button"
+                          disabled={selectedIds.size === 0}
+                          onClick={() => {
+                            onApplyOverrideToPages(Array.from(selectedIds), null);
+                          }}
+                          className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Remove snap override from selected pages"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </fieldset>

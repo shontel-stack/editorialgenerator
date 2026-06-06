@@ -411,6 +411,18 @@ function Index() {
       ),
     }));
 
+  /** Apply (or clear) the same snap override across many pages in one shot. */
+  const applySnapOverrideToPages = (ids: string[], patch: Partial<SnapSettings> | null) => {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        idSet.has(p.id) ? ({ ...p, snapOverride: patch ?? undefined } as IssuePageNode) : p,
+      ),
+    }));
+  };
+
   const movePage = (id: string, dir: -1 | 1) =>
     setIssue((d) => {
       const idx = d.pages.findIndex((p) => p.id === id);
@@ -867,6 +879,12 @@ function Index() {
             pageLabel={selected.pageType}
             override={selected.snapOverride ?? null}
             onChangeOverride={(next) => setSnapOverride(selected.id, next)}
+            currentPageId={selected.id}
+            pages={issue.pages.map((p, i) => ({
+              id: p.id,
+              label: `${String(i + 1).padStart(2, "0")} · ${p.pageType}${p.snapOverride ? " ●" : ""}`,
+            }))}
+            onApplyOverrideToPages={applySnapOverrideToPages}
           />
 
 
