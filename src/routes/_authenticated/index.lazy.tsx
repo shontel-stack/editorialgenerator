@@ -2147,16 +2147,18 @@ function Index() {
         publicationId={activePublication?.id ?? null}
         publicationName={activePublication?.name ?? null}
         selectedPageId={selected.id}
-        attachments={attachments.rows.map((r) => ({
-          id: r.id,
-          file_name: r.file_name,
-          mime_type: r.mime_type,
-          kind: r.kind,
-          page_id: r.page_id,
-          region: r.region,
-          position_x: r.position_x,
-          position_y: r.position_y,
-        }))}
+        attachments={attachments.rows
+          .filter((r): r is typeof r & { kind: "template" | "reference" } => r.kind !== "library")
+          .map((r) => ({
+            id: r.id,
+            file_name: r.file_name,
+            mime_type: r.mime_type,
+            kind: r.kind,
+            page_id: r.page_id,
+            region: r.region,
+            position_x: r.position_x,
+            position_y: r.position_y,
+          }))}
         onPlaceAttachment={(id, patch) => applyPlacement(id, patch)}
       />
 
