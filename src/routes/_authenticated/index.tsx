@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { usePanelRef } from "react-resizable-panels";
 import { PagePreview } from "@/components/PagePreview";
 import { GuidesOverlay } from "@/components/GuidesOverlay";
 import { SnapSettingsPanel } from "@/components/SnapSettingsPanel";
@@ -690,10 +692,30 @@ function Index() {
     r.readAsText(file);
   };
 
+  // Resizable workspace panel refs + collapsed state
+  const leftPanelRef = usePanelRef();
+  const middlePanelRef = usePanelRef();
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [middleCollapsed, setMiddleCollapsed] = useState(false);
+  const toggleLeftPanel = () => {
+    const p = leftPanelRef.current;
+    if (!p) return;
+    p.isCollapsed() ? p.expand() : p.collapse();
+  };
+  const toggleMiddlePanel = () => {
+    const p = middlePanelRef.current;
+    if (!p) return;
+    p.isCollapsed() ? p.expand() : p.collapse();
+  };
+  const selectedHasOverrides =
+    (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
+    (selected.textScales && Object.keys(selected.textScales).length > 0) ||
+    (selected.blockLinks && Object.keys(selected.blockLinks).length > 0);
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card sticky top-0 z-30">
-        <div className="mx-auto max-w-[1800px] px-8 py-4 flex items-center justify-between gap-6 flex-wrap">
+        <div className="mx-auto max-w-full px-4 py-4 flex items-center justify-between gap-6 flex-wrap">
           <div className="flex items-center gap-4">
             {/* Brand wordmark */}
             <div className="flex items-center gap-3">
@@ -776,7 +798,22 @@ function Index() {
       </header>
 
 
-      <div className="mx-auto max-w-[1800px] px-8 py-8 grid gap-6 lg:grid-cols-[260px_380px_1fr]">
+      <div className="px-3 py-3">
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="min-h-[calc(100vh-140px)] gap-0 rounded-sm"
+      >
+        <ResizablePanel
+          panelRef={leftPanelRef}
+          id="ws-left"
+          defaultSize={20}
+          minSize={14}
+          maxSize={35}
+          collapsible
+          collapsedSize={0}
+          onResize={(size) => setLeftCollapsed(size.asPercentage < 1)}
+        >
+        <div className="h-full overflow-y-auto pr-3">
         {/* Page list */}
         <aside className="space-y-3">
           <div className="border border-border bg-card">
@@ -873,62 +910,7 @@ function Index() {
           </div>
 
 
-          {/* Spread view toggle as a clean toolbar pill */}
-          <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between">
-            <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Preview mode</span>
-            <div className="inline-flex border border-border rounded-sm overflow-hidden">
-              <button
-                onClick={() => setSpreadView(false)}
-                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase transition ${!spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-              >
-                Single
-              </button>
-              <button
-                onClick={() => setSpreadView(true)}
-                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase transition ${spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-              >
-                Spread
-              </button>
-            </div>
-          </div>
 
-          {/* Layout edit toggle — drag blocks to reposition on the current page */}
-          <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between gap-2">
-            <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Edit layout</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowGuides((v) => !v)}
-                className={`px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${showGuides ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-                title="Toggle non-printing margin & bleed guides"
-              >
-                {showGuides ? "Guides on" : "Guides off"}
-              </button>
-              {editLayout && (
-                (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
-                (selected.textScales && Object.keys(selected.textScales).length > 0) ||
-                (selected.blockLinks && Object.keys(selected.blockLinks).length > 0)
-              ) && (
-                <button
-                  onClick={() => resetOverrides(selected.id)}
-                  className="px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary"
-                  title="Reset all block positions on this page"
-                >
-                  Reset
-                </button>
-              )}
-              <button
-                onClick={() => setEditLayout((v) => !v)}
-                className={`px-3 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${editLayout ? "bg-foreground text-background" : "hover:bg-secondary"}`}
-              >
-                {editLayout ? "Done" : "Drag blocks"}
-              </button>
-            </div>
-          </div>
-          {editLayout && (
-            <p className="text-[10px] leading-relaxed text-muted-foreground -mt-2 px-1">
-              Drag any outlined block on the page. Use the <strong>+ Add</strong> palette in the top-right of the page to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
-            </p>
-          )}
 
           <SnapSettingsPanel
             pageLabel={selected.pageType}
@@ -1100,8 +1082,20 @@ function Index() {
             </p>
           </Section>
         </aside>
-
-
+        </div>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel
+          panelRef={middlePanelRef}
+          id="ws-middle"
+          defaultSize={26}
+          minSize={18}
+          maxSize={42}
+          collapsible
+          collapsedSize={0}
+          onResize={(size) => setMiddleCollapsed(size.asPercentage < 1)}
+        >
+        <div className="h-full overflow-y-auto px-3">
         {/* Editor for selected page */}
         <aside className="space-y-6">
           {selected.pageType === "cover" && (
@@ -1185,12 +1179,83 @@ function Index() {
             </p>
           </Section>
         </aside>
+        </div>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel id="ws-canvas" defaultSize={54} minSize={30}>
+        <div className="h-full overflow-y-auto pl-3 flex flex-col gap-3">
+          {/* Canvas ribbon — most-used controls + panel collapse toggles */}
+          <div className="border border-border bg-card rounded-sm px-2 py-1.5 flex items-center gap-2 flex-wrap sticky top-0 z-10">
+            <button
+              onClick={toggleLeftPanel}
+              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
+              title={leftCollapsed ? "Show pages panel" : "Hide pages panel"}
+              aria-label={leftCollapsed ? "Show pages panel" : "Hide pages panel"}
+            >
+              {leftCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={toggleMiddlePanel}
+              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
+              title={middleCollapsed ? "Show edit panel" : "Hide edit panel"}
+              aria-label={middleCollapsed ? "Show edit panel" : "Hide edit panel"}
+            >
+              {middleCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
+            </button>
+            <div className="h-5 w-px bg-border mx-1" />
+            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden sm:inline">View</span>
+            <div className="inline-flex border border-border rounded-sm overflow-hidden">
+              <button
+                onClick={() => setSpreadView(false)}
+                className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase transition ${!spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                Single
+              </button>
+              <button
+                onClick={() => setSpreadView(true)}
+                className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase transition ${spreadView ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              >
+                Spread
+              </button>
+            </div>
+            <button
+              onClick={() => setShowGuides((v) => !v)}
+              className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${showGuides ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              title="Toggle non-printing margin & bleed guides"
+            >
+              {showGuides ? "Guides on" : "Guides off"}
+            </button>
+            <button
+              onClick={() => setEditLayout((v) => !v)}
+              className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${editLayout ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+              title="Drag blocks to reposition them on the page"
+            >
+              {editLayout ? "Done" : "Drag blocks"}
+            </button>
+            {editLayout && selectedHasOverrides && (
+              <button
+                onClick={() => resetOverrides(selected.id)}
+                className="px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm hover:bg-secondary"
+                title="Reset all block positions on this page"
+              >
+                Reset
+              </button>
+            )}
+            <span className="ml-auto text-[10px] tracking-[0.3em] uppercase text-muted-foreground hidden md:inline">
+              {dimInches.w}″ × {dimInches.h}″
+            </span>
+          </div>
+          {editLayout && (
+            <p className="text-[10px] leading-relaxed text-muted-foreground px-1">
+              Drag any outlined block on the page. Use the <strong>+ Add</strong> palette in the top-right of the page to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
+            </p>
+          )}
 
         {/* Preview */}
         <section
           ref={stageRef}
-          className="relative bg-secondary/60 border border-border overflow-hidden"
-          style={{ minHeight: "85vh", aspectRatio: `${stageW / dimPx.h}` }}
+          className="relative bg-secondary/60 border border-border overflow-hidden flex-1"
+          style={{ minHeight: "70vh", aspectRatio: `${stageW / dimPx.h}` }}
         >
           <div
             className="absolute left-1/2 top-1/2 origin-center"
@@ -1254,6 +1319,9 @@ function Index() {
             )}
           </div>
         </section>
+        </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
       </div>
 
 
@@ -1283,7 +1351,7 @@ function Index() {
 
 
       <footer className="border-t border-border mt-8">
-        <div className="mx-auto max-w-[1800px] px-8 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
+        <div className="mx-auto max-w-full px-4 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
           <span>The Arts Today · Editorial Page System</span>
           <span>Page size · {dimInches.w} × {dimInches.h} in</span>
         </div>
