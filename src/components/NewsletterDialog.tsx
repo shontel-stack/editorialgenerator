@@ -98,7 +98,7 @@ export function NewsletterDialog({ open, onOpenChange, issue, issueSlug }: Props
         publication: issue.master.publication || "The Arts Today",
         issueLabel,
         dateLabel,
-        tagline: issue.meta.tagline || "Your Source for Art Appreciation",
+        tagline: "Your Source for Art Appreciation",
         subject: result.subject,
         preheader: result.preheader,
         intro: result.intro,
