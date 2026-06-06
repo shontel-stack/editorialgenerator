@@ -139,6 +139,42 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
+
+  // ----- Autosave: persist the IssueDoc per (user, issueId) -----
+  const autosaveKeyStr = useMemo(
+    () => autosaveKey(userId ?? null, issue.meta.issueId),
+    [userId, issue.meta.issueId],
+  );
+  const [autosaveRestoring, setAutosaveRestoring] = useState(true);
+  const restoredKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    // Try to restore the autosaved snapshot for this (user, issueId).
+    if (restoredKeyRef.current === autosaveKeyStr) return;
+    restoredKeyRef.current = autosaveKeyStr;
+    setAutosaveRestoring(true);
+    try {
+      const rec = loadAutosave<IssueDoc>(autosaveKeyStr);
+      if (rec?.data?.pages?.length && rec.data.meta?.issueId === issue.meta.issueId) {
+        setIssue(rec.data);
+        lastSavedRef.current = JSON.stringify(rec.data);
+        if (!rec.data.pages.some((p) => p.id === selectedId)) {
+          setSelectedId(rec.data.pages[0].id);
+        }
+      }
+    } catch {
+      // ignore restore failures
+    } finally {
+      // Defer un-pausing so the autosave hook sees the restored value as baseline.
+      setTimeout(() => setAutosaveRestoring(false), 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosaveKeyStr]);
+  const autosave = useAutosave(issue, {
+    key: autosaveKeyStr,
+    paused: autosaveRestoring,
+    debounceMs: 1500,
+    maxIntervalMs: 8000,
+  });
   // Page dimensions (and margin/bleed) come from the active publication.
   const pageDims = useMemo(() => getPageDimensions(activePublication), [activePublication]);
   const dimPx = pageDims.px;
