@@ -129,6 +129,7 @@ function Index() {
   const dimPx = pageDims.px;
   const dimInches = pageDims.inches;
   const pageMargins = useMemo(() => getPageMargins(activePublication), [activePublication]);
+  const snapSettings = useSnapSettings();
   // Snap targets: bleed (outside trim), trim edges, margin (safe area), centers.
   // Coords are in page-px at 300 DPI to match the editor canvas.
   const snapGuides = useMemo(() => {
@@ -141,9 +142,9 @@ function Index() {
     return {
       xs: [-bleed, 0, mL, dimPx.w / 2, dimPx.w - mR, dimPx.w, dimPx.w + bleed],
       ys: [-bleed, 0, mT, dimPx.h / 2, dimPx.h - mB, dimPx.h, dimPx.h + bleed],
-      threshold: 30, // ~0.1 in at 300 DPI
+      threshold: snapSettings.edgeTolerancePx,
     };
-  }, [pageMargins, dimPx.w, dimPx.h]);
+  }, [pageMargins, dimPx.w, dimPx.h, snapSettings.edgeTolerancePx]);
   // Full IDML/Canva geometry packet — width/height + margins + bleed.
   const idmlDim = useMemo(
     () => ({
