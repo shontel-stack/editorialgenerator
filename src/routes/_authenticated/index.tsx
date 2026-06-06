@@ -25,6 +25,7 @@ import {
   PAGE_LAYOUT_LABELS,
   PAGE_LAYOUT_DESCRIPTIONS,
   DEFAULT_PAGE_LAYOUT,
+  PAGE_LAYOUT_COLUMNS,
   type PageLayout,
 } from "@/lib/pageLayouts";
 import {
