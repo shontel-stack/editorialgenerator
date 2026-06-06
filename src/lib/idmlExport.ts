@@ -269,13 +269,13 @@ const graphicXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <StrokeStyle Self="StrokeStyle/$ID/Solid" Name="$ID/Solid"/>
 </idPkg:Graphic>`;
 
-const preferencesXml = ({ PAGE_W, PAGE_H }: Geom): string => {
+const preferencesXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML, BLEED }: Geom): string => {
   const orientation = PAGE_W > PAGE_H ? "Landscape" : "Portrait";
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
 <idPkg:Preferences xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
-  <DocumentPreference Self="dpref" PageHeight="${PAGE_H}" PageWidth="${PAGE_W}" PageOrientation="${orientation}" PagesPerDocument="1" FacingPages="false" AllowPageShuffle="true" DocumentBleedBottomOffset="0" DocumentBleedTopOffset="0" DocumentBleedInsideOrLeftOffset="0" DocumentBleedOutsideOrRightOffset="0" SlugBottomOffset="0" SlugTopOffset="0" SlugInsideOrLeftOffset="0" SlugRightOrOutsideOffset="0" DocumentBleedUniformSize="true" DocumentSlugUniformSize="false" PreserveLayoutWhenShuffling="true" ColumnDirection="Horizontal" ColumnGuideColor="PurpleRed"/>
-  <MarginPreference Self="mpref" ColumnCount="1" ColumnGutter="12" Top="${MARGIN}" Bottom="${MARGIN}" Left="${MARGIN}" Right="${MARGIN}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - 2 * MARGIN}"/>
+  <DocumentPreference Self="dpref" PageHeight="${PAGE_H}" PageWidth="${PAGE_W}" PageOrientation="${orientation}" PagesPerDocument="1" FacingPages="false" AllowPageShuffle="true" DocumentBleedBottomOffset="${BLEED}" DocumentBleedTopOffset="${BLEED}" DocumentBleedInsideOrLeftOffset="${BLEED}" DocumentBleedOutsideOrRightOffset="${BLEED}" SlugBottomOffset="0" SlugTopOffset="0" SlugInsideOrLeftOffset="0" SlugRightOrOutsideOffset="0" DocumentBleedUniformSize="true" DocumentSlugUniformSize="false" PreserveLayoutWhenShuffling="true" ColumnDirection="Horizontal" ColumnGuideColor="PurpleRed"/>
+  <MarginPreference Self="mpref" ColumnCount="1" ColumnGutter="12" Top="${MT}" Bottom="${MB}" Left="${ML}" Right="${MR}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - ML - MR}"/>
   <TransparencyDefaultContainerObject Self="TransparencyDefaultContainer">
     <TransparencyDefault Self="TransparencyDefault"/>
   </TransparencyDefaultContainerObject>
@@ -283,7 +283,7 @@ const preferencesXml = ({ PAGE_W, PAGE_H }: Geom): string => {
 </idPkg:Preferences>`;
 };
 
-const masterSpreadXml = ({ PAGE_W, PAGE_H }: Geom): string => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+const masterSpreadXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML }: Geom): string => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
 <idPkg:MasterSpread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
   <MasterSpread Self="uMaster" Name="A-Master" NamePrefix="A" BaseName="Master" ShowMasterItems="true" PageCount="1" OverriddenPageItemProps="">
@@ -291,7 +291,7 @@ const masterSpreadXml = ({ PAGE_W, PAGE_H }: Geom): string => `<?xml version="1.
       <Properties>
         <PageColor type="enumeration">UseMasterColor</PageColor>
       </Properties>
-      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MARGIN}" Bottom="${MARGIN}" Left="${MARGIN}" Right="${MARGIN}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - 2 * MARGIN}"/>
+      <MarginPreference ColumnCount="1" ColumnGutter="12" Top="${MT}" Bottom="${MB}" Left="${ML}" Right="${MR}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - ML - MR}"/>
     </Page>
   </MasterSpread>
 </idPkg:MasterSpread>`;
