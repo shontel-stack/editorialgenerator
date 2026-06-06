@@ -217,15 +217,45 @@ function Index() {
     debounceMs: 4000,
     push: async (value) => {
       if (!userId) throw new Error("Not signed in");
-      const rec = await upsertIssueDraft<IssueDoc>({
-        userId,
-        issueId: value.meta.issueId,
-        publicationId: activePublication?.id ?? null,
-        issueLabel: value.meta.issue ?? null,
-        data: value,
-        clientUpdatedAt: Date.now(),
+      const clientUpdatedAt = Date.now();
+      try {
+        const rec = await upsertIssueDraft<IssueDoc>({
+          userId,
+          issueId: value.meta.issueId,
+          publicationId: activePublication?.id ?? null,
+          issueLabel: value.meta.issue ?? null,
+          data: value,
+          clientUpdatedAt,
+        });
+        return new Date(rec.client_updated_at).getTime();
+      } catch (err) {
+        // Network/server failure → persist to the offline sync queue so it
+        // survives reloads and gets uploaded automatically on reconnect.
+        enqueueDraft<IssueDoc>(userId, {
+          issueId: value.meta.issueId,
+          publicationId: activePublication?.id ?? null,
+          issueLabel: value.meta.issue ?? null,
+          data: value,
+          clientUpdatedAt,
+          lastError: (err as Error).message,
+        });
+        throw err;
+      }
+    },
+  });
+
+  // ----- Offline sync queue drainer -----
+  const queueDrainer = useSyncQueueDrainer<IssueDoc>({
+    userId: userId ?? null,
+    push: async (item) => {
+      await upsertIssueDraft<IssueDoc>({
+        userId: userId!,
+        issueId: item.issueId,
+        publicationId: item.publicationId,
+        issueLabel: item.issueLabel,
+        data: item.data,
+        clientUpdatedAt: item.clientUpdatedAt,
       });
-      return new Date(rec.client_updated_at).getTime();
     },
   });
   // Page dimensions (and margin/bleed) come from the active publication.
