@@ -43,6 +43,8 @@ export function SnapSettingsPanel({
   const global = useSnapSettings();
   const [open, setOpen] = useState(false);
   const [pageOpen, setPageOpen] = useState(Boolean(override));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const otherPages = (pages ?? []).filter((p) => p.id !== currentPageId);
   const [anglesText, setAnglesText] = useState<string>(global.rotationAngles.join(", "));
   const overrideEnabled = Boolean(override);
   const effective: SnapSettings = {
