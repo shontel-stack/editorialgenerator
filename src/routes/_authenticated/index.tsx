@@ -1516,8 +1516,10 @@ function Index() {
         publicationName={activePublication?.name ?? null}
         selectedPageId={selected.id}
         selectedPageLabel={selected.pageType}
+        pages={pageRefsForStatus}
         attachments={attachments}
       />
+
 
       <StaffPanel
         open={staffOpen}
