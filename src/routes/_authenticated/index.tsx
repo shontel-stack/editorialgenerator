@@ -239,6 +239,7 @@ function Index() {
     publicationId: activePublication?.id ?? null,
     pages: pageRefsForStatus,
   });
+  const layoutPresets = useLayoutPresets(userId);
   const [pendingLayout, setPendingLayout] = useState<PageLayout | null>(null);
 
   // Hidden off-screen render stage holds a div ref for every page node.
