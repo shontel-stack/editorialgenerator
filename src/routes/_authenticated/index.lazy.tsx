@@ -2139,6 +2139,23 @@ function Index() {
         selectedPageLabel={selected.pageType}
         pages={pageRefsForStatus}
         attachments={{ ...attachments, updateAssignment: applyPlacement }}
+        library={libraryAttachments}
+        onInsertImage={(row) => {
+          if (!row.signedUrl) return;
+          const existing = selected.customBlocks ?? [];
+          const block = {
+            id: newId(),
+            kind: "image" as const,
+            x: 80,
+            y: 80,
+            z: 50,
+            w: 480,
+            h: 320,
+            imageUrl: row.signedUrl,
+            imageFit: "cover" as const,
+          };
+          setCustomBlocks(selected.id, [...existing, block]);
+        }}
       />
 
 
