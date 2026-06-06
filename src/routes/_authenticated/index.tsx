@@ -263,7 +263,7 @@ function Index() {
         }
       }
       if (!changed) return;
-      await applyPlacement(id, patch);
+      await attachments.updateAssignment(id, patch);
       if (!opts?.silent) {
         undoStackRef.current.push({ id, before, after });
         if (undoStackRef.current.length > 100) undoStackRef.current.shift();
