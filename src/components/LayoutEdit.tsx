@@ -385,7 +385,7 @@ export function Draggable({
           {typeof previewScale === "number" ? ` · ${Math.round(previewScale * 100)}%` : ""}
         </div>
       )}
-      {editing && ctx && (
+      {isSelected && ctx && (
         <div
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -400,7 +400,7 @@ export function Draggable({
             gap: 6,
             background: "white",
             color: "#0a0a0a",
-            border: "1px solid #6b1320",
+            border: "1px solid #2563eb",
             borderRadius: 4,
             padding: "4px 6px",
             fontSize: 11,
@@ -411,6 +411,22 @@ export function Draggable({
             pointerEvents: "auto",
           }}
         >
+          <span
+            title="Drag to move"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "2px 4px",
+              color: "#2563eb",
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Move size={12} />
+            <span>Selected</span>
+          </span>
           <button
             type="button"
             title="Resize text"
