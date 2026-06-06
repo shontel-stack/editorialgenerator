@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { toJpeg } from "html-to-image";
-import { jsPDF } from "jspdf";
 import { Copy, Download, FileText, Link as LinkIcon, Loader2, Sparkles, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +16,6 @@ import {
 } from "@/lib/newsletter";
 import { generateNewsletterHighlights } from "@/lib/newsletter.functions";
 import { snapshotIssue } from "@/lib/issue-snapshot";
-import { exportNewsletterInteractivePdf } from "@/lib/newsletter-pdf";
 import type { ExportDim } from "@/lib/exportCover";
 
 type Props = {
@@ -148,6 +145,10 @@ export function NewsletterDialog({
       const rect = node.getBoundingClientRect();
       const widthPx = Math.max(600, Math.round(rect.width));
       const heightPx = Math.max(800, Math.round(rect.height));
+      const [{ toJpeg }, { jsPDF }] = await Promise.all([
+        import("html-to-image"),
+        import("jspdf"),
+      ]);
       const jpeg = await toJpeg(node, {
         width: widthPx,
         height: heightPx,
@@ -189,6 +190,7 @@ export function NewsletterDialog({
       pageNodes.forEach((el, id) => {
         if (el) map.set(id, el);
       });
+      const { exportNewsletterInteractivePdf } = await import("@/lib/newsletter-pdf");
       await exportNewsletterInteractivePdf({
         newsletterNode: node,
         pageNodes: map,
