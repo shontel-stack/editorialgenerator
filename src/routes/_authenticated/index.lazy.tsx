@@ -2047,6 +2047,7 @@ function Index() {
                 dim={dimPx}
                 scale={scale}
                 onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
+                editing={editLayout && spread.left.id === selected.id}
               />
             </div>
             {spreadView && spread.right && (
@@ -2087,6 +2088,7 @@ function Index() {
                   dim={dimPx}
                   scale={scale}
                   onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
+                  editing={editLayout && spread.right.id === selected.id}
                 />
               </div>
             )}
