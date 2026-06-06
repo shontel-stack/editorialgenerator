@@ -156,11 +156,30 @@ export function WorkspaceSwitcher() {
   // pre-filled, selected, and editable).
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState("");
+  const [appendIssueDate, setAppendIssueDate] = useState(false);
+
+  // Human-readable "current issue date" suffix (e.g. "March 2026"). Using
+  // today's date as the issue date — duplicating a publication is normally
+  // done when starting work on the next issue.
+  const issueDateSuffix = (): string =>
+    new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const stripDateSuffix = (s: string): string =>
+    s.replace(/\s*[—–-]\s*[A-Za-z]+\s+\d{4}\s*$/u, "").trimEnd();
 
   const openDuplicateDialog = () => {
     if (!active || submitting) return;
     setDuplicateName(`${active.name} (copy)`);
+    setAppendIssueDate(false);
     setDuplicateOpen(true);
+  };
+
+  const toggleAppendIssueDate = (next: boolean) => {
+    setAppendIssueDate(next);
+    setDuplicateName((prev) => {
+      const base = stripDateSuffix(prev);
+      return next ? `${base} — ${issueDateSuffix()}` : base;
+    });
   };
 
   const confirmDuplicate = async () => {
@@ -532,6 +551,18 @@ export function WorkspaceSwitcher() {
                 className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
+            <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={appendIssueDate}
+                onChange={(e) => toggleAppendIssueDate(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 accent-foreground cursor-pointer"
+              />
+              <span>
+                Append current issue date{" "}
+                <span className="text-foreground">({issueDateSuffix()})</span> to the name
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <button
