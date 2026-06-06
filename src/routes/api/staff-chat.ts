@@ -77,6 +77,9 @@ export const Route = createFileRoute("/api/staff-chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const auth = await requireAuthFromRequest(request);
+        if (auth instanceof Response) return auth;
+
         let body: StaffChatBody;
         try {
           body = (await request.json()) as StaffChatBody;
