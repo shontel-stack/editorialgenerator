@@ -925,7 +925,7 @@ function Index() {
               </label>
             </div>
             <button
-              onClick={() => downloadIdml(issue, issueSlug || "issue", dimInches)}
+              onClick={() => downloadIdml(issue, issueSlug || "issue", idmlDim)}
               className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
               title="Download a .zip containing the InDesign-editable IDML file"
             >
