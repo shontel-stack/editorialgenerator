@@ -16,6 +16,33 @@ const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
 const newId = () => `cb_${Math.random().toString(36).slice(2, 10)}`;
 
+/** Snap a single coordinate to the nearest guide within threshold. Returns
+ *  the delta to add (snapped - value), or 0 if no guide is close enough. */
+function snapEdge(value: number, guides: number[] | undefined, threshold: number): number {
+  if (!guides || guides.length === 0) return 0;
+  let best = 0;
+  let bestDist = threshold;
+  for (const g of guides) {
+    const d = g - value;
+    const ad = Math.abs(d);
+    if (ad < bestDist) {
+      bestDist = ad;
+      best = d;
+    }
+  }
+  return best;
+}
+
+/** Snap a rotation angle (degrees) to the nearest common angle when close. */
+const ROTATION_SNAPS = [-180, -135, -90, -45, 0, 15, 30, 45, 60, 90, 120, 135, 180];
+const ROTATION_THRESHOLD = 4; // degrees
+function snapRotation(deg: number): number {
+  for (const a of ROTATION_SNAPS) {
+    if (Math.abs(deg - a) <= ROTATION_THRESHOLD) return a;
+  }
+  return deg;
+}
+
 const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
   display: "var(--font-display)",
   serif: "var(--font-serif)",
