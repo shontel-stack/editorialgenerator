@@ -1541,6 +1541,17 @@ function Index() {
         publicationId={activePublication?.id ?? null}
         publicationName={activePublication?.name ?? null}
         selectedPageId={selected.id}
+        attachments={attachments.rows.map((r) => ({
+          id: r.id,
+          file_name: r.file_name,
+          mime_type: r.mime_type,
+          kind: r.kind,
+          page_id: r.page_id,
+          region: r.region,
+          position_x: r.position_x,
+          position_y: r.position_y,
+        }))}
+        onPlaceAttachment={(id, patch) => attachments.updateAssignment(id, patch)}
       />
 
       <ProductionChecklist
