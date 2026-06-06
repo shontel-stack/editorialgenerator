@@ -1510,14 +1510,6 @@ function Index() {
           {/* Canvas ribbon — most-used controls + panel collapse toggles */}
           <div className="border border-border bg-card rounded-sm px-2 py-1.5 flex items-center gap-2 flex-wrap sticky top-0 z-10">
             <button
-              onClick={toggleLeftPanel}
-              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
-              title={leftCollapsed ? "Show pages panel" : "Hide pages panel"}
-              aria-label={leftCollapsed ? "Show pages panel" : "Hide pages panel"}
-            >
-              {leftCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-            </button>
-            <button
               onClick={toggleMiddlePanel}
               className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
               title={middleCollapsed ? "Show edit panel" : "Hide edit panel"}
