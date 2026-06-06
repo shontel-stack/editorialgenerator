@@ -864,7 +864,8 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
 }
 
 function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "image" }>; onChange: (p: Partial<CustomBlock>) => void }) {
-  const snap = useSnapSettings();
+  const ctx = useLayoutEdit();
+  const snap = ctx?.snapSettings ?? useSnapSettings();
   return (
     <>
       <label style={btnStyle("normal")}>
