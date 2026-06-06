@@ -48,7 +48,12 @@ export function SnapSettingsPanel({
   pages,
   currentPageId,
   onApplyOverrideToPages,
+  onUndoOverrides,
+  onRedoOverrides,
+  canUndoOverrides,
+  canRedoOverrides,
 }: PageOverrideProps = {}) {
+
   const global = useSnapSettings();
   const [open, setOpen] = useState(false);
   const [pageOpen, setPageOpen] = useState(Boolean(override));
