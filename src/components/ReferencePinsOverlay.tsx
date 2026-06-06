@@ -21,6 +21,10 @@ type Props = {
     patch: AttachmentAssignment,
     opts?: AssignOpts,
   ) => Promise<void> | void;
+  /** When true, the overlay does not intercept pointer events on empty
+   *  canvas space — so block dragging in layout-edit mode works. Pins
+   *  themselves remain interactive. */
+  editing?: boolean;
 };
 
 function iconFor(mime: string) {
