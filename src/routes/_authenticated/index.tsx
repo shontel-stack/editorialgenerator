@@ -1265,6 +1265,15 @@ function Index() {
               Reset to defaults
             </button>
           </Section>
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-[color:var(--ruby-deep)] transition">
+              <Download className="h-3.5 w-3.5" /> Save &amp; Export <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
 
           <Section title="Issue · Save & Export" defaultOpen>
             <button
