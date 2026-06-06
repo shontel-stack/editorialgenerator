@@ -113,7 +113,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body suppressHydrationWarning>
-        {children}
+        <RootErrorBoundary>{children}</RootErrorBoundary>
         <Scripts />
       </body>
     </html>
