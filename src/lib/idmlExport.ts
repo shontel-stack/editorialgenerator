@@ -375,7 +375,7 @@ const buildSpread = (
   folio: BuiltStory | null,
   geom: Geom,
 ): BuiltSpread => {
-  const { PAGE_W, PAGE_H } = geom;
+  const { PAGE_W, PAGE_H, MT, MR, MB, ML } = geom;
   const spreadSelf = `uSpread_${pageIndex + 1}`;
   const pageSelf = `uPage_${pageIndex + 1}`;
 
@@ -384,10 +384,10 @@ const buildSpread = (
 
   // Main text frame: fills the live area (inside margins).
   const tfId = nextSelfId("uTF");
-  const left = MARGIN;
-  const top = MARGIN;
-  const right = PAGE_W - MARGIN;
-  const bottom = PAGE_H - MARGIN - 24; // leave room for folio
+  const left = ML;
+  const top = MT;
+  const right = PAGE_W - MR;
+  const bottom = PAGE_H - MB - 24; // leave room for folio
   // GeometricBounds: y1 x1 y2 x2 (top left bottom right)
   items.push(
     `      <TextFrame Self="${tfId}" ParentStory="${bodyStory.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${top} ${left} ${bottom} ${right}" ItemTransform="1 0 0 1 0 0">
