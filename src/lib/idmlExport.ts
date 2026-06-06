@@ -410,8 +410,8 @@ const buildSpread = (
   // Image placeholder frame (top of page, half height) when an image is referenced.
   if (text.imageUrl) {
     const imgId = nextSelfId("uIMG");
-    const imgTop = MARGIN;
-    const imgBottom = MARGIN + (PAGE_H - 2 * MARGIN) * 0.45;
+    const imgTop = MT;
+    const imgBottom = MT + (PAGE_H - MT - MB) * 0.45;
     items.push(
       `      <Rectangle Self="${imgId}" ContentType="GraphicType" GeometricBounds="${imgTop} ${left} ${imgBottom} ${right}" ItemTransform="1 0 0 1 0 0" Label="${xmlEscape(text.imageUrl)}">
         <Properties>
