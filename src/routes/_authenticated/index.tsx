@@ -1136,7 +1136,8 @@ function Index() {
                 previewScales={pendingByPage[spread.left.id]?.scales}
                 customBlocks={spread.left.customBlocks ?? []}
                 setCustomBlocks={(next) => setCustomBlocks(spread.left.id, next)}
-                guides={showGuides ? snapGuides : undefined}
+                guides={showGuides ? guidesFor(spread.left) : undefined}
+                snapSettings={effectiveSnapFor(spread.left)}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
@@ -1160,7 +1161,8 @@ function Index() {
                   previewScales={pendingByPage[spread.right.id]?.scales}
                   customBlocks={spread.right.customBlocks ?? []}
                   setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
-                  guides={showGuides ? snapGuides : undefined}
+                  guides={showGuides ? guidesFor(spread.right) : undefined}
+                  snapSettings={effectiveSnapFor(spread.right)}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>
