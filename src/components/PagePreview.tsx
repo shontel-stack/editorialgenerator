@@ -369,8 +369,8 @@ function ArticleFooter({
   );
 }
 
-const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData }>(function ArticlePreview(
-  { data },
+const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData; dim?: { w: number; h: number } }>(function ArticlePreview(
+  { data, dim },
   ref,
 ) {
   const pal = PALETTES[data.palette];
