@@ -190,6 +190,7 @@ export function NewsletterDialog({
       pageNodes.forEach((el, id) => {
         if (el) map.set(id, el);
       });
+      const { exportNewsletterInteractivePdf } = await import("@/lib/newsletter-pdf");
       await exportNewsletterInteractivePdf({
         newsletterNode: node,
         pageNodes: map,
