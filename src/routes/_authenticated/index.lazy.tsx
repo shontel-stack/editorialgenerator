@@ -110,6 +110,8 @@ import {
 
   pageNumberFor,
   renderFolio,
+  folioSideForIndex,
+  normalizeFolioTemplate,
   type AdData,
   type ArticleData,
   type ArticleLayout,
