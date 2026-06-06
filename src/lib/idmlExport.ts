@@ -22,21 +22,48 @@ import {
 } from "@/lib/coverDefaults";
 
 // --- page geometry (in PostScript points; 72 pt = 1 inch) -----------------
-// Defaults to US Letter; `buildIdml` / `buildIdmlPackage` / `downloadIdml`
-// / `downloadIdmlPackage` accept a `dim` argument (inches) so each
-// publication's chosen page size flows through the IDML and README.
+// Defaults to US Letter with 0.75" margins and 0.125" bleed.
+// All IDML / package / README entry points accept a `dim` argument (inches)
+// so each publication's chosen page size + margin/bleed flow through.
 const PT_PER_IN = 72;
 const DEFAULT_INCHES = { w: 8.5, h: 11 };
-const MARGIN = 54; // 0.75"
+const DEFAULT_MARGIN_IN = 0.75;
+const DEFAULT_BLEED_IN = 0.125;
 
-export type IdmlDim = { w: number; h: number }; // inches
+export type IdmlDim = {
+  w: number; // inches
+  h: number; // inches
+  marginTop?: number;    // inches
+  marginRight?: number;  // inches
+  marginBottom?: number; // inches
+  marginLeft?: number;   // inches
+  bleed?: number;        // inches (uniform on all four edges)
+};
 
-type Geom = { PAGE_W: number; PAGE_H: number };
+type Geom = {
+  PAGE_W: number;
+  PAGE_H: number;
+  MT: number;   // margin top (pt)
+  MR: number;   // margin right (pt)
+  MB: number;   // margin bottom (pt)
+  ML: number;   // margin left (pt)
+  BLEED: number; // bleed (pt)
+};
+
+const pickIn = (v: number | undefined, d: number) =>
+  typeof v === "number" && isFinite(v) && v >= 0 ? v : d;
+
 const geomFromInches = (dim?: IdmlDim): Geom => {
-  const inches = dim && dim.w > 0 && dim.h > 0 ? dim : DEFAULT_INCHES;
+  const w = dim && dim.w > 0 ? dim.w : DEFAULT_INCHES.w;
+  const h = dim && dim.h > 0 ? dim.h : DEFAULT_INCHES.h;
   return {
-    PAGE_W: +(inches.w * PT_PER_IN).toFixed(4),
-    PAGE_H: +(inches.h * PT_PER_IN).toFixed(4),
+    PAGE_W: +(w * PT_PER_IN).toFixed(4),
+    PAGE_H: +(h * PT_PER_IN).toFixed(4),
+    MT: +(pickIn(dim?.marginTop,    DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    MR: +(pickIn(dim?.marginRight,  DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    MB: +(pickIn(dim?.marginBottom, DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    ML: +(pickIn(dim?.marginLeft,   DEFAULT_MARGIN_IN) * PT_PER_IN).toFixed(4),
+    BLEED: +(pickIn(dim?.bleed,     DEFAULT_BLEED_IN)  * PT_PER_IN).toFixed(4),
   };
 };
 
