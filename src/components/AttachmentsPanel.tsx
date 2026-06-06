@@ -19,10 +19,12 @@ import {
   isPdf,
   isWordDoc,
   signAttachmentUrl,
+  type AttachmentAssignment,
   type AttachmentRow,
   type AttachmentSortKey,
   type AttachmentWithUrl,
 } from "@/lib/attachments";
+
 
 const PAGE_SIZE = 20;
 
