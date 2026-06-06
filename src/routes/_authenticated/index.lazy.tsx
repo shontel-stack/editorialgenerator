@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -105,6 +105,8 @@ import {
   formatPageNumber,
   googleFontsUrl,
   makeNode,
+  newId,
+
   pageNumberFor,
   renderFolio,
   type AdData,
@@ -1083,6 +1085,32 @@ function Index() {
     setSelectedId(a.id);
   };
 
+  /** Duplicate a page (deep-clone data + per-block overrides + custom blocks)
+   *  and insert it directly after the source. Skips cover/back. */
+  const duplicatePage = (id: string) => {
+    const src = issue.pages.find((p) => p.id === id);
+    if (!src || src.pageType === "cover" || src.pageType === "back") return;
+    const cloned: IssuePageNode = {
+      ...(JSON.parse(JSON.stringify(src)) as IssuePageNode),
+      id: newId(),
+      customBlocks: (src.customBlocks ?? []).map((b) => ({ ...b, id: newId() })),
+    };
+    setIssue((d) => {
+      const idx = d.pages.findIndex((p) => p.id === id);
+      if (idx < 0) return d;
+      const backIdx = d.pages.findIndex((p) => p.pageType === "back");
+      let insertAt = idx + 1;
+      if (backIdx >= 0 && insertAt > backIdx) insertAt = backIdx;
+      const next = [...d.pages];
+      next.splice(insertAt, 0, cloned);
+      return { ...d, pages: next };
+    });
+    setSelectedId(cloned.id);
+  };
+
+
+
+
   // Remove the selected page AND its spread partner (if any).
   const removeSpread = (id: string) =>
     setIssue((d) => {
@@ -1858,7 +1886,19 @@ function Index() {
           <span className="text-[10px] tracking-[0.2em] uppercase text-background/50 hidden lg:inline">
             · {selected.pageType}
           </span>
+          <button
+            type="button"
+            onClick={() => duplicatePage(selected.id)}
+            disabled={selected.pageType === "cover" || selected.pageType === "back"}
+            aria-label="Duplicate page"
+            title="Duplicate this page"
+            className="ml-1 inline-flex items-center gap-1 px-1.5 py-1 rounded-sm border border-background/25 text-background/80 hover:bg-background/10 hover:text-background transition disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Copy className="h-3 w-3" />
+            <span className="text-[10px] tracking-[0.2em] uppercase hidden md:inline">Duplicate</span>
+          </button>
         </div>
+
 
         <span className="text-[10px] tracking-[0.3em] uppercase text-background/60 hidden sm:inline">View</span>
 
