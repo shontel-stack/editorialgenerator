@@ -157,10 +157,6 @@ export function AutosaveIndicator({
     <span className="px-2 py-1" title={cloudError ?? undefined}>{cloudContent}</span>
   );
 
-  const queueProps = arguments[0] as AutosaveIndicatorProps;
-  const queuePending = queueProps.queuePending ?? 0;
-  const queueDraining = queueProps.queueDraining ?? false;
-  const onRetryQueue = queueProps.onRetryQueue;
   const queueBadge =
     queuePending > 0 ? (
       <button
