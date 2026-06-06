@@ -41,6 +41,7 @@ import {
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
   DEFAULT_FONTS,
+  getPageDimensions,
   makeDefaultIssue,
   newIssueId,
   DEFAULT_MASTER,
