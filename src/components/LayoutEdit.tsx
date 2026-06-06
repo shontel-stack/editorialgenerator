@@ -45,6 +45,9 @@ type Ctx = {
   guides?: SnapGuides;
   /** Effective snap settings for this page (global merged with page override). */
   snapSettings?: SnapSettings;
+  /** Optional: ask the host to enter edit mode for this page (used when the
+   *  add-element palette is shown outside edit mode). */
+  onRequestEdit?: () => void;
 };
 
 const LayoutEditContext = createContext<Ctx | null>(null);
@@ -68,6 +71,7 @@ export function LayoutEditProvider({
   setCustomBlocks,
   guides,
   snapSettings,
+  onRequestEdit,
   children,
 }: Ctx & { children: ReactNode }) {
   return (
@@ -87,6 +91,7 @@ export function LayoutEditProvider({
         setCustomBlocks,
         guides,
         snapSettings,
+        onRequestEdit,
       }}
     >
       {children}
