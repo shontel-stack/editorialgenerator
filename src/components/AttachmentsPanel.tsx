@@ -51,6 +51,14 @@ type Props = {
     remove: (row: AttachmentWithUrl) => Promise<void>;
     updateAssignment?: (id: string, patch: AttachmentAssignment) => Promise<void>;
   };
+  library?: {
+    rows: AttachmentWithUrl[];
+    loading: boolean;
+    error: string | null;
+    upload: (file: File) => Promise<void>;
+    remove: (row: AttachmentWithUrl) => Promise<void>;
+  };
+  onInsertImage?: (row: AttachmentWithUrl) => void;
 };
 
 
