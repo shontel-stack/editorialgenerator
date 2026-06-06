@@ -15,6 +15,7 @@ import { zipSync, strToU8 } from "fflate";
 import {
   formatPageNumber,
   renderFolio,
+  folioSideForIndex,
   type ArticleData,
   type CoverData,
   type IssueDoc,
