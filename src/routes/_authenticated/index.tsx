@@ -939,7 +939,7 @@ function Index() {
                   const { fetched, skipped } = await downloadIdmlPackage(
                     issue,
                     issueSlug || "issue",
-                    dimInches,
+                    idmlDim,
                   );
                   if (skipped.length) {
                     alert(
