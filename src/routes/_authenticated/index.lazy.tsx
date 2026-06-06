@@ -745,10 +745,10 @@ function Index() {
   // with the issue list automatically.
   const pagesForRender = useMemo(() => {
     const contentsEntries = deriveContentsEntries(issue);
-    const folio = renderFolio(issue.master, issue.meta);
     const total = issue.pages.length;
     return issue.pages.map((p, i) => {
       const num = formatPageNumber(issue.master, i + 1, total);
+      const folio = renderFolio(issue.master, issue.meta, folioSideForIndex(i));
       switch (p.pageType) {
         case "cover":
           return { ...p, data: { ...p.data, issue: issue.meta.issue, date: issue.meta.date } };
