@@ -86,8 +86,6 @@ export async function exportPdf(node: HTMLElement, filename: string, dim: Export
 /* -------- multi-page INTERACTIVE publication PDF -------- */
 
 const PT_PER_IN = 72;
-const PAGE_W = COVER_INCHES.w * PT_PER_IN;
-const PAGE_H = COVER_INCHES.h * PT_PER_IN;
 
 export type IssuePage = {
   id: string;
@@ -106,7 +104,11 @@ export async function exportIssuePdf(
   pages: IssuePage[],
   meta: IssueMeta,
   filename: string,
+  dim: ExportDim = DEFAULT_DIM,
 ) {
+  const PAGE_W = dim.inches.w * PT_PER_IN;
+  const PAGE_H = dim.inches.h * PT_PER_IN;
+
   const doc = await PDFDocument.create();
   doc.setTitle(meta.title);
   doc.setAuthor(meta.author);
@@ -119,7 +121,7 @@ export async function exportIssuePdf(
 
   for (let i = 0; i < pages.length; i++) {
     const { node, id } = pages[i];
-    const jpegDataUrl = await renderNodeToJpeg(node);
+    const jpegDataUrl = await renderNodeToJpeg(node, dim);
     const jpegBytes = dataUrlToBytes(jpegDataUrl);
     const image = await doc.embedJpg(jpegBytes);
     const page = doc.addPage([PAGE_W, PAGE_H]);
@@ -127,6 +129,7 @@ export async function exportIssuePdf(
     pageRefs.push(page.ref);
     pageById.set(id, { index: i, ref: page.ref });
   }
+
 
   // Contents links — match rows with data-link-target = target node id
   for (let i = 0; i < pages.length; i++) {
