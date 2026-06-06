@@ -233,6 +233,7 @@ export function Draggable({
     if (!editing || !ctx) return;
     e.preventDefault();
     e.stopPropagation();
+    ctx.setSelectedKey(blockKey);
     const el = e.currentTarget;
     const root = el.closest("[data-cover-root]") as HTMLElement | null;
     const s = ctx.scale || 1;
