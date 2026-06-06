@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { toJpeg } from "html-to-image";
-import { jsPDF } from "jspdf";
 import { Copy, Download, FileText, Link as LinkIcon, Loader2, Sparkles, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +16,6 @@ import {
 } from "@/lib/newsletter";
 import { generateNewsletterHighlights } from "@/lib/newsletter.functions";
 import { snapshotIssue } from "@/lib/issue-snapshot";
-import { exportNewsletterInteractivePdf } from "@/lib/newsletter-pdf";
 import type { ExportDim } from "@/lib/exportCover";
 
 type Props = {
