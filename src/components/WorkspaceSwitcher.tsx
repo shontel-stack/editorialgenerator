@@ -35,6 +35,14 @@ import {
   getPageMargins,
   matchPresetKey,
 } from "@/lib/coverDefaults";
+import {
+  DEFAULT_SCHEDULE_RULES,
+  loadScheduleRules,
+  normalizeRules,
+  saveScheduleRules,
+  validateIssueDateAgainstRules,
+  type ScheduleRules,
+} from "@/lib/scheduleRules";
 
 export function WorkspaceSwitcher() {
   const { publications, active, select, create, update, loading } = useActivePublication();
