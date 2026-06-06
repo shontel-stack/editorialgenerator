@@ -1130,6 +1130,10 @@ function Index() {
               status={autosave.status}
               lastSavedAt={autosave.lastSavedAt}
               onSaveNow={autosave.saveNow}
+              cloudStatus={cloudSync.status}
+              cloudLastSyncedAt={cloudSync.lastSyncedAt}
+              cloudError={cloudSync.error}
+              onSyncNow={cloudSync.syncNow}
             />
           </div>
           <div className="flex items-center gap-4">
