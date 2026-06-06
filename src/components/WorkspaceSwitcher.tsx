@@ -293,6 +293,11 @@ export function WorkspaceSwitcher() {
                 setPresetKey("custom");
               }}
             />
+            <MarginsForm
+              mTop={mTop} mRight={mRight} mBottom={mBottom} mLeft={mLeft} bleed={bleed}
+              onTop={setMTop} onRight={setMRight} onBottom={setMBottom}
+              onLeft={setMLeft} onBleed={setBleed}
+            />
           </div>
           <DialogFooter>
             <button
