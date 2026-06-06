@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, stepCountIs, tool, type UIMessage } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { requireAuthFromRequest } from "@/lib/require-auth.server";
 import { getRole } from "@/lib/staffRoles";
 import type { IssueSnapshot } from "@/lib/issue-snapshot";
 
