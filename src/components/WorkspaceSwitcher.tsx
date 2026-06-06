@@ -500,6 +500,57 @@ export function WorkspaceSwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Duplicate for next issue — rename step */}
+      <Dialog open={duplicateOpen} onOpenChange={(o) => !submitting && setDuplicateOpen(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicate publication</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Create a copy of <span className="font-medium text-foreground">{active?.name}</span> for
+              your next issue. All settings (fonts, palette, page size, margins) are carried over.
+              Issues themselves are not copied.
+            </p>
+            <div>
+              <label className="block text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-1">
+                New publication name
+              </label>
+              <input
+                autoFocus
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && duplicateName.trim() && !submitting) {
+                    e.preventDefault();
+                    void confirmDuplicate();
+                  }
+                }}
+                placeholder="e.g. The Arts Today — March 2026"
+                className="w-full border border-input bg-background px-2.5 py-1.5 text-sm rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setDuplicateOpen(false)}
+              disabled={submitting}
+              className="text-xs px-3 py-2 rounded-sm hover:bg-secondary disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => void confirmDuplicate()}
+              disabled={!duplicateName.trim() || submitting}
+              className="bg-foreground text-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm disabled:opacity-50"
+            >
+              {submitting ? "Duplicating…" : "Duplicate"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
