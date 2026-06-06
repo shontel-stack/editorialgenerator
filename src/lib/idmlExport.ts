@@ -659,8 +659,9 @@ async function fetchImage(url: string, index: number): Promise<FetchedImage | Sk
 export async function buildIdmlPackage(
   issue: IssueDoc,
   slug: string,
+  dim?: IdmlDim,
 ): Promise<{ bytes: Uint8Array; fetched: number; skipped: SkippedImage[] }> {
-  const idmlBytes = buildIdml(issue);
+  const idmlBytes = buildIdml(issue, dim);
   const urls = collectImageUrls(issue);
   const results = await Promise.all(urls.map((u, i) => fetchImage(u, i)));
 
@@ -708,7 +709,7 @@ export async function buildIdmlPackage(
   for (const f of fetched) files[`Links/${f.filename}`] = f.bytes;
   files["relink-manifest.txt"] = strToU8(manifestLines.join("\n"));
   files["relink-images.jsx"] = strToU8(buildRelinkScript());
-  files["README.txt"] = strToU8(buildReadme(issue, idmlName, fetched.length, skipped));
+  files["README.txt"] = strToU8(buildReadme(issue, idmlName, fetched.length, skipped, dim));
 
   return { bytes: zipSync(files, { level: 6 }), fetched: fetched.length, skipped };
 }
