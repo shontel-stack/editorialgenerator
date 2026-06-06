@@ -7,6 +7,8 @@ import {
   type SnapSettings,
 } from "@/lib/snapSettings";
 
+export type SnapPageRef = { id: string; label: string };
+
 type PageOverrideProps = {
   /** Label shown for the per-page section (e.g. page type or folio). */
   pageLabel?: string;
@@ -14,6 +16,12 @@ type PageOverrideProps = {
   override?: Partial<SnapSettings> | null;
   /** Persist override (pass null to clear). */
   onChangeOverride?: (next: Partial<SnapSettings> | null) => void;
+  /** Other pages in the document, used for the "apply to selected pages" UI. */
+  pages?: SnapPageRef[];
+  /** Currently selected page id — excluded from the multi-select list. */
+  currentPageId?: string;
+  /** Bulk-apply the current override to a list of page ids. */
+  onApplyOverrideToPages?: (ids: string[], override: Partial<SnapSettings> | null) => void;
 };
 
 /**
