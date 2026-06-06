@@ -489,9 +489,10 @@ function Index() {
     setBusy(kind.toUpperCase());
     try {
       const name = `arts-today-${issueSlug}-${selected.pageType}-${pageNumberFor(issue, selected.id)}`;
-      if (kind === "pdf") await exportPdf(node, `${name}.pdf`);
-      else if (kind === "png") await exportPng(node, `${name}.png`);
-      else await exportJpeg(node, `${name}.jpg`);
+      const exportDim = { inches: dimInches, px: dimPx };
+      if (kind === "pdf") await exportPdf(node, `${name}.pdf`, exportDim);
+      else if (kind === "png") await exportPng(node, `${name}.png`, exportDim);
+      else await exportJpeg(node, `${name}.jpg`, exportDim);
     } finally {
       setBusy(null);
     }
