@@ -304,6 +304,16 @@ export type CustomBlock =
       loop?: boolean;
       rotate?: number;
       link?: string;
+      /** Optional thumbnail shown before playback (HTML video poster). */
+      poster?: string;
+      /** Default volume 0..1 (ignored while muted). */
+      volume?: number;
+      /** Show native player controls. */
+      controls?: boolean;
+      /** Inline playback on iOS rather than fullscreen takeover. */
+      playsInline?: boolean;
+      /** How aggressively the browser preloads the source. */
+      preload?: "none" | "metadata" | "auto";
     };
 
 export type IssuePageNode = AnyPageData & {

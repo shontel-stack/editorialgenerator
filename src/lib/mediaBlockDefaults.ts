@@ -24,6 +24,16 @@ export type VideoBlockDefaults = {
   muted: boolean;
   loop: boolean;
   autoplay: boolean;
+  /** Default poster (thumbnail) URL shown before playback. */
+  poster: string;
+  /** Default volume 0..1 (ignored while muted). */
+  volume: number;
+  /** Whether to show the native player controls bar. */
+  controls: boolean;
+  /** Inline playback on iOS rather than fullscreen takeover. */
+  playsInline: boolean;
+  /** Preload behavior — how aggressively the browser fetches the source. */
+  preload: "none" | "metadata" | "auto";
 };
 
 export const IMAGE_BLOCK_DEFAULTS: ImageBlockDefaults = {
@@ -45,6 +55,11 @@ export const VIDEO_BLOCK_DEFAULTS: VideoBlockDefaults = {
   muted: true,
   loop: false,
   autoplay: false,
+  poster: "",
+  volume: 1,
+  controls: true,
+  playsInline: true,
+  preload: "metadata",
 };
 
 const IMG_KEY = "imageBlockDefaults:v1";
