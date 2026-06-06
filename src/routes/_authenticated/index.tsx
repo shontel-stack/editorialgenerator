@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList } from "lucide-react";
 import { PagePreview } from "@/components/PagePreview";
+import { GuidesOverlay } from "@/components/GuidesOverlay";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
@@ -117,6 +118,7 @@ function Index() {
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
   const [editLayout, setEditLayout] = useState(false);
+  const [showGuides, setShowGuides] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
@@ -790,6 +792,13 @@ function Index() {
           <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between gap-2">
             <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Edit layout</span>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowGuides((v) => !v)}
+                className={`px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${showGuides ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+                title="Toggle non-printing margin & bleed guides"
+              >
+                {showGuides ? "Guides on" : "Guides off"}
+              </button>
               {editLayout && (
                 (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
                 (selected.textScales && Object.keys(selected.textScales).length > 0) ||
@@ -1071,7 +1080,7 @@ function Index() {
           >
             <div
               className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-              style={{ width: dimPx.w, height: dimPx.h }}
+              style={{ width: dimPx.w, height: dimPx.h, position: "relative" }}
             >
               <LayoutEditProvider
                 editing={editLayout && spread.left.id === selected.id}
@@ -1089,11 +1098,12 @@ function Index() {
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
+              {showGuides && <GuidesOverlay dim={dimPx} margins={pageMargins} />}
             </div>
             {spreadView && spread.right && (
               <div
                 className="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)]"
-                style={{ width: dimPx.w, height: dimPx.h }}
+                style={{ width: dimPx.w, height: dimPx.h, position: "relative" }}
               >
                 <LayoutEditProvider
                   editing={editLayout && spread.right.id === selected.id}
@@ -1111,6 +1121,7 @@ function Index() {
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>
+                {showGuides && <GuidesOverlay dim={dimPx} margins={pageMargins} />}
               </div>
             )}
           </div>
