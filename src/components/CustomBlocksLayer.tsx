@@ -911,7 +911,8 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
 }
 
 function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "video" }>; onChange: (p: Partial<CustomBlock>) => void }) {
-  const snap = useSnapSettings();
+  const ctx = useLayoutEdit();
+  const snap = ctx?.snapSettings ?? useSnapSettings();
   return (
     <>
       <label style={labelStyle}>
