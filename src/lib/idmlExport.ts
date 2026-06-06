@@ -757,6 +757,12 @@ function buildReadme(
   const hPx = Math.round(hIn * 300);
   const wPt = +(wIn * 72).toFixed(2);
   const hPt = +(hIn * 72).toFixed(2);
+  const mt = pickIn(dim?.marginTop,    DEFAULT_MARGIN_IN);
+  const mr = pickIn(dim?.marginRight,  DEFAULT_MARGIN_IN);
+  const mb = pickIn(dim?.marginBottom, DEFAULT_MARGIN_IN);
+  const ml = pickIn(dim?.marginLeft,   DEFAULT_MARGIN_IN);
+  const bl = pickIn(dim?.bleed,        DEFAULT_BLEED_IN);
+  const inToMm = (n: number) => +(n * 25.4).toFixed(2);
   const lines: string[] = [
     `${issue.master.publication} — ${issue.meta.issue}`,
     `InDesign package`,
