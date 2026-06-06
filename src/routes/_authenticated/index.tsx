@@ -1595,7 +1595,7 @@ function Index() {
         selectedPageId={selected.id}
         selectedPageLabel={selected.pageType}
         pages={pageRefsForStatus}
-        attachments={attachments}
+        attachments={{ ...attachments, updateAssignment: applyPlacement }}
       />
 
 
