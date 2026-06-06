@@ -42,7 +42,7 @@ function defaultPos(index: number): { x: number; y: number } {
 const NUDGE_STEP = 0.005;
 const NUDGE_STEP_LARGE = 0.02;
 
-export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props) {
+export function ReferencePinsOverlay({ references, dim, scale, onAssign, editing = false }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   // Multi-select set. Shift/Meta/Ctrl-click toggles membership; a plain click
