@@ -26,6 +26,9 @@ import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { getLastPositions, setLastPosition, type LastPosition } from "@/lib/publications";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { useAutosave } from "@/hooks/useAutosave";
+import { autosaveKey, loadAutosave } from "@/lib/issueAutosave";
+import { AutosaveIndicator } from "@/components/AutosaveIndicator";
 import {
   PAGE_LAYOUTS,
   PAGE_LAYOUT_LABELS,
