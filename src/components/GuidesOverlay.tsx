@@ -7,6 +7,13 @@ type Props = {
   margins: PageMargins;
   /** Optional override for label visibility. */
   showLabels?: boolean;
+  /**
+   * Number of body columns to draw inside the safe area. 0/1 = no column
+   * guides; 2 draws one gutter divider, 3 draws two, etc.
+   */
+  columns?: number;
+  /** Gutter between columns, in inches. Defaults to 0.167″ (~12pt). */
+  gutterIn?: number;
 };
 
 /**
@@ -20,13 +27,18 @@ type Props = {
  * match. Bleed extends *outside* the trim, so the parent wrapper must allow
  * overflow.
  */
-export function GuidesOverlay({ dim, margins, showLabels = true }: Props) {
+export function GuidesOverlay({ dim, margins, showLabels = true, columns = 1, gutterIn = 0.167 }: Props) {
   const DPI = 300;
   const mTop = margins.top * DPI;
   const mRight = margins.right * DPI;
   const mBottom = margins.bottom * DPI;
   const mLeft = margins.left * DPI;
   const bleed = Math.max(0, margins.bleed * DPI);
+  const safeW = dim.w - mLeft - mRight;
+  const safeH = dim.h - mTop - mBottom;
+  const cols = Math.max(1, Math.floor(columns));
+  const gutter = Math.max(0, gutterIn * DPI);
+  const colW = cols > 1 ? (safeW - gutter * (cols - 1)) / cols : safeW;
 
   const MAGENTA = "rgba(236, 0, 140, 0.95)"; // safe-area (margin)
   const CYAN = "rgba(0, 174, 239, 0.95)"; // bleed (crop)
@@ -94,6 +106,29 @@ export function GuidesOverlay({ dim, margins, showLabels = true }: Props) {
           boxSizing: "border-box",
         }}
       />
+
+      {/* Column guides — translucent column fills + gutter dividers */}
+      {cols > 1 &&
+        Array.from({ length: cols }).map((_, i) => {
+          const colLeft = bleed + mLeft + i * (colW + gutter);
+          return (
+            <div
+              key={`col-${i}`}
+              style={{
+                position: "absolute",
+                top: bleed + mTop,
+                left: colLeft,
+                width: colW,
+                height: safeH,
+                background: "rgba(0, 174, 239, 0.06)",
+                borderLeft: i === 0 ? "none" : `1px dashed ${CYAN}`,
+                borderRight: i === cols - 1 ? "none" : `1px dashed ${CYAN}`,
+                boxSizing: "border-box",
+              }}
+            />
+          );
+        })}
+
 
       {showLabels && (
         <>
