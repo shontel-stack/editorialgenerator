@@ -52,7 +52,7 @@ function addInternalLink(
   hostPageRef: PDFRef,
   targetPageRef: PDFRef,
   rect: [number, number, number, number],
-) {
+): PDFRef {
   const annot = doc.context.obj({
     Type: "Annot",
     Subtype: "Link",
@@ -69,6 +69,78 @@ function addInternalLink(
   }
   annotsArr.push(annotRef);
   hostPage.set(PDFName.of("Annots"), annotsArr);
+  return annotRef;
+}
+
+/**
+ * Walks every link annotation on the newsletter page and confirms that:
+ *  - exactly one annotation exists per highlight DOM element with a valid target,
+ *  - each annotation's `Dest` resolves to the page ref we recorded for that
+ *    highlight's pageId (no cross-wiring), and
+ *  - each annotation's `Rect` is non-degenerate and within page bounds.
+ * Throws a descriptive Error if any check fails so the caller can surface it.
+ */
+function verifyHighlightLinks(
+  doc: PDFDocument,
+  hostPageRef: PDFRef,
+  pageBounds: { w: number; h: number },
+  expected: Array<{ targetId: string; targetRef: PDFRef; annotRef: PDFRef }>,
+) {
+  const hostPage = doc.context.lookup(hostPageRef) as PDFDict;
+  const annots = hostPage.get(PDFName.of("Annots"));
+  if (!(annots instanceof PDFArray)) {
+    throw new Error("Interactive PDF: newsletter page has no link annotations.");
+  }
+  const annotRefs = annots.asArray();
+  const problems: string[] = [];
+
+  for (const { targetId, targetRef, annotRef } of expected) {
+    if (!annotRefs.some((r) => r === annotRef)) {
+      problems.push(`missing annotation for "${targetId}"`);
+      continue;
+    }
+    const annot = doc.context.lookup(annotRef) as PDFDict;
+    const dest = annot.get(PDFName.of("Dest"));
+    if (!(dest instanceof PDFArray) || dest.asArray().length < 1) {
+      problems.push(`"${targetId}" annotation has no Dest`);
+      continue;
+    }
+    const destRef = dest.asArray()[0];
+    if (destRef !== targetRef) {
+      problems.push(`"${targetId}" links to wrong page ref`);
+      continue;
+    }
+    const rect = annot.get(PDFName.of("Rect"));
+    if (!(rect instanceof PDFArray) || rect.asArray().length !== 4) {
+      problems.push(`"${targetId}" has invalid Rect`);
+      continue;
+    }
+    const [x1, y1, x2, y2] = rect.asArray().map((n) =>
+      n instanceof PDFNumber ? n.asNumber() : Number.NaN,
+    );
+    if (![x1, y1, x2, y2].every(Number.isFinite)) {
+      problems.push(`"${targetId}" Rect has non-numeric values`);
+      continue;
+    }
+    if (x2 - x1 < 1 || y2 - y1 < 1) {
+      problems.push(`"${targetId}" Rect is degenerate (${x2 - x1}×${y2 - y1}pt)`);
+      continue;
+    }
+    if (
+      x1 < -0.5 ||
+      y1 < -0.5 ||
+      x2 > pageBounds.w + 0.5 ||
+      y2 > pageBounds.h + 0.5
+    ) {
+      problems.push(`"${targetId}" Rect is outside the newsletter page bounds`);
+    }
+  }
+
+  if (problems.length > 0) {
+    throw new Error(
+      `Interactive PDF link verification failed: ${problems.join("; ")}`,
+    );
+  }
 }
 
 function buildOutline(
@@ -184,23 +256,57 @@ export async function exportNewsletterInteractivePdf(
   }
 
   // 4) Add link annotations on the newsletter page over each highlight row.
-  const linkEls = newsletterNode.querySelectorAll<HTMLElement>(
-    "[data-link-row][data-link-target]",
+  const linkEls = Array.from(
+    newsletterNode.querySelectorAll<HTMLElement>(
+      "[data-link-row][data-link-target]",
+    ),
   );
   const sx = NL_W_PT / nlRect.width;
   const sy = NL_H_PT / nlRect.height;
+  const verifyTargets: Array<{
+    targetId: string;
+    targetRef: PDFRef;
+    annotRef: PDFRef;
+  }> = [];
+  const missingTargets: string[] = [];
   linkEls.forEach((el) => {
     const targetId = el.dataset.linkTarget;
     if (!targetId) return;
     const targetRef = pageRefById.get(targetId);
-    if (!targetRef) return;
+    if (!targetRef) {
+      missingTargets.push(targetId);
+      return;
+    }
     const r = el.getBoundingClientRect();
     const x1 = (r.left - nlRect.left) * sx;
     const x2 = (r.right - nlRect.left) * sx;
     const y2 = NL_H_PT - (r.top - nlRect.top) * sy;
     const y1 = NL_H_PT - (r.bottom - nlRect.top) * sy;
-    addInternalLink(doc, nlPage.ref, targetRef, [x1, y1, x2, y2]);
+    const annotRef = addInternalLink(doc, nlPage.ref, targetRef, [
+      x1,
+      y1,
+      x2,
+      y2,
+    ]);
+    verifyTargets.push({ targetId, targetRef, annotRef });
   });
+
+  if (missingTargets.length > 0) {
+    throw new Error(
+      `Interactive PDF: no rendered page for highlight target(s): ${missingTargets.join(", ")}`,
+    );
+  }
+  if (verifyTargets.length === 0) {
+    throw new Error(
+      "Interactive PDF: no highlight link rows were found in the newsletter preview.",
+    );
+  }
+  verifyHighlightLinks(
+    doc,
+    nlPage.ref,
+    { w: NL_W_PT, h: NL_H_PT },
+    verifyTargets,
+  );
 
   buildOutline(doc, outlineItems);
   doc.catalog.set(PDFName.of("PageMode"), PDFName.of("UseOutlines"));
