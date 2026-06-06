@@ -123,6 +123,12 @@ export function WorkspaceSwitcher() {
     };
   };
 
+  const parseMargin = (v: string, fallback: number): number => {
+    const n = parseFloat(v);
+    if (!isFinite(n) || n < 0 || n > 10) return fallback;
+    return Math.round(n * 10000) / 10000;
+  };
+
   const handleCreate = async () => {
     if (!name.trim() || submitting) return;
     const dims = parseDims(widthIn, heightIn);
@@ -138,6 +144,11 @@ export function WorkspaceSwitcher() {
         brand_voice: voice.trim() || undefined,
         masthead: masthead.trim() || undefined,
         ...dims,
+        margin_top_in:    parseMargin(mTop,    DEFAULT_PAGE_MARGINS.top),
+        margin_right_in:  parseMargin(mRight,  DEFAULT_PAGE_MARGINS.right),
+        margin_bottom_in: parseMargin(mBottom, DEFAULT_PAGE_MARGINS.bottom),
+        margin_left_in:   parseMargin(mLeft,   DEFAULT_PAGE_MARGINS.left),
+        bleed_in:         parseMargin(bleed,   DEFAULT_PAGE_MARGINS.bleed),
       });
       setOpen(false);
       resetCreateForm();
@@ -155,7 +166,14 @@ export function WorkspaceSwitcher() {
     }
     setEditSubmitting(true);
     try {
-      await update(active.id, dims);
+      await update(active.id, {
+        ...dims,
+        margin_top_in:    parseMargin(editMTop,    DEFAULT_PAGE_MARGINS.top),
+        margin_right_in:  parseMargin(editMRight,  DEFAULT_PAGE_MARGINS.right),
+        margin_bottom_in: parseMargin(editMBottom, DEFAULT_PAGE_MARGINS.bottom),
+        margin_left_in:   parseMargin(editMLeft,   DEFAULT_PAGE_MARGINS.left),
+        bleed_in:         parseMargin(editBleed,   DEFAULT_PAGE_MARGINS.bleed),
+      });
       setEditOpen(false);
     } catch (e) {
       alert(`Could not save dimensions: ${(e as Error).message}`);
