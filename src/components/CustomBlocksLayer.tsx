@@ -627,37 +627,153 @@ function QrPreview({ url, color, bg }: { url: string; color: string; bg: string 
 function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"]) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
+  const [defaultsOpen, setDefaultsOpen] = useState(false);
+  return (
+    <>
+      <div
+        onPointerDown={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: 24,
+          right: 24,
+          transform: `scale(${inv})`,
+          transformOrigin: "top right",
+          background: "white",
+          border: "2px solid #0a0a0a",
+          borderRadius: 6,
+          padding: 8,
+          display: "flex",
+          gap: 6,
+          boxShadow: "0 6px 24px rgba(0,0,0,0.15)",
+          zIndex: 300,
+          fontFamily: "system-ui, sans-serif",
+        }}
+      >
+        <span style={{ alignSelf: "center", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#666", paddingLeft: 4, paddingRight: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <Plus size={12} /> Add
+        </span>
+        <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
+        <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
+        <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
+        <PaletteBtn label="Shape" icon={<Square size={14} />} onClick={() => onAdd("shape")} />
+        <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
+        <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
+        <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
+        <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
+        <PaletteBtn label="Text defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
+      </div>
+      {defaultsOpen && <TextDefaultsPanel onClose={() => setDefaultsOpen(false)} />}
+    </>
+  );
+}
+
+function TextDefaultsPanel({ onClose }: { onClose: () => void }) {
+  const ctx = useLayoutEdit();
+  const inv = 1 / (ctx?.scale ?? 1);
+  const { defaults, update, reset } = useTextBlockDefaults();
+  const num = (v: string, fallback: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  const set = <K extends keyof TextBlockDefaults>(k: K, v: TextBlockDefaults[K]) =>
+    update({ [k]: v } as Partial<TextBlockDefaults>);
   return (
     <div
       onPointerDown={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
-        top: 24,
+        top: 90,
         right: 24,
         transform: `scale(${inv})`,
         transformOrigin: "top right",
         background: "white",
         border: "2px solid #0a0a0a",
-        borderRadius: 6,
-        padding: 8,
-        display: "flex",
-        gap: 6,
-        boxShadow: "0 6px 24px rgba(0,0,0,0.15)",
-        zIndex: 300,
+        borderRadius: 8,
+        padding: 16,
+        width: 340,
+        boxShadow: "0 12px 36px rgba(0,0,0,0.25)",
+        zIndex: 350,
         fontFamily: "system-ui, sans-serif",
+        color: "#0a0a0a",
+        fontSize: 12,
       }}
     >
-      <span style={{ alignSelf: "center", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#666", paddingLeft: 4, paddingRight: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
-        <Plus size={12} /> Add
-      </span>
-      <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
-      <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
-      <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
-      <PaletteBtn label="Shape" icon={<Square size={14} />} onClick={() => onAdd("shape")} />
-      <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
-      <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
-      <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <strong style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase" }}>Text block defaults</strong>
+        <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "#666" }}>
+          <X size={16} />
+        </button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <Field label="Font family">
+          <select value={defaults.fontFamily} onChange={(e) => set("fontFamily", e.target.value as TextBlockDefaults["fontFamily"])} style={defaultsInputStyle}>
+            <option value="display">Display</option>
+            <option value="serif">Serif</option>
+            <option value="sans">Sans</option>
+          </select>
+        </Field>
+        <Field label="Align">
+          <select value={defaults.align} onChange={(e) => set("align", e.target.value as TextBlockDefaults["align"])} style={defaultsInputStyle}>
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </Field>
+        <Field label="Font size (px)">
+          <input type="number" min={8} value={defaults.fontSize} onChange={(e) => set("fontSize", num(e.target.value, defaults.fontSize))} style={defaultsInputStyle} />
+        </Field>
+        <Field label="Weight">
+          <select value={defaults.fontWeight} onChange={(e) => set("fontWeight", Number(e.target.value))} style={defaultsInputStyle}>
+            {[300, 400, 500, 600, 700, 800, 900].map((w) => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Italic">
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <input type="checkbox" checked={defaults.italic} onChange={(e) => set("italic", e.target.checked)} /> Italic
+          </label>
+        </Field>
+        <Field label="Color">
+          <input type="color" value={defaults.color} onChange={(e) => set("color", e.target.value)} style={{ ...defaultsInputStyle, padding: 0, height: 28 }} />
+        </Field>
+        <Field label="Box width (px)">
+          <input type="number" min={40} value={defaults.w} onChange={(e) => set("w", num(e.target.value, defaults.w))} style={defaultsInputStyle} />
+        </Field>
+        <Field label="Box height (px)">
+          <input type="number" min={40} value={defaults.h} onChange={(e) => set("h", num(e.target.value, defaults.h))} style={defaultsInputStyle} />
+        </Field>
+        <Field label="Margin X (px)">
+          <input type="number" min={0} value={defaults.marginX} onChange={(e) => set("marginX", num(e.target.value, defaults.marginX))} style={defaultsInputStyle} />
+        </Field>
+        <Field label="Margin Y (px)">
+          <input type="number" min={0} value={defaults.marginY} onChange={(e) => set("marginY", num(e.target.value, defaults.marginY))} style={defaultsInputStyle} />
+        </Field>
+      </div>
+      <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ color: "#888", fontSize: 10 }}>Page = 3200 × 4267 px (300 DPI).</span>
+        <button type="button" onClick={reset} style={btnStyle("normal")}>Reset</button>
+      </div>
     </div>
+  );
+}
+
+const defaultsInputStyle: CSSProperties = {
+  width: "100%",
+  border: "1px solid #ccc",
+  borderRadius: 4,
+  padding: "4px 6px",
+  fontSize: 12,
+  background: "white",
+  color: "#0a0a0a",
+};
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>{label}</span>
+      {children}
+    </label>
   );
 }
 
