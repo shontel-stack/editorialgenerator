@@ -879,6 +879,12 @@ function Index() {
             pageLabel={selected.pageType}
             override={selected.snapOverride ?? null}
             onChangeOverride={(next) => setSnapOverride(selected.id, next)}
+            currentPageId={selected.id}
+            pages={issue.pages.map((p, i) => ({
+              id: p.id,
+              label: `${String(i + 1).padStart(2, "0")} · ${p.pageType}${p.snapOverride ? " ●" : ""}`,
+            }))}
+            onApplyOverrideToPages={applySnapOverrideToPages}
           />
 
 
