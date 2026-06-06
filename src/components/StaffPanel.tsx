@@ -91,6 +91,8 @@ export function StaffPanel({
   publicationId,
   publicationName,
   selectedPageId,
+  attachments,
+  onPlaceAttachment,
 }: {
   open: boolean;
   onClose: () => void;
@@ -98,6 +100,8 @@ export function StaffPanel({
   publicationId: string | null;
   publicationName?: string | null;
   selectedPageId: string;
+  attachments?: AttachmentBrief[];
+  onPlaceAttachment?: (id: string, patch: PlacementPatch) => Promise<void> | void;
 }) {
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [view, setView] = useState<"masthead" | "inbox">("masthead");
