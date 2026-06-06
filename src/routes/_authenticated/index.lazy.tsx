@@ -148,6 +148,17 @@ function Index() {
     },
   );
   const saveIssueRef = useRef<(() => void) | null>(null);
+  const stickyRef = useRef<HTMLDivElement | null>(null);
+  const [stickyH, setStickyH] = useState(0);
+  useEffect(() => {
+    const el = stickyRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setStickyH(el.getBoundingClientRect().height));
+    ro.observe(el);
+    setStickyH(el.getBoundingClientRect().height);
+    return () => ro.disconnect();
+  }, []);
+
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
