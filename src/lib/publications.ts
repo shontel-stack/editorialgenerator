@@ -17,6 +17,8 @@ export type Publication = {
   body_font: string | null;
   palette_key: string | null;
   masthead: string | null;
+  page_width_in: number | null;
+  page_height_in: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -30,6 +32,8 @@ export type PublicationInput = {
   body_font?: string;
   palette_key?: string;
   masthead?: string;
+  page_width_in?: number | null;
+  page_height_in?: number | null;
 };
 
 function slugify(name: string): string {
@@ -68,6 +72,8 @@ export async function createPublication(
       body_font: input.body_font ?? null,
       palette_key: input.palette_key ?? null,
       masthead: input.masthead ?? null,
+      page_width_in: input.page_width_in ?? null,
+      page_height_in: input.page_height_in ?? null,
     })
     .select()
     .single();
