@@ -334,6 +334,14 @@ export type IssuePageNode = AnyPageData & {
     rotationTolerance?: number;
     rotationAngles?: number[];
   };
+  /**
+   * Number of *unprinted* physical sheets that occupy positions immediately
+   * before this page (e.g. a tip-in insert, a blank divider, or a folded
+   * outsert that lives in the bound copy but carries no folio). Used to
+   * keep verso/recto parity aligned with the physical sheet position
+   * instead of the array index. Default 0.
+   */
+  paritySkip?: number;
 };
 
 
