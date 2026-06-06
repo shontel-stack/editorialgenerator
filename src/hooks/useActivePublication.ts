@@ -11,6 +11,7 @@ import {
   getActivePublicationId,
   listPublications,
   setActivePublicationId,
+  updatePublication,
   type Publication,
   type PublicationInput,
 } from "@/lib/publications";
