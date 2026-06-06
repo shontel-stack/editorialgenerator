@@ -414,9 +414,19 @@ export function googleFontsUrl(fonts: IssueFonts): string {
   return `https://fonts.googleapis.com/css2?${params}&display=swap`;
 }
 
+/**
+ * Folio template per side of the spread. Verso = left-hand page, recto =
+ * right-hand page. Editors typically put the page number on the outer
+ * corner of one side and a copyright / publication line on the other.
+ */
+export type FolioTemplate = {
+  left: string;
+  right: string;
+};
+
 export type IssueMaster = {
-  // Folio template uses tokens: {publication} {issue} {date}
-  folioTemplate: string;
+  // Folio template uses tokens: {publication} {issue} {date} {copyright}
+  folioTemplate: FolioTemplate;
   publication: string;
   pageNumberFormat: PageNumberFormat;
   showFolioOnArticles: boolean;
@@ -426,7 +436,10 @@ export type IssueMaster = {
 };
 
 export const DEFAULT_MASTER: IssueMaster = {
-  folioTemplate: "{publication}  ·  {issue}",
+  folioTemplate: {
+    left: "{publication}  ·  {issue}",
+    right: "© {copyright}",
+  },
   publication: "THE ARTS TODAY",
   pageNumberFormat: "padded",
   showFolioOnArticles: true,
@@ -441,11 +454,52 @@ export type IssueDoc = {
   pages: IssuePageNode[];
 };
 
-export function renderFolio(master: IssueMaster, meta: IssueDoc["meta"]): string {
-  return master.folioTemplate
+/**
+ * Tolerantly coerce a stored folio template (legacy drafts may hold a single
+ * string, or an object missing one side) into a complete `FolioTemplate`.
+ */
+export function normalizeFolioTemplate(v: unknown): FolioTemplate {
+  if (typeof v === "string") return { left: v, right: v };
+  if (v && typeof v === "object") {
+    const o = v as { left?: unknown; right?: unknown };
+    const left = typeof o.left === "string" ? o.left : "";
+    const right = typeof o.right === "string" ? o.right : left;
+    return { left, right };
+  }
+  return { left: "", right: "" };
+}
+
+/**
+ * Page-side parity. Page 1 (cover, index 0) is a right-hand (recto) page;
+ * sides alternate from there. Matches the spread-pairing convention used by
+ * the canvas (cover stands alone, then 2-3, 4-5, ...).
+ */
+export function folioSideForIndex(index0Based: number): "left" | "right" {
+  return index0Based % 2 === 0 ? "right" : "left";
+}
+
+/**
+ * Render the folio string for a single page. The `side` argument picks the
+ * verso (left) or recto (right) template; defaults to "right" so legacy
+ * call sites keep working.
+ */
+export function renderFolio(
+  master: IssueMaster,
+  meta: IssueDoc["meta"],
+  side: "left" | "right" = "right",
+): string {
+  const tpl = normalizeFolioTemplate(master.folioTemplate);
+  const raw = side === "left" ? tpl.left : tpl.right;
+  // Derive {copyright} as "<year> <publication>". Year parsed from
+  // meta.date when present, otherwise the current year.
+  const yearMatch = meta.date.match(/\b(19|20)\d{2}\b/);
+  const year = yearMatch ? yearMatch[0] : String(new Date().getFullYear());
+  const copyright = `${year} ${master.publication}`.trim();
+  return raw
     .replace(/\{publication\}/g, master.publication)
     .replace(/\{issue\}/g, meta.issue)
-    .replace(/\{date\}/g, meta.date);
+    .replace(/\{date\}/g, meta.date)
+    .replace(/\{copyright\}/g, copyright);
 }
 
 export function formatPageNumber(
