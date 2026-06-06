@@ -798,7 +798,22 @@ function Index() {
       </header>
 
 
-      <div className="mx-auto max-w-[1800px] px-8 py-8 grid gap-6 lg:grid-cols-[260px_380px_1fr]">
+      <div className="px-3 py-3">
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="min-h-[calc(100vh-140px)] gap-0 rounded-sm"
+      >
+        <ResizablePanel
+          panelRef={leftPanelRef}
+          id="ws-left"
+          defaultSize={20}
+          minSize={14}
+          maxSize={35}
+          collapsible
+          collapsedSize={0}
+          onResize={(size) => setLeftCollapsed(size < 1)}
+        >
+        <div className="h-full overflow-y-auto pr-3">
         {/* Page list */}
         <aside className="space-y-3">
           <div className="border border-border bg-card">
