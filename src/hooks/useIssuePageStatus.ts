@@ -9,10 +9,17 @@ import {
   listPageStatusForIssue,
   upsertPageStatus,
   updatePageStatus,
+  evenColumnWidths,
+  normalizeColumnWidths,
+  DEFAULT_GUTTER_IN,
   type PageStatusRow,
   type PageStatusValue,
 } from "@/lib/pageStatus";
-import { DEFAULT_PAGE_LAYOUT, type PageLayout } from "@/lib/pageLayouts";
+import {
+  DEFAULT_PAGE_LAYOUT,
+  PAGE_LAYOUT_COLUMNS,
+  type PageLayout,
+} from "@/lib/pageLayouts";
 
 type PageRef = { id: string; label: string };
 
