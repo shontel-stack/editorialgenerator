@@ -52,6 +52,34 @@ type NoteToolOutput = {
   severity?: "low" | "med" | "high";
 };
 
+export type AttachmentBrief = {
+  id: string;
+  file_name: string;
+  mime_type: string;
+  kind: "template" | "reference";
+  page_id: string | null;
+  region: string | null;
+  position_x: number | null;
+  position_y: number | null;
+};
+
+export type PlacementPatch = {
+  page_id?: string | null;
+  region?: string | null;
+  position_x?: number | null;
+  position_y?: number | null;
+};
+
+type PlacementToolOutput = {
+  kind: "placement";
+  attachment_id: string;
+  page_id: string;
+  region?: string | null;
+  position_x?: number | null;
+  position_y?: number | null;
+  rationale?: string;
+};
+
 /* ------------------------------------------------------------------ */
 /*                              Drawer shell                            */
 /* ------------------------------------------------------------------ */
