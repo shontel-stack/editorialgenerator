@@ -49,6 +49,19 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign }: Props
   // change, mouse drag, or Escape so the next nudge starts a fresh undo step.
   const nudgeBatchRef = useRef<string | null>(null);
 
+  // Marquee selection: a rectangle drawn on the empty canvas to lasso pins.
+  // Stored in 0..1 page-relative coords so we can match against each pin's
+  // logical position regardless of zoom.
+  type Marquee = {
+    startX: number;
+    startY: number;
+    curX: number;
+    curY: number;
+    additive: boolean;
+    baseSelection: Set<string>;
+  };
+  const [marquee, setMarquee] = useState<Marquee | null>(null);
+
   const selectPin = (id: string, additive: boolean) => {
     nudgeBatchRef.current = null;
     setSelectedIds((prev) => {
