@@ -1537,6 +1537,47 @@ function Index() {
           });
         }}
       />
+
+      {/* Confirm reflow when switching to a templated layout on a page that
+          already has hand-placed blocks or repositioned content. */}
+      <AlertDialog
+        open={pendingLayout !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingLayout(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Switch to “{pendingLayout ? PAGE_LAYOUT_LABELS[pendingLayout] : ""}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This page has{" "}
+              {selectedCustomBlockCount > 0
+                ? `${selectedCustomBlockCount} custom block${selectedCustomBlockCount === 1 ? "" : "s"}`
+                : "manually positioned content"}
+              . Applying a new layout will reset block positions so they reflow
+              into the new template. Custom blocks you added are kept, but
+              their offsets will return to the template defaults. This action
+              cannot be undone for layout changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingLayout(null)}>
+              Keep current layout
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const next = pendingLayout;
+                setPendingLayout(null);
+                if (next) void commitLayoutChange(next);
+              }}
+            >
+              Apply and reflow
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
