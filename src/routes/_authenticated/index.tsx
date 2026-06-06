@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -53,6 +53,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Select,
   SelectTrigger,
@@ -909,15 +910,8 @@ function Index() {
   };
 
   // Resizable workspace panel refs + collapsed state
-  const leftPanelRef = usePanelRef();
   const middlePanelRef = usePanelRef();
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [middleCollapsed, setMiddleCollapsed] = useState(false);
-  const toggleLeftPanel = () => {
-    const p = leftPanelRef.current;
-    if (!p) return;
-    p.isCollapsed() ? p.expand() : p.collapse();
-  };
   const toggleMiddlePanel = () => {
     const p = middlePanelRef.current;
     if (!p) return;
@@ -1042,24 +1036,19 @@ function Index() {
       </header>
 
 
-      <div className="px-3 py-3">
-      <ResizablePanelGroup
-        orientation="horizontal"
-        className="min-h-[calc(100vh-140px)] gap-0 rounded-sm"
-      >
-        <ResizablePanel
-          panelRef={leftPanelRef}
-          id="ws-left"
-          defaultSize={20}
-          minSize={14}
-          maxSize={35}
-          collapsible
-          collapsedSize={0}
-          onResize={(size) => setLeftCollapsed(size.asPercentage < 1)}
-        >
-        <div className="h-full overflow-y-auto pr-3">
+      <div className="px-3 pt-3 pb-2 flex flex-wrap items-center gap-2 border-b border-border bg-card/40">
+        <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mr-1">Tools</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
+              <Layers className="h-3.5 w-3.5" /> Pages
+              <span className="font-numerals text-foreground/80">{issue.pages.length.toString().padStart(2, "0")}</span>
+              <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-0">
         {/* Page list */}
-        <aside className="space-y-3">
+
           <div className="border border-border bg-card">
             <div className="px-3 py-2.5 border-b border-border flex items-center justify-between gap-2">
               <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
@@ -1152,9 +1141,15 @@ function Index() {
               />
             </div>
           </div>
-
-
-
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
+              <Settings2 className="h-3.5 w-3.5" /> Snap <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
 
           <SnapSettingsPanel
             pageLabel={selected.pageType}
@@ -1172,10 +1167,15 @@ function Index() {
             canRedoOverrides={snapFutureRef.current.length > 0}
             historyTick={snapHistoryTick}
           />
-
-
-
-
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
+              <BookOpen className="h-3.5 w-3.5" /> Master <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
@@ -1228,6 +1228,15 @@ function Index() {
               />
             </div>
           </Section>
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
+              <Type className="h-3.5 w-3.5" /> Typography <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
 
           <Section title="Typography" defaultOpen={false}>
             <FontPicker
@@ -1256,6 +1265,15 @@ function Index() {
               Reset to defaults
             </button>
           </Section>
+          </PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="inline-flex items-center gap-2 bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-[color:var(--ruby-deep)] transition">
+              <Download className="h-3.5 w-3.5" /> Save &amp; Export <ChevronDown className="h-3 w-3 opacity-70" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
 
           <Section title="Issue · Save & Export" defaultOpen>
             <button
@@ -1332,10 +1350,16 @@ function Index() {
               (Links panel → Relink to Folder).
             </p>
           </Section>
-        </aside>
-        </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="px-3 py-3">
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="min-h-[calc(100vh-180px)] gap-0 rounded-sm"
+      >
+
         <ResizablePanel
           panelRef={middlePanelRef}
           id="ws-middle"
@@ -1485,14 +1509,6 @@ function Index() {
         <div className="h-full overflow-y-auto pl-3 flex flex-col gap-3">
           {/* Canvas ribbon — most-used controls + panel collapse toggles */}
           <div className="border border-border bg-card rounded-sm px-2 py-1.5 flex items-center gap-2 flex-wrap sticky top-0 z-10">
-            <button
-              onClick={toggleLeftPanel}
-              className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
-              title={leftCollapsed ? "Show pages panel" : "Hide pages panel"}
-              aria-label={leftCollapsed ? "Show pages panel" : "Hide pages panel"}
-            >
-              {leftCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-            </button>
             <button
               onClick={toggleMiddlePanel}
               className="p-1.5 rounded-sm hover:bg-secondary text-muted-foreground hover:text-foreground transition"
