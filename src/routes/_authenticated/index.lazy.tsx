@@ -1164,8 +1164,14 @@ function Index() {
               onSaveNow={autosave.saveNow}
               cloudStatus={cloudSync.status}
               cloudLastSyncedAt={cloudSync.lastSyncedAt}
-              cloudError={cloudSync.error}
-              onSyncNow={cloudSync.syncNow}
+              cloudError={cloudSync.error ?? queueDrainer.lastError}
+              onSyncNow={() => {
+                cloudSync.syncNow();
+                queueDrainer.drainNow();
+              }}
+              queuePending={queueDrainer.pending}
+              queueDraining={queueDrainer.draining}
+              onRetryQueue={queueDrainer.drainNow}
             />
           </div>
           <div className="flex items-center gap-4">
