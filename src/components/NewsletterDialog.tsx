@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toJpeg } from "html-to-image";
 import { jsPDF } from "jspdf";
-import { Copy, Download, FileText, Loader2, Sparkles, X } from "lucide-react";
+import { Copy, Download, FileText, Link as LinkIcon, Loader2, Sparkles, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,18 @@ import {
 } from "@/lib/newsletter";
 import { generateNewsletterHighlights } from "@/lib/newsletter.functions";
 import { snapshotIssue } from "@/lib/issue-snapshot";
+import { exportNewsletterInteractivePdf } from "@/lib/newsletter-pdf";
+import type { ExportDim } from "@/lib/exportCover";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issue: IssueDoc;
   issueSlug: string;
+  /** Live DOM nodes for each issue page, used to build the interactive PDF. */
+  pageNodes?: Map<string, HTMLDivElement | null>;
+  /** Issue page dimensions (inches + px) used for the interactive PDF. */
+  pageDim?: ExportDim;
 };
 
 function imageForPage(p: IssuePageNode): string | null {
