@@ -1820,7 +1820,20 @@ function Index() {
 
       {/* Canvas ribbon — page-specific controls, sticky alongside the header */}
       <div className="border-t border-foreground/20 bg-foreground text-background px-3 py-1.5 flex items-center gap-2 flex-wrap">
+        <div className="inline-flex items-center gap-2 pr-2 mr-1 border-r border-background/25">
+          <span className="text-[10px] tracking-[0.3em] uppercase text-background/60">Page</span>
+          <span className="px-2 py-0.5 rounded-sm bg-background/15 text-background text-[11px] font-medium tabular-nums">
+            {pageNumberFor(issue, selected.id)}
+          </span>
+          <span className="text-[11px] text-background/80 max-w-[180px] truncate hidden md:inline" title={labelForNode(selected)}>
+            {labelForNode(selected)}
+          </span>
+          <span className="text-[10px] tracking-[0.2em] uppercase text-background/50 hidden lg:inline">
+            · {selected.pageType}
+          </span>
+        </div>
         <span className="text-[10px] tracking-[0.3em] uppercase text-background/60 hidden sm:inline">View</span>
+
         <div className="inline-flex border border-background/25 rounded-sm overflow-hidden">
           <button
             onClick={() => setSpreadView(false)}
