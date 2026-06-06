@@ -411,16 +411,19 @@ export type Database = {
       user_settings: {
         Row: {
           active_publication_id: string | null
+          last_positions: Json
           updated_at: string
           user_id: string
         }
         Insert: {
           active_publication_id?: string | null
+          last_positions?: Json
           updated_at?: string
           user_id: string
         }
         Update: {
           active_publication_id?: string | null
+          last_positions?: Json
           updated_at?: string
           user_id?: string
         }

@@ -137,3 +137,43 @@ export async function setActivePublicationId(
     );
   if (error) throw error;
 }
+
+/** Per-publication "where we left off" — restores the last selected page when
+ *  the user reopens that publication. issueId is recorded so we can detect
+ *  fresh/different issues and fall back to pageIndex if the saved page id
+ *  doesn't exist in the loaded issue. */
+export type LastPosition = {
+  issueId: string | null;
+  pageId: string | null;
+  pageIndex: number | null;
+};
+
+export async function getLastPositions(
+  userId: string,
+): Promise<Record<string, LastPosition>> {
+  const { data, error } = await supabase
+    .from("user_settings")
+    .select("last_positions")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  const raw = (data as { last_positions?: unknown } | null)?.last_positions;
+  if (!raw || typeof raw !== "object") return {};
+  return raw as Record<string, LastPosition>;
+}
+
+export async function setLastPosition(
+  userId: string,
+  publicationId: string,
+  position: LastPosition,
+): Promise<void> {
+  const current = await getLastPositions(userId);
+  const next = { ...current, [publicationId]: position };
+  const { error } = await supabase
+    .from("user_settings")
+    .upsert(
+      { user_id: userId, last_positions: next },
+      { onConflict: "user_id" },
+    );
+  if (error) throw error;
+}
