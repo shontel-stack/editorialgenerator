@@ -792,6 +792,13 @@ function Index() {
           <div className="border border-border bg-card rounded-sm px-3 py-2 flex items-center justify-between gap-2">
             <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">Edit layout</span>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowGuides((v) => !v)}
+                className={`px-2 py-1 text-[10px] tracking-[0.3em] uppercase border border-border rounded-sm transition ${showGuides ? "bg-foreground text-background" : "hover:bg-secondary"}`}
+                title="Toggle non-printing margin & bleed guides"
+              >
+                {showGuides ? "Guides on" : "Guides off"}
+              </button>
               {editLayout && (
                 (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
                 (selected.textScales && Object.keys(selected.textScales).length > 0) ||
