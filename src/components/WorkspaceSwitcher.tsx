@@ -251,6 +251,7 @@ export function WorkspaceSwitcher() {
 
   const confirmDuplicate = async () => {
     if (!active || submitting) return;
+    if (appendIssueDate && validateIssueDate(issueDate)) return;
     const proposed = duplicateName.trim();
     if (!proposed) return;
     setSubmitting(true);
