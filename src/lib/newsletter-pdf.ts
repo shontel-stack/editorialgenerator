@@ -1,15 +1,7 @@
-import { toJpeg } from "html-to-image";
-import {
-  PDFArray,
-  PDFDocument,
-  PDFName,
-  PDFNumber,
-  PDFHexString,
-  type PDFRef,
-  type PDFDict,
-} from "pdf-lib";
-
 import type { ExportDim } from "./exportCover";
+import type { PDFDocument, PDFRef, PDFDict } from "pdf-lib";
+
+type PdfLib = typeof import("pdf-lib");
 
 const PT_PER_IN = 72;
 
@@ -48,11 +40,13 @@ function downloadBlob(bytes: Uint8Array, filename: string, mime: string) {
 }
 
 function addInternalLink(
+  pdfLib: PdfLib,
   doc: PDFDocument,
   hostPageRef: PDFRef,
   targetPageRef: PDFRef,
   rect: [number, number, number, number],
 ): PDFRef {
+  const { PDFArray, PDFName } = pdfLib;
   const annot = doc.context.obj({
     Type: "Annot",
     Subtype: "Link",
@@ -81,11 +75,13 @@ function addInternalLink(
  * Throws a descriptive Error if any check fails so the caller can surface it.
  */
 function verifyHighlightLinks(
+  pdfLib: PdfLib,
   doc: PDFDocument,
   hostPageRef: PDFRef,
   pageBounds: { w: number; h: number },
   expected: Array<{ targetId: string; targetRef: PDFRef; annotRef: PDFRef }>,
 ) {
+  const { PDFArray, PDFName, PDFNumber } = pdfLib;
   const hostPage = doc.context.lookup(hostPageRef) as PDFDict;
   const annots = hostPage.get(PDFName.of("Annots"));
   if (!(annots instanceof PDFArray)) {
@@ -144,10 +140,12 @@ function verifyHighlightLinks(
 }
 
 function buildOutline(
+  pdfLib: PdfLib,
   doc: PDFDocument,
   items: Array<{ title: string; ref: PDFRef }>,
 ) {
   if (items.length === 0) return;
+  const { PDFHexString, PDFName, PDFNumber } = pdfLib;
   const outlinesRef = doc.context.nextRef();
   const itemRefs = items.map(() => doc.context.nextRef());
   items.forEach((it, i) => {
