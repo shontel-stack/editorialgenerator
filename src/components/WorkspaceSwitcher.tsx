@@ -4,7 +4,7 @@
  * currently active one.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Building2, Check, ChevronDown, Copy, Download, Plus, Settings2, Upload } from "lucide-react";
 import {
   DropdownMenu,
@@ -128,6 +128,8 @@ export function WorkspaceSwitcher() {
     if (!isFinite(n) || n < 0 || n > 10) return fallback;
     return Math.round(n * 10000) / 10000;
   };
+
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const downloadJson = (filename: string, data: unknown) => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
