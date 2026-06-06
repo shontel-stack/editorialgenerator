@@ -536,8 +536,9 @@ export function buildIdml(issue: IssueDoc, dim?: IdmlDim): Uint8Array {
   const spreads: BuiltSpread[] = [];
   const stories: BuiltStory[] = [];
 
+  const physIdx = computePhysicalIndices(issue.pages);
   issue.pages.forEach((page, i) => {
-    const text = collectPageText(page, issue, i);
+    const text = collectPageText(page, issue, i, physIdx[i]);
     const body = buildStory(text, i);
     stories.push(body);
     const folio = folioStory(text, i);
