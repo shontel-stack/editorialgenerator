@@ -5,6 +5,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { usePanelRef } from "react-resizable-panels";
 import { PagePreview } from "@/components/PagePreview";
 import { GuidesOverlay } from "@/components/GuidesOverlay";
+import { ColumnTuningControls } from "@/components/ColumnTuningControls";
 import { SnapSettingsPanel } from "@/components/SnapSettingsPanel";
 import { useSnapSettings, mergeSnapSettings, type SnapSettings } from "@/lib/snapSettings";
 import { LayoutEditProvider } from "@/components/LayoutEdit";
@@ -17,6 +18,7 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
+import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { downloadIdml, downloadIdmlPackage } from "@/lib/idmlExport";
@@ -239,6 +241,7 @@ function Index() {
     publicationId: activePublication?.id ?? null,
     pages: pageRefsForStatus,
   });
+  const layoutPresets = useLayoutPresets(userId);
   const [pendingLayout, setPendingLayout] = useState<PageLayout | null>(null);
 
   // Hidden off-screen render stage holds a div ref for every page node.
@@ -1183,6 +1186,26 @@ function Index() {
               <p className="text-[11px] leading-relaxed text-muted-foreground">
                 {PAGE_LAYOUT_DESCRIPTIONS[selectedLayout]} Saved per page.
               </p>
+              {PAGE_LAYOUT_COLUMNS[selectedLayout] > 1 && (
+                <div className="mt-3 border-t border-border/60 pt-3">
+                  <ColumnTuningControls
+                    layout={selectedLayout}
+                    widths={pageStatus.columnWidthsOf(selected.id)}
+                    gutterIn={pageStatus.gutterOf(selected.id)}
+                    onChange={(patch) => pageStatus.setColumnTuning(selected.id, patch)}
+                    presets={layoutPresets.presetsFor(selectedLayout)}
+                    onSavePreset={(name) =>
+                      layoutPresets.save({
+                        name,
+                        layout: selectedLayout,
+                        column_widths: pageStatus.columnWidthsOf(selected.id),
+                        gutter_in: pageStatus.gutterOf(selected.id),
+                      })
+                    }
+                    onDeletePreset={(id) => layoutPresets.remove(id)}
+                  />
+                </div>
+              )}
             </div>
           </Section>
           {selected.pageType === "cover" && (
@@ -1395,7 +1418,15 @@ function Index() {
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
               </LayoutEditProvider>
-              {showGuides && <GuidesOverlay dim={dimPx} margins={pageMargins} columns={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(spread.left.id) ?? DEFAULT_PAGE_LAYOUT]} />}
+              {showGuides && (
+                <GuidesOverlay
+                  dim={dimPx}
+                  margins={pageMargins}
+                  columns={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(spread.left.id) ?? DEFAULT_PAGE_LAYOUT]}
+                  columnRatios={pageStatus.columnWidthsOf(spread.left.id)}
+                  gutterIn={pageStatus.gutterOf(spread.left.id)}
+                />
+              )}
             </div>
             {spreadView && spread.right && (
               <div
@@ -1420,7 +1451,15 @@ function Index() {
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
                 </LayoutEditProvider>
-                {showGuides && <GuidesOverlay dim={dimPx} margins={pageMargins} columns={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(spread.right.id) ?? DEFAULT_PAGE_LAYOUT]} />}
+                {showGuides && (
+                  <GuidesOverlay
+                    dim={dimPx}
+                    margins={pageMargins}
+                    columns={PAGE_LAYOUT_COLUMNS[pageStatus.layoutOf(spread.right.id) ?? DEFAULT_PAGE_LAYOUT]}
+                    columnRatios={pageStatus.columnWidthsOf(spread.right!.id)}
+                    gutterIn={pageStatus.gutterOf(spread.right!.id)}
+                  />
+                )}
               </div>
             )}
           </div>

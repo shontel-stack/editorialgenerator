@@ -51,9 +51,27 @@ export type PageStatusRow = {
   notes: string | null;
   position: number;
   layout: PageLayout;
+  column_widths: number[] | null;
+  gutter_in: number | null;
   created_at: string;
   updated_at: string;
 };
+
+export const DEFAULT_GUTTER_IN = 0.167;
+
+/** Even-split column ratios summing to 1 for the given count. */
+export function evenColumnWidths(count: number): number[] {
+  const n = Math.max(1, Math.floor(count));
+  return Array.from({ length: n }, () => 1 / n);
+}
+
+/** Normalize an arbitrary array of positive numbers to ratios summing to 1. */
+export function normalizeColumnWidths(widths: number[]): number[] {
+  const cleaned = widths.map((w) => (Number.isFinite(w) && w > 0 ? w : 0));
+  const sum = cleaned.reduce((a, b) => a + b, 0);
+  if (sum <= 0) return evenColumnWidths(widths.length || 1);
+  return cleaned.map((w) => w / sum);
+}
 
 export async function listPageStatusForIssue(
   userId: string,
@@ -119,7 +137,15 @@ export async function updatePageStatus(
   patch: Partial<
     Pick<
       PageStatusRow,
-      "status" | "assignee_role" | "due_date" | "notes" | "position" | "page_label" | "layout"
+      | "status"
+      | "assignee_role"
+      | "due_date"
+      | "notes"
+      | "position"
+      | "page_label"
+      | "layout"
+      | "column_widths"
+      | "gutter_in"
     >
   >,
 ): Promise<void> {

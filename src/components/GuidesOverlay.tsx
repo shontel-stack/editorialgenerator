@@ -14,6 +14,11 @@ type Props = {
   columns?: number;
   /** Gutter between columns, in inches. Defaults to 0.167″ (~12pt). */
   gutterIn?: number;
+  /**
+   * Optional per-column width ratios (must sum to 1). When supplied, columns
+   * are sized proportionally instead of evenly.
+   */
+  columnRatios?: number[];
 };
 
 /**
@@ -27,7 +32,14 @@ type Props = {
  * match. Bleed extends *outside* the trim, so the parent wrapper must allow
  * overflow.
  */
-export function GuidesOverlay({ dim, margins, showLabels = true, columns = 1, gutterIn = 0.167 }: Props) {
+export function GuidesOverlay({
+  dim,
+  margins,
+  showLabels = true,
+  columns = 1,
+  gutterIn = 0.167,
+  columnRatios,
+}: Props) {
   const DPI = 300;
   const mTop = margins.top * DPI;
   const mRight = margins.right * DPI;
@@ -38,7 +50,14 @@ export function GuidesOverlay({ dim, margins, showLabels = true, columns = 1, gu
   const safeH = dim.h - mTop - mBottom;
   const cols = Math.max(1, Math.floor(columns));
   const gutter = Math.max(0, gutterIn * DPI);
-  const colW = cols > 1 ? (safeW - gutter * (cols - 1)) / cols : safeW;
+  const totalGutter = gutter * Math.max(0, cols - 1);
+  const usableW = Math.max(0, safeW - totalGutter);
+  const ratios =
+    columnRatios && columnRatios.length === cols
+      ? columnRatios
+      : Array.from({ length: cols }, () => 1 / cols);
+  const ratioSum = ratios.reduce((a, b) => a + b, 0) || 1;
+  const colWidths = ratios.map((r) => (r / ratioSum) * usableW);
 
   const MAGENTA = "rgba(236, 0, 140, 0.95)"; // safe-area (margin)
   const CYAN = "rgba(0, 174, 239, 0.95)"; // bleed (crop)
@@ -109,25 +128,29 @@ export function GuidesOverlay({ dim, margins, showLabels = true, columns = 1, gu
 
       {/* Column guides — translucent column fills + gutter dividers */}
       {cols > 1 &&
-        Array.from({ length: cols }).map((_, i) => {
-          const colLeft = bleed + mLeft + i * (colW + gutter);
-          return (
-            <div
-              key={`col-${i}`}
-              style={{
-                position: "absolute",
-                top: bleed + mTop,
-                left: colLeft,
-                width: colW,
-                height: safeH,
-                background: "rgba(0, 174, 239, 0.06)",
-                borderLeft: i === 0 ? "none" : `1px dashed ${CYAN}`,
-                borderRight: i === cols - 1 ? "none" : `1px dashed ${CYAN}`,
-                boxSizing: "border-box",
-              }}
-            />
-          );
-        })}
+        (() => {
+          let x = bleed + mLeft;
+          return colWidths.map((w, i) => {
+            const colLeft = x;
+            x += w + gutter;
+            return (
+              <div
+                key={`col-${i}`}
+                style={{
+                  position: "absolute",
+                  top: bleed + mTop,
+                  left: colLeft,
+                  width: w,
+                  height: safeH,
+                  background: "rgba(0, 174, 239, 0.06)",
+                  borderLeft: i === 0 ? "none" : `1px dashed ${CYAN}`,
+                  borderRight: i === cols - 1 ? "none" : `1px dashed ${CYAN}`,
+                  boxSizing: "border-box",
+                }}
+              />
+            );
+          });
+        })()}
 
 
       {showLabels && (

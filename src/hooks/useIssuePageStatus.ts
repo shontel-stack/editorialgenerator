@@ -9,10 +9,17 @@ import {
   listPageStatusForIssue,
   upsertPageStatus,
   updatePageStatus,
+  evenColumnWidths,
+  normalizeColumnWidths,
+  DEFAULT_GUTTER_IN,
   type PageStatusRow,
   type PageStatusValue,
 } from "@/lib/pageStatus";
-import { DEFAULT_PAGE_LAYOUT, type PageLayout } from "@/lib/pageLayouts";
+import {
+  DEFAULT_PAGE_LAYOUT,
+  PAGE_LAYOUT_COLUMNS,
+  type PageLayout,
+} from "@/lib/pageLayouts";
 
 type PageRef = { id: string; label: string };
 
@@ -165,5 +172,69 @@ export function useIssuePageStatus(opts: {
     [byPage],
   );
 
-  return { rows, byPage, loading, reload, setStatus, setAssignee, setDueDate, setLayout, layoutOf };
+  const columnWidthsOf = useCallback(
+    (pageId: string): number[] => {
+      const row = byPage[pageId];
+      const layout = row?.layout ?? DEFAULT_PAGE_LAYOUT;
+      const expected = Math.max(1, PAGE_LAYOUT_COLUMNS[layout] || 1);
+      const stored = row?.column_widths;
+      if (Array.isArray(stored) && stored.length === expected) {
+        return normalizeColumnWidths(stored as number[]);
+      }
+      return evenColumnWidths(expected);
+    },
+    [byPage],
+  );
+
+  const gutterOf = useCallback(
+    (pageId: string): number => {
+      const g = byPage[pageId]?.gutter_in;
+      return typeof g === "number" && Number.isFinite(g) && g >= 0 ? g : DEFAULT_GUTTER_IN;
+    },
+    [byPage],
+  );
+
+  const setColumnTuning = useCallback(
+    async (
+      pageId: string,
+      patch: { column_widths?: number[] | null; gutter_in?: number | null },
+    ) => {
+      const existing = byPage[pageId];
+      const label = pages.find((p) => p.id === pageId)?.label ?? null;
+      const normalized: { column_widths?: number[] | null; gutter_in?: number | null } = {};
+      if (patch.column_widths !== undefined) {
+        normalized.column_widths =
+          patch.column_widths === null ? null : normalizeColumnWidths(patch.column_widths);
+      }
+      if (patch.gutter_in !== undefined) normalized.gutter_in = patch.gutter_in;
+      if (existing) {
+        await updatePageStatus(existing.id, normalized);
+      } else if (userId) {
+        await upsertPageStatus({
+          userId,
+          publicationId,
+          issueId,
+          pageId,
+          pageLabel: label,
+        });
+        // Realtime will reconcile; follow-up update will be retried on next call.
+      }
+    },
+    [byPage, pages, userId, publicationId, issueId],
+  );
+
+  return {
+    rows,
+    byPage,
+    loading,
+    reload,
+    setStatus,
+    setAssignee,
+    setDueDate,
+    setLayout,
+    layoutOf,
+    columnWidthsOf,
+    gutterOf,
+    setColumnTuning,
+  };
 }

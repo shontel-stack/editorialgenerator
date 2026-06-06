@@ -94,11 +94,46 @@ export type Database = {
         }
         Relationships: []
       }
+      layout_presets: {
+        Row: {
+          column_widths: Json
+          created_at: string
+          gutter_in: number
+          id: string
+          layout: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          column_widths: Json
+          created_at?: string
+          gutter_in?: number
+          id?: string
+          layout: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          column_widths?: Json
+          created_at?: string
+          gutter_in?: number
+          id?: string
+          layout?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       page_status: {
         Row: {
           assignee_role: string | null
+          column_widths: Json | null
           created_at: string
           due_date: string | null
+          gutter_in: number | null
           id: string
           issue_id: string
           layout: string
@@ -113,8 +148,10 @@ export type Database = {
         }
         Insert: {
           assignee_role?: string | null
+          column_widths?: Json | null
           created_at?: string
           due_date?: string | null
+          gutter_in?: number | null
           id?: string
           issue_id: string
           layout?: string
@@ -129,8 +166,10 @@ export type Database = {
         }
         Update: {
           assignee_role?: string | null
+          column_widths?: Json | null
           created_at?: string
           due_date?: string | null
+          gutter_in?: number | null
           id?: string
           issue_id?: string
           layout?: string
