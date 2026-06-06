@@ -529,3 +529,136 @@ export function AttachmentsPanel({
   );
 }
 
+function LibrarySection({
+  inputRef,
+  publicationName,
+  library,
+  busy,
+  err,
+  onPick,
+  onInsertImage,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  publicationName: string | null;
+  library: {
+    rows: AttachmentWithUrl[];
+    loading: boolean;
+    error: string | null;
+    remove: (row: AttachmentWithUrl) => Promise<void>;
+  };
+  busy: boolean;
+  err: string | null;
+  onPick: (file: File | undefined) => Promise<void>;
+  onInsertImage?: (row: AttachmentWithUrl) => void;
+}) {
+  return (
+    <>
+      <div className="px-4 py-3 border-b border-border space-y-3">
+        <p className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground">
+          Shared library {publicationName ? `· ${publicationName}` : ""}
+        </p>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPT_ATTR}
+          className="hidden"
+          onChange={(e) => void onPick(e.target.files?.[0])}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy || !publicationName}
+          className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-border bg-secondary/40 hover:bg-secondary px-3 py-3 text-xs uppercase tracking-[0.25em] text-foreground rounded-sm disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {busy ? "Uploading…" : "Upload to library"}
+        </button>
+        {err && <p className="text-[11px] text-destructive">{err}</p>}
+        {!publicationName && (
+          <p className="text-[11px] text-muted-foreground">
+            Select a publication to manage its shared library.
+          </p>
+        )}
+        <p className="text-[10px] text-muted-foreground">
+          Files here are shared across every issue in this publication. PDF, JPG, PNG, WEBP, DOCX up to 10 MB.
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {library.loading && library.rows.length === 0 ? (
+          <div className="p-6 text-center text-xs text-muted-foreground">Loading…</div>
+        ) : library.error ? (
+          <div className="p-4 text-xs text-destructive">{library.error}</div>
+        ) : library.rows.length === 0 ? (
+          <div className="p-6 text-center text-xs text-muted-foreground">
+            No library files yet. Upload one to share across issues.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {library.rows.map((row) => {
+              const Icon = iconFor(row.mime_type);
+              const canInsert = !!onInsertImage && isImage(row.mime_type) && !!row.signedUrl;
+              return (
+                <li key={row.id} className="px-4 py-3 flex items-start gap-3">
+                  {row.signedUrl && isImage(row.mime_type) ? (
+                    <img
+                      src={row.signedUrl}
+                      alt=""
+                      loading="lazy"
+                      className="h-10 w-10 object-cover rounded-sm border border-border flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 flex items-center justify-center border border-border rounded-sm flex-shrink-0">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-foreground truncate" title={row.file_name}>
+                      {row.file_name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground tracking-wide">
+                      {formatSize(row.size_bytes)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {canInsert && (
+                      <button
+                        type="button"
+                        onClick={() => onInsertImage!(row)}
+                        className="text-[10px] tracking-[0.2em] uppercase border border-border px-2 py-1 rounded-sm hover:bg-secondary text-foreground"
+                        title="Insert as image on current page"
+                      >
+                        Insert
+                      </button>
+                    )}
+                    {row.signedUrl && (
+                      <a
+                        href={row.signedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-muted-foreground hover:text-foreground p-1.5 rounded-sm hover:bg-secondary"
+                        title="Open"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void library.remove(row)}
+                      className="text-muted-foreground hover:text-destructive p-1.5 rounded-sm hover:bg-secondary"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+}
+
+
