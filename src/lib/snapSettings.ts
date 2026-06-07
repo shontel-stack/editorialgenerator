@@ -17,13 +17,20 @@ export type SnapSettings = {
   edgeTolerancePx: number;
   rotationTolerance: number;
   rotationAngles: number[];
+  /** Snap-to-grid pixel size (page-px @ 300 DPI). 0 disables the grid. */
+  gridSizePx: number;
+  /** Snap to edges/centers of OTHER blocks on the same page. */
+  alignToObjects: boolean;
 };
 
 export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   edgeTolerancePx: 30, // ≈ 0.1 in @ 300 DPI
   rotationTolerance: 4, // degrees
   rotationAngles: [-180, -135, -90, -45, 0, 15, 30, 45, 60, 90, 120, 135, 180],
+  gridSizePx: 0,
+  alignToObjects: true,
 };
+
 
 const STORAGE_KEY = "lovable.snapSettings.v1";
 const EVENT = "lovable:snap-settings-change";
