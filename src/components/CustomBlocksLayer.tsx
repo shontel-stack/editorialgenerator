@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
@@ -1379,6 +1379,14 @@ function BlockToolbar({
       <button type="button" title="Bring forward" onClick={() => onReorder("forward")} style={btnStyle("normal")}><ChevronUp size={12} /></button>
       <button type="button" title="Send backward" onClick={() => onReorder("backward")} style={btnStyle("normal")}><ChevronDown size={12} /></button>
       <button type="button" title="Send to back" onClick={() => onReorder("back")} style={btnStyle("normal")}><ChevronsDown size={12} /></button>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Align page</span>
+      <button type="button" title="Align left" onClick={() => onChange({ x: 0 } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignStartVertical size={12} /></button>
+      <button type="button" title="Center horizontally" onClick={() => onChange({ x: Math.round((3200 - block.w) / 2) } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignCenterVertical size={12} /></button>
+      <button type="button" title="Align right" onClick={() => onChange({ x: 3200 - block.w } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignEndVertical size={12} /></button>
+      <button type="button" title="Align top" onClick={() => onChange({ y: 0 } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignStartHorizontal size={12} /></button>
+      <button type="button" title="Center vertically" onClick={() => onChange({ y: Math.round((4267 - block.h) / 2) } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignCenterHorizontal size={12} /></button>
+      <button type="button" title="Align bottom" onClick={() => onChange({ y: 4267 - block.h } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignEndHorizontal size={12} /></button>
       <LinkControl link={(block as { link?: string }).link} onChange={(v) => onChange({ link: v } as Partial<CustomBlock>)} />
       <button type="button" onClick={onRemove} style={btnStyle("danger")}>
         <Trash2 size={12} /> Delete
@@ -1400,10 +1408,11 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
         Size
         <input type="number" min={12} max={400} value={block.fontSize ?? 48} onChange={(e) => onChange({ fontSize: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
       </label>
-      <select value={block.align ?? "left"} onChange={(e) => onChange({ align: e.target.value as "left" | "center" | "right" })} style={inputStyle}>
+      <select value={block.align ?? "left"} onChange={(e) => onChange({ align: e.target.value as "left" | "center" | "right" | "justify" })} style={inputStyle}>
         <option value="left">Left</option>
         <option value="center">Center</option>
         <option value="right">Right</option>
+        <option value="justify">Justify</option>
       </select>
       <button type="button" onClick={() => onChange({ italic: !block.italic })} style={btnStyle(block.italic ? "active" : "normal")}>
         Italic

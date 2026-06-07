@@ -256,7 +256,7 @@ export type CustomBlock =
       fontSize?: number;
       fontWeight?: number;
       italic?: boolean;
-      align?: "left" | "center" | "right";
+      align?: "left" | "center" | "right" | "justify";
       color?: string;
       bg?: string;
       rotate?: number;
