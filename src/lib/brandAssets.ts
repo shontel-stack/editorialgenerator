@@ -171,15 +171,15 @@ export async function setFontSlotOverride(
   slot: "display" | "serif" | "sans",
   fontId: string | null,
 ): Promise<void> {
-  const col =
+  const patch =
     slot === "display"
-      ? "display_font_custom_id"
+      ? { display_font_custom_id: fontId }
       : slot === "serif"
-        ? "serif_font_custom_id"
-        : "sans_font_custom_id";
+        ? { serif_font_custom_id: fontId }
+        : { sans_font_custom_id: fontId };
   const { error } = await supabase
     .from("publications")
-    .update({ [col]: fontId })
+    .update(patch)
     .eq("id", publicationId);
   if (error) throw error;
 }
