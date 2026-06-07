@@ -391,7 +391,7 @@ function CustomBlockView({
     dragRef.current = null;
   };
 
-  const rotate = (block.kind === "image" || block.kind === "video") ? (block.rotate ?? 0) : 0;
+  const rotate = (block as { rotate?: number }).rotate ?? 0;
   const wrapper: CSSProperties = {
     position: "absolute",
     left: block.x,
