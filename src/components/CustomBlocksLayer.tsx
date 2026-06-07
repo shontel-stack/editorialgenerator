@@ -1502,6 +1502,7 @@ function TextControls({
     while (next.length < totalParas) next.push(null);
     next[pIdx] = v;
     onChange({ [key]: next } as Partial<CustomBlock>);
+  };
   const setParaLineHeight = (v: number | null) => {
     if (pIdx == null) return;
     const next = pLH.slice();
