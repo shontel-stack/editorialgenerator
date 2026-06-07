@@ -87,7 +87,12 @@ export function mergeSnapSettings(
       Array.isArray(override.rotationAngles) && override.rotationAngles.length > 0
         ? override.rotationAngles
         : base.rotationAngles,
+    gridSizePx:
+      typeof override.gridSizePx === "number" ? override.gridSizePx : base.gridSizePx,
+    alignToObjects:
+      typeof override.alignToObjects === "boolean" ? override.alignToObjects : base.alignToObjects,
   };
+
 }
 
 /** Snap a rotation (degrees) to the nearest configured angle within tolerance. */
