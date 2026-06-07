@@ -174,6 +174,28 @@ export function CustomBlocksLayer() {
   );
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  const reorder = useCallback(
+    (id: string, action: "front" | "back" | "forward" | "backward") => {
+      if (!setBlocks) return;
+      const zs = blocks.map((b) => b.z ?? 50);
+      const maxZ = zs.length ? Math.max(...zs) : 50;
+      const minZ = zs.length ? Math.min(...zs) : 50;
+      setBlocks(
+        blocks.map((b) => {
+          if (b.id !== id) return b;
+          const cur = b.z ?? 50;
+          let next = cur;
+          if (action === "front") next = maxZ + 1;
+          else if (action === "back") next = minZ - 1;
+          else if (action === "forward") next = cur + 1;
+          else if (action === "backward") next = cur - 1;
+          return { ...b, z: next } as CustomBlock;
+        }),
+      );
+    },
+    [blocks, setBlocks],
+  );
+
   return (
     <>
       {blocks.map((b) => (
@@ -189,7 +211,12 @@ export function CustomBlocksLayer() {
       ))}
       {setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => { if (!editing) requestEdit?.(); setPickerOpen(true); }} />}
       {editing && selected && setBlocks && (
-        <BlockToolbar block={selected} onChange={(p) => update(selected.id, p)} onRemove={() => remove(selected.id)} />
+        <BlockToolbar
+          block={selected}
+          onChange={(p) => update(selected.id, p)}
+          onRemove={() => remove(selected.id)}
+          onReorder={(a) => reorder(selected.id, a)}
+        />
       )}
       {editing && pickerOpen && setBlocks && (
         <TemplatePicker onPick={(t) => { insertTemplate(t); setPickerOpen(false); }} onClose={() => setPickerOpen(false)} />
@@ -197,6 +224,7 @@ export function CustomBlocksLayer() {
     </>
   );
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Single block view (drag, resize, click-to-select, inline text edit) */
