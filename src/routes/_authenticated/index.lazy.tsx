@@ -20,8 +20,12 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
+import { BrandKitPanel } from "@/components/BrandKitPanel";
+import { BrandKitProvider } from "@/lib/brandKitContext";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useLibraryAttachments } from "@/hooks/useLibraryAttachments";
+import { useBrandFonts } from "@/hooks/useBrandFonts";
+import { useBrandSwatches } from "@/hooks/useBrandSwatches";
 import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
@@ -176,6 +180,7 @@ function Index() {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [brandKitOpen, setBrandKitOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
 
   // ----- Autosave: persist the IssueDoc per (user, issueId) -----
@@ -476,6 +481,19 @@ function Index() {
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
   const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
+  const brandFonts = useBrandFonts(activePublication?.id ?? null);
+  const brandSwatches = useBrandSwatches(activePublication?.id ?? null);
+  const brandKitContextValue = useMemo(
+    () => ({
+      fonts: brandFonts.fonts,
+      swatches: brandSwatches.swatches,
+      resolveFontCssFamily: brandFonts.resolveCssFamily,
+      saveSwatch: brandSwatches.add,
+      removeSwatch: brandSwatches.remove,
+    }),
+    [brandFonts.fonts, brandSwatches.swatches, brandFonts.resolveCssFamily, brandSwatches.add, brandSwatches.remove],
+  );
+
 
   // ----- Placement undo / redo history -----
   // Records changes made via drag-on-canvas, sidebar pin edits, AttachmentsPanel
