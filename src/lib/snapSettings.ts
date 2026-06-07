@@ -47,7 +47,10 @@ function safeRead(): SnapSettings {
       rotationAngles: Array.isArray(parsed.rotationAngles) && parsed.rotationAngles.length > 0
         ? Array.from(new Set(parsed.rotationAngles.filter((n) => Number.isFinite(n)).map((n) => clampNum(n, -360, 360, 0)))).sort((a, b) => a - b)
         : DEFAULT_SNAP_SETTINGS.rotationAngles,
+      gridSizePx: clampNum(parsed.gridSizePx, 0, 600, DEFAULT_SNAP_SETTINGS.gridSizePx),
+      alignToObjects: typeof parsed.alignToObjects === "boolean" ? parsed.alignToObjects : DEFAULT_SNAP_SETTINGS.alignToObjects,
     };
+
   } catch {
     return DEFAULT_SNAP_SETTINGS;
   }
