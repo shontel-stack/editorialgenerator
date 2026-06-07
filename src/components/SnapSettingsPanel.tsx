@@ -81,7 +81,11 @@ export function SnapSettingsPanel({
       override?.rotationAngles && override.rotationAngles.length > 0
         ? override.rotationAngles
         : global.rotationAngles,
+    gridSizePx: override?.gridSizePx ?? global.gridSizePx,
+    alignToObjects:
+      typeof override?.alignToObjects === "boolean" ? override.alignToObjects : global.alignToObjects,
   };
+
   const [pageAnglesText, setPageAnglesText] = useState<string>(effective.rotationAngles.join(", "));
 
   const commitGlobal = (patch: Partial<SnapSettings>) => {
@@ -170,6 +174,25 @@ export function SnapSettingsPanel({
               onText={setAnglesText}
               onCommit={() => commitGlobalAngles(anglesText)}
             />
+            <ToleranceSlider
+              label={
+                global.gridSizePx > 0
+                  ? `Grid · ${global.gridSizePx}px (${inchEquiv(global.gridSizePx)}″)`
+                  : "Grid · off"
+              }
+              value={global.gridSizePx}
+              min={0}
+              max={300}
+              onChange={(v) => commitGlobal({ gridSizePx: v })}
+            />
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={global.alignToObjects}
+                onChange={(e) => commitGlobal({ alignToObjects: e.target.checked })}
+              />
+              <span>Snap to other objects (smart guides)</span>
+            </label>
             <button
               type="button"
               onClick={reset}
@@ -177,6 +200,7 @@ export function SnapSettingsPanel({
             >
               Reset global defaults
             </button>
+
           </fieldset>
 
           {/* PER-PAGE OVERRIDE */}

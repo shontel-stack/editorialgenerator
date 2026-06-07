@@ -17,13 +17,20 @@ export type SnapSettings = {
   edgeTolerancePx: number;
   rotationTolerance: number;
   rotationAngles: number[];
+  /** Snap-to-grid pixel size (page-px @ 300 DPI). 0 disables the grid. */
+  gridSizePx: number;
+  /** Snap to edges/centers of OTHER blocks on the same page. */
+  alignToObjects: boolean;
 };
 
 export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   edgeTolerancePx: 30, // ≈ 0.1 in @ 300 DPI
   rotationTolerance: 4, // degrees
   rotationAngles: [-180, -135, -90, -45, 0, 15, 30, 45, 60, 90, 120, 135, 180],
+  gridSizePx: 0,
+  alignToObjects: true,
 };
+
 
 const STORAGE_KEY = "lovable.snapSettings.v1";
 const EVENT = "lovable:snap-settings-change";
@@ -40,7 +47,10 @@ function safeRead(): SnapSettings {
       rotationAngles: Array.isArray(parsed.rotationAngles) && parsed.rotationAngles.length > 0
         ? Array.from(new Set(parsed.rotationAngles.filter((n) => Number.isFinite(n)).map((n) => clampNum(n, -360, 360, 0)))).sort((a, b) => a - b)
         : DEFAULT_SNAP_SETTINGS.rotationAngles,
+      gridSizePx: clampNum(parsed.gridSizePx, 0, 600, DEFAULT_SNAP_SETTINGS.gridSizePx),
+      alignToObjects: typeof parsed.alignToObjects === "boolean" ? parsed.alignToObjects : DEFAULT_SNAP_SETTINGS.alignToObjects,
     };
+
   } catch {
     return DEFAULT_SNAP_SETTINGS;
   }
@@ -77,7 +87,12 @@ export function mergeSnapSettings(
       Array.isArray(override.rotationAngles) && override.rotationAngles.length > 0
         ? override.rotationAngles
         : base.rotationAngles,
+    gridSizePx:
+      typeof override.gridSizePx === "number" ? override.gridSizePx : base.gridSizePx,
+    alignToObjects:
+      typeof override.alignToObjects === "boolean" ? override.alignToObjects : base.alignToObjects,
   };
+
 }
 
 /** Snap a rotation (degrees) to the nearest configured angle within tolerance. */
