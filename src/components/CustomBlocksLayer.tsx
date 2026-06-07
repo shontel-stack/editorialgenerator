@@ -1483,9 +1483,11 @@ function TextControls({
   const pAligns = block.paragraphAligns ?? [];
   const pBefore = block.paragraphSpaceBefore ?? [];
   const pAfter = block.paragraphSpaceAfter ?? [];
+  const pLH = block.paragraphLineHeight ?? [];
   const currentParaAlign = pIdx != null ? pAligns[pIdx] ?? null : null;
   const currentSpaceBefore = pIdx != null ? pBefore[pIdx] ?? 0 : 0;
   const currentSpaceAfter = pIdx != null ? pAfter[pIdx] ?? 0 : 0;
+  const currentLineHeight = pIdx != null ? pLH[pIdx] ?? 0 : 0;
   const setParaAlign = (a: "left" | "center" | "right" | "justify" | null) => {
     if (pIdx == null) return;
     const next = pAligns.slice();
@@ -1500,6 +1502,12 @@ function TextControls({
     while (next.length < totalParas) next.push(null);
     next[pIdx] = v;
     onChange({ [key]: next } as Partial<CustomBlock>);
+  const setParaLineHeight = (v: number | null) => {
+    if (pIdx == null) return;
+    const next = pLH.slice();
+    while (next.length < totalParas) next.push(null);
+    next[pIdx] = v;
+    onChange({ paragraphLineHeight: next } as Partial<CustomBlock>);
   };
   return (
     <>
@@ -1609,6 +1617,24 @@ function TextControls({
           }}
           style={{ ...inputStyle, width: 56, opacity: pIdx == null ? 0.5 : 1 }}
           title="Space after this paragraph (px)"
+        />
+      </label>
+      <label style={labelStyle}>
+        Leading
+        <input
+          type="number"
+          min={0}
+          max={4}
+          step={0.05}
+          disabled={pIdx == null}
+          value={currentLineHeight}
+          onChange={(e) => {
+            const raw = Number(e.target.value);
+            const v = Number.isFinite(raw) ? Math.max(0, Math.min(4, raw)) : 0;
+            setParaLineHeight(v > 0 ? v : null);
+          }}
+          style={{ ...inputStyle, width: 60, opacity: pIdx == null ? 0.5 : 1 }}
+          title="Line-height multiplier for this paragraph (0 = inherit block default)"
         />
       </label>
     </>
