@@ -22,6 +22,8 @@ import {
   type ImageBlockDefaults,
   type VideoBlockDefaults,
 } from "@/lib/mediaBlockDefaults";
+import { useBrandKit } from "@/lib/brandKitContext";
+import { SwatchPicker } from "@/components/SwatchPicker";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
