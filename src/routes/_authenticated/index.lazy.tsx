@@ -1399,6 +1399,14 @@ function Index() {
               Production
             </button>
             <button
+              onClick={() => setBrandKitOpen((v) => !v)}
+              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
+              title="Brand kit · fonts &amp; swatches"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              Brand kit
+            </button>
+            <button
               onClick={() => setAssistantOpen((v) => !v)}
               className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
               title="Editorial assistant"
