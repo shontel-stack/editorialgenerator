@@ -164,6 +164,8 @@ export function CustomBlocksLayer() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+  // Index of the paragraph the caret is in while editing a text block, else null.
+  const [caretParagraph, setCaretParagraph] = useState<number | null>(null);
 
   // Live alignment lines shown during a drag. Cleared on pointer up.
   const [activeLines, setActiveLines] = useState<{ xs: number[]; ys: number[] }>({ xs: [], ys: [] });
@@ -184,8 +186,15 @@ export function CustomBlocksLayer() {
 
   // Clear selection when leaving edit mode
   useEffect(() => {
-    if (!editing) setSelectedId(null);
+    if (!editing) {
+      setSelectedId(null);
+      setCaretParagraph(null);
+    }
   }, [editing]);
+  // Reset caret paragraph when switching selected block.
+  useEffect(() => {
+    setCaretParagraph(null);
+  }, [selectedId]);
   // Clear any leftover alignment lines when leaving edit mode.
   useEffect(() => {
     if (!editing) setActiveLines({ xs: [], ys: [] });
@@ -305,6 +314,7 @@ export function CustomBlocksLayer() {
           siblingAxesFor={siblingAxesFor}
           gridSize={snapCfg.gridSizePx}
           onActiveLines={setActiveLines}
+          onCaretParagraphChange={selectedId === b.id ? setCaretParagraph : undefined}
         />
       ))}
 
@@ -349,6 +359,7 @@ export function CustomBlocksLayer() {
           onChange={(p) => update(selected.id, p)}
           onRemove={() => remove(selected.id)}
           onReorder={(a) => reorder(selected.id, a)}
+          caretParagraph={caretParagraph}
         />
       )}
       {editing && pickerOpen && setBlocks && (
