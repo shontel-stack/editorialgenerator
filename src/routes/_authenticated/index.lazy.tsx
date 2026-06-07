@@ -1301,6 +1301,7 @@ function Index() {
   };
 
   return (
+    <BrandKitProvider value={brandKitContextValue}>
     <main className="min-h-screen bg-background text-foreground" style={{ scrollPaddingTop: stickyH }}>
       <div ref={stickyRef} className="sticky top-0 z-30 bg-background">
 
