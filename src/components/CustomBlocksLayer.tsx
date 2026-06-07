@@ -1459,7 +1459,27 @@ function BlockToolbar({
 }
 
 
-function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "text" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+function TextControls({
+  block,
+  onChange,
+  caretParagraph,
+}: {
+  block: Extract<CustomBlock, { kind: "text" }>;
+  onChange: (p: Partial<CustomBlock>) => void;
+  caretParagraph?: number | null;
+}) {
+  const paragraphs = block.text.split("\n");
+  const totalParas = paragraphs.length;
+  const pIdx = caretParagraph != null && caretParagraph >= 0 && caretParagraph < totalParas ? caretParagraph : null;
+  const pAligns = block.paragraphAligns ?? [];
+  const currentParaAlign = pIdx != null ? pAligns[pIdx] ?? null : null;
+  const setParaAlign = (a: "left" | "center" | "right" | "justify" | null) => {
+    if (pIdx == null) return;
+    const next = pAligns.slice();
+    while (next.length < totalParas) next.push(null);
+    next[pIdx] = a;
+    onChange({ paragraphAligns: next });
+  };
   return (
     <>
       <select value={block.fontFamily ?? "serif"} onChange={(e) => onChange({ fontFamily: e.target.value as "display" | "serif" | "sans" })} style={inputStyle}>
@@ -1515,6 +1535,27 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
           style={{ ...inputStyle, width: 56 }}
         />
       </label>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>
+        {pIdx != null ? `¶ ${pIdx + 1}/${totalParas}` : "¶ (click in text)"}
+      </span>
+      {(["left", "center", "right", "justify"] as const).map((a) => (
+        <button
+          key={a}
+          type="button"
+          title={`Paragraph: ${a}`}
+          disabled={pIdx == null}
+          onClick={() => setParaAlign(a)}
+          style={{ ...btnStyle(currentParaAlign === a ? "active" : "normal"), opacity: pIdx == null ? 0.5 : 1 }}
+        >
+          {a === "left" ? "L" : a === "center" ? "C" : a === "right" ? "R" : "J"}
+        </button>
+      ))}
+      {pIdx != null && currentParaAlign != null && (
+        <button type="button" title="Clear paragraph override" onClick={() => setParaAlign(null)} style={btnStyle("normal")}>
+          ×
+        </button>
+      )}
     </>
   );
 }
