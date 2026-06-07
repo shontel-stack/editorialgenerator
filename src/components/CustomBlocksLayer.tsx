@@ -1097,7 +1097,7 @@ function TemplateThumb({ tpl }: { tpl: LayoutTemplate }) {
           b.kind === "text" ? "1px dashed #999" :
           b.kind === "shape" && b.shape === "line" ? `2px solid ${b.stroke ?? "#0a0a0a"}` :
           "none";
-        const rot = (b.kind === "image" || b.kind === "video") ? (b.rotate ?? 0) : 0;
+        const rot = (b as { rotate?: number }).rotate ?? 0;
         return (
           <div
             key={b.id}
