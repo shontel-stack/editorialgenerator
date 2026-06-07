@@ -259,6 +259,7 @@ export type CustomBlock =
       align?: "left" | "center" | "right";
       color?: string;
       bg?: string;
+      rotate?: number;
       link?: string;
     }
   | {
@@ -281,6 +282,7 @@ export type CustomBlock =
       fill?: string;
       stroke?: string;
       strokeWidth?: number;
+      rotate?: number;
       link?: string;
     }
   | {
@@ -292,8 +294,10 @@ export type CustomBlock =
       label?: string;
       color?: string;
       bg?: string;
+      rotate?: number;
       link?: string;
     }
+
   | {
       id: string;
       kind: "video";

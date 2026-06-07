@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2 } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
@@ -174,6 +174,28 @@ export function CustomBlocksLayer() {
   );
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  const reorder = useCallback(
+    (id: string, action: "front" | "back" | "forward" | "backward") => {
+      if (!setBlocks) return;
+      const zs = blocks.map((b) => b.z ?? 50);
+      const maxZ = zs.length ? Math.max(...zs) : 50;
+      const minZ = zs.length ? Math.min(...zs) : 50;
+      setBlocks(
+        blocks.map((b) => {
+          if (b.id !== id) return b;
+          const cur = b.z ?? 50;
+          let next = cur;
+          if (action === "front") next = maxZ + 1;
+          else if (action === "back") next = minZ - 1;
+          else if (action === "forward") next = cur + 1;
+          else if (action === "backward") next = cur - 1;
+          return { ...b, z: next } as CustomBlock;
+        }),
+      );
+    },
+    [blocks, setBlocks],
+  );
+
   return (
     <>
       {blocks.map((b) => (
@@ -189,7 +211,12 @@ export function CustomBlocksLayer() {
       ))}
       {setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => { if (!editing) requestEdit?.(); setPickerOpen(true); }} />}
       {editing && selected && setBlocks && (
-        <BlockToolbar block={selected} onChange={(p) => update(selected.id, p)} onRemove={() => remove(selected.id)} />
+        <BlockToolbar
+          block={selected}
+          onChange={(p) => update(selected.id, p)}
+          onRemove={() => remove(selected.id)}
+          onReorder={(a) => reorder(selected.id, a)}
+        />
       )}
       {editing && pickerOpen && setBlocks && (
         <TemplatePicker onPick={(t) => { insertTemplate(t); setPickerOpen(false); }} onClose={() => setPickerOpen(false)} />
@@ -197,6 +224,7 @@ export function CustomBlocksLayer() {
     </>
   );
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Single block view (drag, resize, click-to-select, inline text edit) */
@@ -219,7 +247,10 @@ function CustomBlockView({
 }) {
   const ctx = useLayoutEdit();
   const pageScale = ctx?.scale ?? 1;
+  const global = useSnapSettings();
+  const snapCfg = ctx?.snapSettings ?? global;
   const dragRef = useRef<{ mode: "move" | "resize"; x: number; y: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
+  const rotRef = useRef<{ cx: number; cy: number; startAngle: number; startRotate: number } | null>(null);
   const [editingText, setEditingText] = useState(false);
 
   const startDrag = (mode: "move" | "resize", e: RPointerEvent<HTMLDivElement>) => {
@@ -235,6 +266,39 @@ function CustomBlockView({
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     onSelect();
   };
+
+  const startRotate = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!editing) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const target = (e.currentTarget as HTMLElement).parentElement as HTMLElement | null;
+    const rect = target?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+    const curRotate = (block as { rotate?: number }).rotate ?? 0;
+    rotRef.current = { cx, cy, startAngle, startRotate: curRotate };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    onSelect();
+  };
+  const onRotateMove = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!rotRef.current) return;
+    const { cx, cy, startAngle, startRotate } = rotRef.current;
+    const a = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+    let next = startRotate + (a - startAngle);
+    // Wrap to [-180, 180]
+    while (next > 180) next -= 360;
+    while (next < -180) next += 360;
+    onChange({ rotate: snapRotationWith(next, snapCfg) } as Partial<CustomBlock>);
+  };
+  const onRotateUp = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!rotRef.current) return;
+    rotRef.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+  };
+
+
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
     const s = pageScale || 1;
@@ -327,7 +391,7 @@ function CustomBlockView({
     dragRef.current = null;
   };
 
-  const rotate = (block.kind === "image" || block.kind === "video") ? (block.rotate ?? 0) : 0;
+  const rotate = (block as { rotate?: number }).rotate ?? 0;
   const wrapper: CSSProperties = {
     position: "absolute",
     left: block.x,
@@ -400,6 +464,52 @@ function CustomBlockView({
               zIndex: 200,
             }}
           />
+          {/* Rotate handle (top-center, above the block) */}
+          <div
+            title="Drag to rotate"
+            onPointerDown={startRotate}
+            onPointerMove={onRotateMove}
+            onPointerUp={onRotateUp}
+            onPointerCancel={onRotateUp}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: 28,
+              height: 28,
+              transform: `translate(-50%, -180%) scale(${inv})`,
+              transformOrigin: "center center",
+              background: "white",
+              border: "2px solid #2563eb",
+              color: "#2563eb",
+              borderRadius: "50%",
+              cursor: "grab",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 210,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+              touchAction: "none",
+            }}
+          >
+            <RotateCw size={14} />
+          </div>
+          {/* Tether line from block top to rotate handle */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: 2,
+              height: 28,
+              transform: `translate(-50%, -100%) scaleY(${inv})`,
+              transformOrigin: "bottom center",
+              background: "#2563eb",
+              opacity: 0.5,
+              pointerEvents: "none",
+              zIndex: 205,
+            }}
+          />
           {/* Quick delete */}
           <button
             type="button"
@@ -432,6 +542,7 @@ function CustomBlockView({
           </button>
         </>
       )}
+
     </div>
   );
 }
@@ -986,7 +1097,7 @@ function TemplateThumb({ tpl }: { tpl: LayoutTemplate }) {
           b.kind === "text" ? "1px dashed #999" :
           b.kind === "shape" && b.shape === "line" ? `2px solid ${b.stroke ?? "#0a0a0a"}` :
           "none";
-        const rot = (b.kind === "image" || b.kind === "video") ? (b.rotate ?? 0) : 0;
+        const rot = (b as { rotate?: number }).rotate ?? 0;
         return (
           <div
             key={b.id}
@@ -1037,13 +1148,18 @@ function BlockToolbar({
   block,
   onChange,
   onRemove,
+  onReorder,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
+  onReorder: (action: "front" | "back" | "forward" | "backward") => void;
 }) {
   const ctx = useLayoutEdit();
+  const global = useSnapSettings();
+  const snapCfg = ctx?.snapSettings ?? global;
   const inv = 1 / (ctx?.scale ?? 1);
+  const rotate = (block as { rotate?: number }).rotate ?? 0;
   return (
     <div
       onPointerDown={(e) => e.stopPropagation()}
@@ -1075,6 +1191,29 @@ function BlockToolbar({
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
       {block.kind === "video" && <VideoControls block={block} onChange={onChange} />}
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <label style={labelStyle}>
+        Rotate
+        <input
+          type="number"
+          min={-180}
+          max={180}
+          value={Math.round(rotate)}
+          onChange={(e) => onChange({ rotate: snapRotationWith(Number(e.target.value), snapCfg) } as Partial<CustomBlock>)}
+          style={{ ...inputStyle, width: 56 }}
+        />
+      </label>
+      {rotate !== 0 && (
+        <button type="button" title="Reset rotation" onClick={() => onChange({ rotate: 0 } as Partial<CustomBlock>)} style={btnStyle("normal")}>
+          0°
+        </button>
+      )}
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Layer</span>
+      <button type="button" title="Bring to front" onClick={() => onReorder("front")} style={btnStyle("normal")}><ChevronsUp size={12} /></button>
+      <button type="button" title="Bring forward" onClick={() => onReorder("forward")} style={btnStyle("normal")}><ChevronUp size={12} /></button>
+      <button type="button" title="Send backward" onClick={() => onReorder("backward")} style={btnStyle("normal")}><ChevronDown size={12} /></button>
+      <button type="button" title="Send to back" onClick={() => onReorder("back")} style={btnStyle("normal")}><ChevronsDown size={12} /></button>
       <LinkControl link={(block as { link?: string }).link} onChange={(v) => onChange({ link: v } as Partial<CustomBlock>)} />
       <button type="button" onClick={onRemove} style={btnStyle("danger")}>
         <Trash2 size={12} /> Delete
@@ -1082,6 +1221,7 @@ function BlockToolbar({
     </div>
   );
 }
+
 
 function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "text" }>; onChange: (p: Partial<CustomBlock>) => void }) {
   return (
