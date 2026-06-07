@@ -260,6 +260,7 @@ export type CustomBlock =
       paragraphAligns?: Array<"left" | "center" | "right" | "justify" | null>;
       paragraphSpaceBefore?: Array<number | null>;
       paragraphSpaceAfter?: Array<number | null>;
+      paragraphLineHeight?: Array<number | null>;
       color?: string;
       bg?: string;
       rotate?: number;

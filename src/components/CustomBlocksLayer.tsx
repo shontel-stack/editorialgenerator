@@ -801,12 +801,14 @@ function BlockContent({
     const paragraphs = block.text.split("\n");
     const pBefore = block.paragraphSpaceBefore ?? [];
     const pAfter = block.paragraphSpaceAfter ?? [];
+    const pLH = block.paragraphLineHeight ?? [];
     return (
       <div style={style}>
         {paragraphs.map((p, i) => {
           const a = pAligns[i] ?? blockAlign;
           const mt = pBefore[i] ?? 0;
           const mb = pAfter[i] ?? 0;
+          const lh = pLH[i];
           return (
             <p
               key={i}
@@ -815,6 +817,7 @@ function BlockContent({
                 marginTop: mt || undefined,
                 marginBottom: mb || undefined,
                 textAlign: a,
+                lineHeight: lh ?? undefined,
                 breakInside: "avoid" as const,
                 minHeight: p.length === 0 ? "1em" : undefined,
               }}
