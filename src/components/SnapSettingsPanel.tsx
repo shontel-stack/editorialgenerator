@@ -81,7 +81,11 @@ export function SnapSettingsPanel({
       override?.rotationAngles && override.rotationAngles.length > 0
         ? override.rotationAngles
         : global.rotationAngles,
+    gridSizePx: override?.gridSizePx ?? global.gridSizePx,
+    alignToObjects:
+      typeof override?.alignToObjects === "boolean" ? override.alignToObjects : global.alignToObjects,
   };
+
   const [pageAnglesText, setPageAnglesText] = useState<string>(effective.rotationAngles.join(", "));
 
   const commitGlobal = (patch: Partial<SnapSettings>) => {
