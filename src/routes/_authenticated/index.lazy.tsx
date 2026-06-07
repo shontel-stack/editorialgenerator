@@ -2257,6 +2257,16 @@ function Index() {
         }}
       />
 
+      <BrandKitPanel
+        open={brandKitOpen}
+        onClose={() => setBrandKitOpen(false)}
+        publicationId={activePublication?.id ?? null}
+        publicationName={activePublication?.name ?? null}
+        fonts={brandFonts}
+        swatches={brandSwatches}
+      />
+
+
 
       <StaffPanel
         open={staffOpen}
