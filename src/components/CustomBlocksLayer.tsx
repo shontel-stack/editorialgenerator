@@ -799,15 +799,21 @@ function BlockContent({
     }
     // Render each line as its own paragraph so per-paragraph alignment works.
     const paragraphs = block.text.split("\n");
+    const pBefore = block.paragraphSpaceBefore ?? [];
+    const pAfter = block.paragraphSpaceAfter ?? [];
     return (
       <div style={style}>
         {paragraphs.map((p, i) => {
           const a = pAligns[i] ?? blockAlign;
+          const mt = pBefore[i] ?? 0;
+          const mb = pAfter[i] ?? 0;
           return (
             <p
               key={i}
               style={{
                 margin: 0,
+                marginTop: mt || undefined,
+                marginBottom: mb || undefined,
                 textAlign: a,
                 breakInside: "avoid" as const,
                 minHeight: p.length === 0 ? "1em" : undefined,
@@ -1472,13 +1478,25 @@ function TextControls({
   const totalParas = paragraphs.length;
   const pIdx = caretParagraph != null && caretParagraph >= 0 && caretParagraph < totalParas ? caretParagraph : null;
   const pAligns = block.paragraphAligns ?? [];
+  const pBefore = block.paragraphSpaceBefore ?? [];
+  const pAfter = block.paragraphSpaceAfter ?? [];
   const currentParaAlign = pIdx != null ? pAligns[pIdx] ?? null : null;
+  const currentSpaceBefore = pIdx != null ? pBefore[pIdx] ?? 0 : 0;
+  const currentSpaceAfter = pIdx != null ? pAfter[pIdx] ?? 0 : 0;
   const setParaAlign = (a: "left" | "center" | "right" | "justify" | null) => {
     if (pIdx == null) return;
     const next = pAligns.slice();
     while (next.length < totalParas) next.push(null);
     next[pIdx] = a;
     onChange({ paragraphAligns: next });
+  };
+  const setParaSpace = (key: "paragraphSpaceBefore" | "paragraphSpaceAfter", v: number | null) => {
+    if (pIdx == null) return;
+    const src = key === "paragraphSpaceBefore" ? pBefore : pAfter;
+    const next = src.slice();
+    while (next.length < totalParas) next.push(null);
+    next[pIdx] = v;
+    onChange({ [key]: next } as Partial<CustomBlock>);
   };
   return (
     <>
@@ -1552,10 +1570,44 @@ function TextControls({
         </button>
       ))}
       {pIdx != null && currentParaAlign != null && (
-        <button type="button" title="Clear paragraph override" onClick={() => setParaAlign(null)} style={btnStyle("normal")}>
+        <button type="button" title="Clear paragraph alignment override" onClick={() => setParaAlign(null)} style={btnStyle("normal")}>
           ×
         </button>
       )}
+      <label style={labelStyle}>
+        ↑Space
+        <input
+          type="number"
+          min={0}
+          max={400}
+          step={4}
+          disabled={pIdx == null}
+          value={currentSpaceBefore}
+          onChange={(e) => {
+            const v = Math.max(0, Math.min(400, Math.floor(Number(e.target.value) || 0)));
+            setParaSpace("paragraphSpaceBefore", v || null);
+          }}
+          style={{ ...inputStyle, width: 56, opacity: pIdx == null ? 0.5 : 1 }}
+          title="Space before this paragraph (px)"
+        />
+      </label>
+      <label style={labelStyle}>
+        ↓Space
+        <input
+          type="number"
+          min={0}
+          max={400}
+          step={4}
+          disabled={pIdx == null}
+          value={currentSpaceAfter}
+          onChange={(e) => {
+            const v = Math.max(0, Math.min(400, Math.floor(Number(e.target.value) || 0)));
+            setParaSpace("paragraphSpaceAfter", v || null);
+          }}
+          style={{ ...inputStyle, width: 56, opacity: pIdx == null ? 0.5 : 1 }}
+          title="Space after this paragraph (px)"
+        />
+      </label>
     </>
   );
 }

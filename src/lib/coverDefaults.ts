@@ -258,6 +258,8 @@ export type CustomBlock =
       italic?: boolean;
       align?: "left" | "center" | "right" | "justify";
       paragraphAligns?: Array<"left" | "center" | "right" | "justify" | null>;
+      paragraphSpaceBefore?: Array<number | null>;
+      paragraphSpaceAfter?: Array<number | null>;
       color?: string;
       bg?: string;
       rotate?: number;
