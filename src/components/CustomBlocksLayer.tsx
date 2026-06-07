@@ -1400,10 +1400,11 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
         Size
         <input type="number" min={12} max={400} value={block.fontSize ?? 48} onChange={(e) => onChange({ fontSize: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
       </label>
-      <select value={block.align ?? "left"} onChange={(e) => onChange({ align: e.target.value as "left" | "center" | "right" })} style={inputStyle}>
+      <select value={block.align ?? "left"} onChange={(e) => onChange({ align: e.target.value as "left" | "center" | "right" | "justify" })} style={inputStyle}>
         <option value="left">Left</option>
         <option value="center">Center</option>
         <option value="right">Right</option>
+        <option value="justify">Justify</option>
       </select>
       <button type="button" onClick={() => onChange({ italic: !block.italic })} style={btnStyle(block.italic ? "active" : "normal")}>
         Italic
