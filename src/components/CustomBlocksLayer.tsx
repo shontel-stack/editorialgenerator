@@ -1530,12 +1530,24 @@ function TextControls({
     next[pIdx] = v;
     onChange({ paragraphLineHeight: next } as Partial<CustomBlock>);
   };
+  const brandKit = useBrandKit();
   return (
     <>
-      <select value={block.fontFamily ?? "serif"} onChange={(e) => onChange({ fontFamily: e.target.value as "display" | "serif" | "sans" })} style={inputStyle}>
+      <select
+        value={block.fontFamily ?? "serif"}
+        onChange={(e) => onChange({ fontFamily: e.target.value })}
+        style={inputStyle}
+      >
         <option value="display">Display</option>
         <option value="serif">Serif</option>
         <option value="sans">Sans</option>
+        {brandKit.fonts.length > 0 && (
+          <optgroup label="Brand fonts">
+            {brandKit.fonts.map((f) => (
+              <option key={f.id} value={`custom:${f.id}`}>{f.family_name}</option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <label style={labelStyle}>
         Size
@@ -1557,6 +1569,25 @@ function TextControls({
         Color
         <input type="color" value={block.color ?? "#0a0a0a"} onChange={(e) => onChange({ color: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
       </label>
+      <SwatchPicker
+        swatches={brandKit.swatches}
+        currentHex={block.color ?? "#0a0a0a"}
+        onPick={(hex) => onChange({ color: hex })}
+        onSave={brandKit.saveSwatch}
+        onRemove={brandKit.removeSwatch}
+      />
+      <label style={labelStyle}>
+        BG
+        <input type="color" value={block.bg && block.bg.startsWith("#") ? block.bg : "#ffffff"} onChange={(e) => onChange({ bg: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+      </label>
+      <SwatchPicker
+        swatches={brandKit.swatches}
+        currentHex={block.bg ?? undefined}
+        onPick={(hex) => onChange({ bg: hex })}
+        onSave={brandKit.saveSwatch}
+        onRemove={brandKit.removeSwatch}
+      />
+      <button type="button" title="Clear background" onClick={() => onChange({ bg: undefined })} style={btnStyle("normal")}>×BG</button>
       <label style={labelStyle}>
         Cols
         <input
