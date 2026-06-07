@@ -385,6 +385,7 @@ function CustomBlockView({
   siblingAxesFor,
   gridSize,
   onActiveLines,
+  onCaretParagraphChange,
 }: {
   block: CustomBlock;
   editing: boolean;
@@ -395,6 +396,7 @@ function CustomBlockView({
   siblingAxesFor?: (dragId: string) => { xs: number[]; ys: number[] };
   gridSize?: number;
   onActiveLines?: (lines: { xs: number[]; ys: number[] }) => void;
+  onCaretParagraphChange?: (n: number | null) => void;
 }) {
   const ctx = useLayoutEdit();
   const pageScale = ctx?.scale ?? 1;
