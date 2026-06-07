@@ -298,14 +298,7 @@ function CustomBlockView({
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
 
-      mode,
-      x: e.clientX,
-      y: e.clientY,
-      box: { x: block.x, y: block.y, w: block.w, h: block.h },
-    };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    onSelect();
-  };
+
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
     const s = pageScale || 1;
