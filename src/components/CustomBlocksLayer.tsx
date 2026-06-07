@@ -1148,13 +1148,18 @@ function BlockToolbar({
   block,
   onChange,
   onRemove,
+  onReorder,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
+  onReorder: (action: "front" | "back" | "forward" | "backward") => void;
 }) {
   const ctx = useLayoutEdit();
+  const global = useSnapSettings();
+  const snapCfg = ctx?.snapSettings ?? global;
   const inv = 1 / (ctx?.scale ?? 1);
+  const rotate = (block as { rotate?: number }).rotate ?? 0;
   return (
     <div
       onPointerDown={(e) => e.stopPropagation()}
@@ -1186,6 +1191,29 @@ function BlockToolbar({
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
       {block.kind === "video" && <VideoControls block={block} onChange={onChange} />}
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <label style={labelStyle}>
+        Rotate
+        <input
+          type="number"
+          min={-180}
+          max={180}
+          value={Math.round(rotate)}
+          onChange={(e) => onChange({ rotate: snapRotationWith(Number(e.target.value), snapCfg) } as Partial<CustomBlock>)}
+          style={{ ...inputStyle, width: 56 }}
+        />
+      </label>
+      {rotate !== 0 && (
+        <button type="button" title="Reset rotation" onClick={() => onChange({ rotate: 0 } as Partial<CustomBlock>)} style={btnStyle("normal")}>
+          0°
+        </button>
+      )}
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Layer</span>
+      <button type="button" title="Bring to front" onClick={() => onReorder("front")} style={btnStyle("normal")}><ChevronsUp size={12} /></button>
+      <button type="button" title="Bring forward" onClick={() => onReorder("forward")} style={btnStyle("normal")}><ChevronUp size={12} /></button>
+      <button type="button" title="Send backward" onClick={() => onReorder("backward")} style={btnStyle("normal")}><ChevronDown size={12} /></button>
+      <button type="button" title="Send to back" onClick={() => onReorder("back")} style={btnStyle("normal")}><ChevronsDown size={12} /></button>
       <LinkControl link={(block as { link?: string }).link} onChange={(v) => onChange({ link: v } as Partial<CustomBlock>)} />
       <button type="button" onClick={onRemove} style={btnStyle("danger")}>
         <Trash2 size={12} /> Delete
@@ -1193,6 +1221,7 @@ function BlockToolbar({
     </div>
   );
 }
+
 
 function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "text" }>; onChange: (p: Partial<CustomBlock>) => void }) {
   return (
