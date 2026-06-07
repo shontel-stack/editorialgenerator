@@ -247,7 +247,10 @@ function CustomBlockView({
 }) {
   const ctx = useLayoutEdit();
   const pageScale = ctx?.scale ?? 1;
+  const global = useSnapSettings();
+  const snapCfg = ctx?.snapSettings ?? global;
   const dragRef = useRef<{ mode: "move" | "resize"; x: number; y: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
+  const rotRef = useRef<{ cx: number; cy: number; startAngle: number; startRotate: number } | null>(null);
   const [editingText, setEditingText] = useState(false);
 
   const startDrag = (mode: "move" | "resize", e: RPointerEvent<HTMLDivElement>) => {
@@ -255,6 +258,46 @@ function CustomBlockView({
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = {
+      mode,
+      x: e.clientX,
+      y: e.clientY,
+      box: { x: block.x, y: block.y, w: block.w, h: block.h },
+    };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    onSelect();
+  };
+
+  const startRotate = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!editing) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const target = (e.currentTarget as HTMLElement).parentElement as HTMLElement | null;
+    const rect = target?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+    const curRotate = (block as { rotate?: number }).rotate ?? 0;
+    rotRef.current = { cx, cy, startAngle, startRotate: curRotate };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    onSelect();
+  };
+  const onRotateMove = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!rotRef.current) return;
+    const { cx, cy, startAngle, startRotate } = rotRef.current;
+    const a = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+    let next = startRotate + (a - startAngle);
+    // Wrap to [-180, 180]
+    while (next > 180) next -= 360;
+    while (next < -180) next += 360;
+    onChange({ rotate: snapRotationWith(next, snapCfg) } as Partial<CustomBlock>);
+  };
+  const onRotateUp = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!rotRef.current) return;
+    rotRef.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+  };
+
       mode,
       x: e.clientX,
       y: e.clientY,
