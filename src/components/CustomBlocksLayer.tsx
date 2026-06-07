@@ -22,6 +22,8 @@ import {
   type ImageBlockDefaults,
   type VideoBlockDefaults,
 } from "@/lib/mediaBlockDefaults";
+import { useBrandKit } from "@/lib/brandKitContext";
+import { SwatchPicker } from "@/components/SwatchPicker";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
@@ -85,6 +87,23 @@ const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
   serif: "var(--font-serif)",
   sans: "var(--font-sans)",
 };
+
+/** Resolve a text block's `fontFamily` to a CSS `font-family` value.
+ *  Supports the 3 system slots and `custom:<brand-font-id>` tokens. */
+function resolveFontFamily(
+  value: string | undefined,
+  resolveCustom: (id: string) => string | null,
+): string {
+  const v = value ?? "serif";
+  if (v.startsWith("custom:")) {
+    const id = v.slice("custom:".length);
+    const css = resolveCustom(id);
+    if (css) return `'${css}', var(--font-serif)`;
+    return "var(--font-serif)";
+  }
+  if (v === "display" || v === "serif" || v === "sans") return FONT_VARS[v];
+  return "var(--font-serif)";
+}
 
 function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
   const id = newId();
@@ -742,6 +761,7 @@ function BlockContent({
   stopEditingText: () => void;
   onCaretParagraphChange?: (n: number | null) => void;
 }) {
+  const brandKit = useBrandKit();
   if (block.kind === "text") {
     const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
     const gap = Math.max(0, block.columnGap ?? 32);
@@ -752,7 +772,7 @@ function BlockContent({
       height: "100%",
       padding: 8,
       boxSizing: "border-box",
-      fontFamily: FONT_VARS[block.fontFamily ?? "serif"],
+      fontFamily: resolveFontFamily(block.fontFamily, brandKit.resolveFontCssFamily),
       fontSize: block.fontSize ?? 48,
       fontWeight: block.fontWeight ?? 400,
       fontStyle: block.italic ? "italic" : "normal",
@@ -1510,12 +1530,24 @@ function TextControls({
     next[pIdx] = v;
     onChange({ paragraphLineHeight: next } as Partial<CustomBlock>);
   };
+  const brandKit = useBrandKit();
   return (
     <>
-      <select value={block.fontFamily ?? "serif"} onChange={(e) => onChange({ fontFamily: e.target.value as "display" | "serif" | "sans" })} style={inputStyle}>
+      <select
+        value={block.fontFamily ?? "serif"}
+        onChange={(e) => onChange({ fontFamily: e.target.value })}
+        style={inputStyle}
+      >
         <option value="display">Display</option>
         <option value="serif">Serif</option>
         <option value="sans">Sans</option>
+        {brandKit.fonts.length > 0 && (
+          <optgroup label="Brand fonts">
+            {brandKit.fonts.map((f) => (
+              <option key={f.id} value={`custom:${f.id}`}>{f.family_name}</option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <label style={labelStyle}>
         Size
@@ -1537,6 +1569,25 @@ function TextControls({
         Color
         <input type="color" value={block.color ?? "#0a0a0a"} onChange={(e) => onChange({ color: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
       </label>
+      <SwatchPicker
+        swatches={brandKit.swatches}
+        currentHex={block.color ?? "#0a0a0a"}
+        onPick={(hex) => onChange({ color: hex })}
+        onSave={brandKit.saveSwatch}
+        onRemove={brandKit.removeSwatch}
+      />
+      <label style={labelStyle}>
+        BG
+        <input type="color" value={block.bg && block.bg.startsWith("#") ? block.bg : "#ffffff"} onChange={(e) => onChange({ bg: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+      </label>
+      <SwatchPicker
+        swatches={brandKit.swatches}
+        currentHex={block.bg ?? undefined}
+        onPick={(hex) => onChange({ bg: hex })}
+        onSave={brandKit.saveSwatch}
+        onRemove={brandKit.removeSwatch}
+      />
+      <button type="button" title="Clear background" onClick={() => onChange({ bg: undefined })} style={btnStyle("normal")}>×BG</button>
       <label style={labelStyle}>
         Cols
         <input

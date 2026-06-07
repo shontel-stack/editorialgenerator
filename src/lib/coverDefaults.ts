@@ -252,7 +252,7 @@ export type CustomBlock =
       kind: "text";
       x: number; y: number; w: number; h: number; z?: number;
       text: string;
-      fontFamily?: "display" | "serif" | "sans";
+      fontFamily?: "display" | "serif" | "sans" | string;
       fontSize?: number;
       fontWeight?: number;
       italic?: boolean;

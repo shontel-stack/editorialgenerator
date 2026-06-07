@@ -20,8 +20,12 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
+import { BrandKitPanel } from "@/components/BrandKitPanel";
+import { BrandKitProvider } from "@/lib/brandKitContext";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useLibraryAttachments } from "@/hooks/useLibraryAttachments";
+import { useBrandFonts } from "@/hooks/useBrandFonts";
+import { useBrandSwatches } from "@/hooks/useBrandSwatches";
 import { useIssuePageStatus } from "@/hooks/useIssuePageStatus";
 import { useLayoutPresets } from "@/hooks/useLayoutPresets";
 import { useActivePublication } from "@/hooks/useActivePublication";
@@ -176,6 +180,7 @@ function Index() {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [brandKitOpen, setBrandKitOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
 
   // ----- Autosave: persist the IssueDoc per (user, issueId) -----
@@ -476,6 +481,19 @@ function Index() {
   }, [pendingSpatial]);
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
   const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
+  const brandFonts = useBrandFonts(activePublication?.id ?? null);
+  const brandSwatches = useBrandSwatches(activePublication?.id ?? null);
+  const brandKitContextValue = useMemo(
+    () => ({
+      fonts: brandFonts.fonts,
+      swatches: brandSwatches.swatches,
+      resolveFontCssFamily: brandFonts.resolveCssFamily,
+      saveSwatch: brandSwatches.add,
+      removeSwatch: brandSwatches.remove,
+    }),
+    [brandFonts.fonts, brandSwatches.swatches, brandFonts.resolveCssFamily, brandSwatches.add, brandSwatches.remove],
+  );
+
 
   // ----- Placement undo / redo history -----
   // Records changes made via drag-on-canvas, sidebar pin edits, AttachmentsPanel
@@ -1283,6 +1301,7 @@ function Index() {
   };
 
   return (
+    <BrandKitProvider value={brandKitContextValue}>
     <main className="min-h-screen bg-background text-foreground" style={{ scrollPaddingTop: stickyH }}>
       <div ref={stickyRef} className="sticky top-0 z-30 bg-background">
 
@@ -1379,6 +1398,14 @@ function Index() {
             >
               <ClipboardList className="h-3.5 w-3.5" />
               Production
+            </button>
+            <button
+              onClick={() => setBrandKitOpen((v) => !v)}
+              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
+              title="Brand kit · fonts &amp; swatches"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              Brand kit
             </button>
             <button
               onClick={() => setAssistantOpen((v) => !v)}
@@ -2230,6 +2257,16 @@ function Index() {
         }}
       />
 
+      <BrandKitPanel
+        open={brandKitOpen}
+        onClose={() => setBrandKitOpen(false)}
+        publicationId={activePublication?.id ?? null}
+        publicationName={activePublication?.name ?? null}
+        fonts={brandFonts}
+        swatches={brandSwatches}
+      />
+
+
 
       <StaffPanel
         open={staffOpen}
@@ -2359,6 +2396,7 @@ function Index() {
         pageDim={{ inches: dimInches, px: dimPx }}
       />
     </main>
+    </BrandKitProvider>
   );
 }
 

@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_fonts: {
+        Row: {
+          created_at: string
+          family_name: string
+          file_name: string
+          file_path: string
+          format: string
+          id: string
+          publication_id: string
+          size_bytes: number
+          style: string
+          updated_at: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          family_name: string
+          file_name: string
+          file_path: string
+          format: string
+          id?: string
+          publication_id: string
+          size_bytes?: number
+          style?: string
+          updated_at?: string
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          family_name?: string
+          file_name?: string
+          file_path?: string
+          format?: string
+          id?: string
+          publication_id?: string
+          size_bytes?: number
+          style?: string
+          updated_at?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      brand_swatches: {
+        Row: {
+          created_at: string
+          hex: string
+          id: string
+          name: string
+          position: number
+          publication_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hex: string
+          id?: string
+          name?: string
+          position?: number
+          publication_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hex?: string
+          id?: string
+          name?: string
+          position?: number
+          publication_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       issue_attachments: {
         Row: {
           created_at: string
@@ -244,6 +322,7 @@ export type Database = {
           brand_voice: string | null
           created_at: string
           display_font: string | null
+          display_font_custom_id: string | null
           id: string
           margin_bottom_in: number | null
           margin_left_in: number | null
@@ -254,6 +333,8 @@ export type Database = {
           page_height_in: number | null
           page_width_in: number | null
           palette_key: string | null
+          sans_font_custom_id: string | null
+          serif_font_custom_id: string | null
           slug: string
           tagline: string | null
           updated_at: string
@@ -265,6 +346,7 @@ export type Database = {
           brand_voice?: string | null
           created_at?: string
           display_font?: string | null
+          display_font_custom_id?: string | null
           id?: string
           margin_bottom_in?: number | null
           margin_left_in?: number | null
@@ -275,6 +357,8 @@ export type Database = {
           page_height_in?: number | null
           page_width_in?: number | null
           palette_key?: string | null
+          sans_font_custom_id?: string | null
+          serif_font_custom_id?: string | null
           slug: string
           tagline?: string | null
           updated_at?: string
@@ -286,6 +370,7 @@ export type Database = {
           brand_voice?: string | null
           created_at?: string
           display_font?: string | null
+          display_font_custom_id?: string | null
           id?: string
           margin_bottom_in?: number | null
           margin_left_in?: number | null
@@ -296,12 +381,36 @@ export type Database = {
           page_height_in?: number | null
           page_width_in?: number | null
           palette_key?: string | null
+          sans_font_custom_id?: string | null
+          serif_font_custom_id?: string | null
           slug?: string
           tagline?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "publications_display_font_custom_id_fkey"
+            columns: ["display_font_custom_id"]
+            isOneToOne: false
+            referencedRelation: "brand_fonts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publications_sans_font_custom_id_fkey"
+            columns: ["sans_font_custom_id"]
+            isOneToOne: false
+            referencedRelation: "brand_fonts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publications_serif_font_custom_id_fkey"
+            columns: ["serif_font_custom_id"]
+            isOneToOne: false
+            referencedRelation: "brand_fonts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_messages: {
         Row: {
