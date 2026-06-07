@@ -261,6 +261,8 @@ export type CustomBlock =
       bg?: string;
       rotate?: number;
       link?: string;
+      columns?: number;
+      columnGap?: number;
     }
   | {
       id: string;
