@@ -771,7 +771,7 @@ function BlockContent({
       height: "100%",
       padding: 8,
       boxSizing: "border-box",
-      fontFamily: FONT_VARS[block.fontFamily ?? "serif"],
+      fontFamily: resolveFontFamily(block.fontFamily, brandKit.resolveFontCssFamily),
       fontSize: block.fontSize ?? 48,
       fontWeight: block.fontWeight ?? 400,
       fontStyle: block.italic ? "italic" : "normal",
