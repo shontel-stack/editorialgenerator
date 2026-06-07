@@ -88,6 +88,23 @@ const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
   sans: "var(--font-sans)",
 };
 
+/** Resolve a text block's `fontFamily` to a CSS `font-family` value.
+ *  Supports the 3 system slots and `custom:<brand-font-id>` tokens. */
+function resolveFontFamily(
+  value: string | undefined,
+  resolveCustom: (id: string) => string | null,
+): string {
+  const v = value ?? "serif";
+  if (v.startsWith("custom:")) {
+    const id = v.slice("custom:".length);
+    const css = resolveCustom(id);
+    if (css) return `'${css}', var(--font-serif)`;
+    return "var(--font-serif)";
+  }
+  if (v === "display" || v === "serif" || v === "sans") return FONT_VARS[v];
+  return "var(--font-serif)";
+}
+
 function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
   const id = newId();
   const base = { id, x: 600, y: 600, z: 50 } as const;
