@@ -580,7 +580,18 @@ function CustomBlockView({
     outlineOffset: 2,
   };
 
-  const inner = <BlockContent block={block} editingText={editingText} onTextChange={(t) => onChange({ text: t } as Partial<CustomBlock>)} stopEditingText={() => setEditingText(false)} />;
+  const inner = (
+    <BlockContent
+      block={block}
+      editingText={editingText}
+      onTextChange={(t) => onChange({ text: t } as Partial<CustomBlock>)}
+      stopEditingText={() => {
+        setEditingText(false);
+        onCaretParagraphChange?.(null);
+      }}
+      onCaretParagraphChange={onCaretParagraphChange}
+    />
+  );
 
   const wrapped =
     block.link && !editing ? (
