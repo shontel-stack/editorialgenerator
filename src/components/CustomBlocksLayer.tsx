@@ -159,14 +159,53 @@ export function CustomBlocksLayer() {
   const editing = ctx?.editing ?? false;
   const blocks = ctx?.customBlocks ?? [];
   const setBlocks = ctx?.setCustomBlocks;
+  const globalSnap = useSnapSettings();
+  const snapCfg = ctx?.snapSettings ?? globalSnap;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+
+  // Live alignment lines shown during a drag. Cleared on pointer up.
+  const [activeLines, setActiveLines] = useState<{ xs: number[]; ys: number[] }>({ xs: [], ys: [] });
+
+  // Measure the parent container (page surface) so the grid overlay can size
+  // itself without the parent needing to pass pageDim explicitly.
+  const probeRef = useRef<HTMLDivElement | null>(null);
+  const [pageSize, setPageSize] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = probeRef.current?.parentElement;
+    if (!el) return;
+    const update = () => setPageSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [editing]);
 
   // Clear selection when leaving edit mode
   useEffect(() => {
     if (!editing) setSelectedId(null);
   }, [editing]);
+  // Clear any leftover alignment lines when leaving edit mode.
+  useEffect(() => {
+    if (!editing) setActiveLines({ xs: [], ys: [] });
+  }, [editing]);
+
+  /** Build sibling-block snap axes for a given drag target id. */
+  const siblingAxesFor = useCallback(
+    (dragId: string): { xs: number[]; ys: number[] } => {
+      if (!snapCfg.alignToObjects) return { xs: [], ys: [] };
+      const xs: number[] = [];
+      const ys: number[] = [];
+      for (const b of blocks) {
+        if (b.id === dragId) continue;
+        xs.push(b.x, b.x + b.w / 2, b.x + b.w);
+        ys.push(b.y, b.y + b.h / 2, b.y + b.h);
+      }
+      return { xs, ys };
+    },
+    [blocks, snapCfg.alignToObjects],
+  );
 
   const update = useCallback(
     (id: string, patch: Partial<CustomBlock>) => {
@@ -229,8 +268,31 @@ export function CustomBlocksLayer() {
     [blocks, setBlocks],
   );
 
+  const grid = editing && snapCfg.gridSizePx > 0 && pageSize ? snapCfg.gridSizePx : 0;
+
   return (
     <>
+      {/* Zero-size probe used to discover the page surface dimensions. */}
+      <div ref={probeRef} style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }} />
+
+      {/* Snap-to-grid overlay (non-printing). */}
+      {grid > 0 && pageSize && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 1,
+            backgroundImage:
+              `linear-gradient(to right, rgba(37,99,235,0.18) 1px, transparent 1px),` +
+              `linear-gradient(to bottom, rgba(37,99,235,0.18) 1px, transparent 1px)`,
+            backgroundSize: `${grid}px ${grid}px`,
+            mixBlendMode: "multiply",
+          }}
+        />
+      )}
+
       {blocks.map((b) => (
         <CustomBlockView
           key={b.id}
@@ -240,8 +302,46 @@ export function CustomBlocksLayer() {
           onSelect={() => setSelectedId(b.id)}
           onChange={(p) => update(b.id, p)}
           onRemove={() => remove(b.id)}
+          siblingAxesFor={siblingAxesFor}
+          gridSize={snapCfg.gridSizePx}
+          onActiveLines={setActiveLines}
         />
       ))}
+
+      {/* Live alignment guide lines during drag. */}
+      {editing && pageSize && (activeLines.xs.length > 0 || activeLines.ys.length > 0) && (
+        <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 220 }}>
+          {activeLines.xs.map((x, i) => (
+            <div
+              key={`gx-${i}-${x}`}
+              style={{
+                position: "absolute",
+                left: x,
+                top: 0,
+                width: 1,
+                height: pageSize.h,
+                background: "#ec4899",
+                boxShadow: "0 0 0 1px rgba(236,72,153,0.25)",
+              }}
+            />
+          ))}
+          {activeLines.ys.map((y, i) => (
+            <div
+              key={`gy-${i}-${y}`}
+              style={{
+                position: "absolute",
+                top: y,
+                left: 0,
+                height: 1,
+                width: pageSize.w,
+                background: "#ec4899",
+                boxShadow: "0 0 0 1px rgba(236,72,153,0.25)",
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => { if (!editing) requestEdit?.(); setPickerOpen(true); }} />}
       {editing && selected && setBlocks && (
         <BlockToolbar
@@ -257,6 +357,7 @@ export function CustomBlocksLayer() {
     </>
   );
 }
+
 
 
 /* ------------------------------------------------------------------ */
