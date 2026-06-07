@@ -44,6 +44,39 @@ function snapEdge(value: number, guides: number[] | undefined, threshold: number
   return best;
 }
 
+/** Snap a coordinate to its closest guide and return both the delta AND the
+ *  matched guide value (page-px) — used to draw live alignment lines. */
+function snapEdgeWithMatch(
+  value: number,
+  guides: number[] | undefined,
+  threshold: number,
+): { delta: number; match: number | null } {
+  if (!guides || guides.length === 0) return { delta: 0, match: null };
+  let best = 0;
+  let match: number | null = null;
+  let bestDist = threshold;
+  for (const g of guides) {
+    const d = g - value;
+    const ad = Math.abs(d);
+    if (ad < bestDist) {
+      bestDist = ad;
+      best = d;
+      match = g;
+    }
+  }
+  return { delta: best, match };
+}
+
+/** Snap a value to the nearest multiple of `step` if within `threshold`. */
+function snapGrid(value: number, step: number, threshold: number): { delta: number; match: number | null } {
+  if (!step || step <= 0) return { delta: 0, match: null };
+  const nearest = Math.round(value / step) * step;
+  const d = nearest - value;
+  if (Math.abs(d) <= threshold) return { delta: d, match: nearest };
+  return { delta: 0, match: null };
+}
+
+
 // Rotation snapping is now user-configurable via `useSnapSettings` —
 // see src/lib/snapSettings.ts.
 
