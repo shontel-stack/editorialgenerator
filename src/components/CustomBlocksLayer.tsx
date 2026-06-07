@@ -734,15 +734,19 @@ function BlockContent({
   editingText,
   onTextChange,
   stopEditingText,
+  onCaretParagraphChange,
 }: {
   block: CustomBlock;
   editingText: boolean;
   onTextChange: (text: string) => void;
   stopEditingText: () => void;
+  onCaretParagraphChange?: (n: number | null) => void;
 }) {
   if (block.kind === "text") {
     const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
     const gap = Math.max(0, block.columnGap ?? 32);
+    const blockAlign = block.align ?? "left";
+    const pAligns = block.paragraphAligns ?? [];
     const style: CSSProperties = {
       width: "100%",
       height: "100%",
@@ -752,12 +756,12 @@ function BlockContent({
       fontSize: block.fontSize ?? 48,
       fontWeight: block.fontWeight ?? 400,
       fontStyle: block.italic ? "italic" : "normal",
-      textAlign: block.align ?? "left",
+      textAlign: blockAlign,
       color: block.color ?? "#0a0a0a",
       background: block.bg ?? "transparent",
       lineHeight: 1.25,
       overflow: "hidden",
-      whiteSpace: cols > 1 ? "pre-wrap" : "pre-wrap",
+      whiteSpace: "pre-wrap",
       wordBreak: "break-word",
       outline: "none",
       ...(cols > 1
@@ -769,11 +773,23 @@ function BlockContent({
         : null),
     };
     if (editingText) {
+      const reportCaret = (target: HTMLTextAreaElement) => {
+        const pos = target.selectionStart ?? 0;
+        const idx = target.value.slice(0, pos).split("\n").length - 1;
+        onCaretParagraphChange?.(idx);
+      };
       return (
         <textarea
           autoFocus
           value={block.text}
-          onChange={(e) => onTextChange(e.target.value)}
+          onChange={(e) => {
+            onTextChange(e.target.value);
+            reportCaret(e.currentTarget);
+          }}
+          onSelect={(e) => reportCaret(e.currentTarget)}
+          onClick={(e) => reportCaret(e.currentTarget)}
+          onKeyUp={(e) => reportCaret(e.currentTarget)}
+          onFocus={(e) => reportCaret(e.currentTarget)}
           onBlur={stopEditingText}
           onPointerDown={(e) => e.stopPropagation()}
           onDoubleClick={(e) => e.stopPropagation()}
@@ -781,7 +797,28 @@ function BlockContent({
         />
       );
     }
-    return <div style={style}>{block.text}</div>;
+    // Render each line as its own paragraph so per-paragraph alignment works.
+    const paragraphs = block.text.split("\n");
+    return (
+      <div style={style}>
+        {paragraphs.map((p, i) => {
+          const a = pAligns[i] ?? blockAlign;
+          return (
+            <p
+              key={i}
+              style={{
+                margin: 0,
+                textAlign: a,
+                breakInside: "avoid" as const,
+                minHeight: p.length === 0 ? "1em" : undefined,
+              }}
+            >
+              {p.length === 0 ? "\u00a0" : p}
+            </p>
+          );
+        })}
+      </div>
+    );
   }
   if (block.kind === "image") {
     const borderStyle = block.borderWidth
