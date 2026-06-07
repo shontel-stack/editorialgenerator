@@ -164,6 +164,8 @@ export function CustomBlocksLayer() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+  // Index of the paragraph the caret is in while editing a text block, else null.
+  const [caretParagraph, setCaretParagraph] = useState<number | null>(null);
 
   // Live alignment lines shown during a drag. Cleared on pointer up.
   const [activeLines, setActiveLines] = useState<{ xs: number[]; ys: number[] }>({ xs: [], ys: [] });
@@ -184,8 +186,15 @@ export function CustomBlocksLayer() {
 
   // Clear selection when leaving edit mode
   useEffect(() => {
-    if (!editing) setSelectedId(null);
+    if (!editing) {
+      setSelectedId(null);
+      setCaretParagraph(null);
+    }
   }, [editing]);
+  // Reset caret paragraph when switching selected block.
+  useEffect(() => {
+    setCaretParagraph(null);
+  }, [selectedId]);
   // Clear any leftover alignment lines when leaving edit mode.
   useEffect(() => {
     if (!editing) setActiveLines({ xs: [], ys: [] });
@@ -305,6 +314,7 @@ export function CustomBlocksLayer() {
           siblingAxesFor={siblingAxesFor}
           gridSize={snapCfg.gridSizePx}
           onActiveLines={setActiveLines}
+          onCaretParagraphChange={selectedId === b.id ? setCaretParagraph : undefined}
         />
       ))}
 
@@ -349,6 +359,7 @@ export function CustomBlocksLayer() {
           onChange={(p) => update(selected.id, p)}
           onRemove={() => remove(selected.id)}
           onReorder={(a) => reorder(selected.id, a)}
+          caretParagraph={caretParagraph}
         />
       )}
       {editing && pickerOpen && setBlocks && (
@@ -374,6 +385,7 @@ function CustomBlockView({
   siblingAxesFor,
   gridSize,
   onActiveLines,
+  onCaretParagraphChange,
 }: {
   block: CustomBlock;
   editing: boolean;
@@ -384,6 +396,7 @@ function CustomBlockView({
   siblingAxesFor?: (dragId: string) => { xs: number[]; ys: number[] };
   gridSize?: number;
   onActiveLines?: (lines: { xs: number[]; ys: number[] }) => void;
+  onCaretParagraphChange?: (n: number | null) => void;
 }) {
   const ctx = useLayoutEdit();
   const pageScale = ctx?.scale ?? 1;
@@ -567,7 +580,18 @@ function CustomBlockView({
     outlineOffset: 2,
   };
 
-  const inner = <BlockContent block={block} editingText={editingText} onTextChange={(t) => onChange({ text: t } as Partial<CustomBlock>)} stopEditingText={() => setEditingText(false)} />;
+  const inner = (
+    <BlockContent
+      block={block}
+      editingText={editingText}
+      onTextChange={(t) => onChange({ text: t } as Partial<CustomBlock>)}
+      stopEditingText={() => {
+        setEditingText(false);
+        onCaretParagraphChange?.(null);
+      }}
+      onCaretParagraphChange={onCaretParagraphChange}
+    />
+  );
 
   const wrapped =
     block.link && !editing ? (
@@ -710,15 +734,19 @@ function BlockContent({
   editingText,
   onTextChange,
   stopEditingText,
+  onCaretParagraphChange,
 }: {
   block: CustomBlock;
   editingText: boolean;
   onTextChange: (text: string) => void;
   stopEditingText: () => void;
+  onCaretParagraphChange?: (n: number | null) => void;
 }) {
   if (block.kind === "text") {
     const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
     const gap = Math.max(0, block.columnGap ?? 32);
+    const blockAlign = block.align ?? "left";
+    const pAligns = block.paragraphAligns ?? [];
     const style: CSSProperties = {
       width: "100%",
       height: "100%",
@@ -728,12 +756,12 @@ function BlockContent({
       fontSize: block.fontSize ?? 48,
       fontWeight: block.fontWeight ?? 400,
       fontStyle: block.italic ? "italic" : "normal",
-      textAlign: block.align ?? "left",
+      textAlign: blockAlign,
       color: block.color ?? "#0a0a0a",
       background: block.bg ?? "transparent",
       lineHeight: 1.25,
       overflow: "hidden",
-      whiteSpace: cols > 1 ? "pre-wrap" : "pre-wrap",
+      whiteSpace: "pre-wrap",
       wordBreak: "break-word",
       outline: "none",
       ...(cols > 1
@@ -745,11 +773,23 @@ function BlockContent({
         : null),
     };
     if (editingText) {
+      const reportCaret = (target: HTMLTextAreaElement) => {
+        const pos = target.selectionStart ?? 0;
+        const idx = target.value.slice(0, pos).split("\n").length - 1;
+        onCaretParagraphChange?.(idx);
+      };
       return (
         <textarea
           autoFocus
           value={block.text}
-          onChange={(e) => onTextChange(e.target.value)}
+          onChange={(e) => {
+            onTextChange(e.target.value);
+            reportCaret(e.currentTarget);
+          }}
+          onSelect={(e) => reportCaret(e.currentTarget)}
+          onClick={(e) => reportCaret(e.currentTarget)}
+          onKeyUp={(e) => reportCaret(e.currentTarget)}
+          onFocus={(e) => reportCaret(e.currentTarget)}
           onBlur={stopEditingText}
           onPointerDown={(e) => e.stopPropagation()}
           onDoubleClick={(e) => e.stopPropagation()}
@@ -757,7 +797,28 @@ function BlockContent({
         />
       );
     }
-    return <div style={style}>{block.text}</div>;
+    // Render each line as its own paragraph so per-paragraph alignment works.
+    const paragraphs = block.text.split("\n");
+    return (
+      <div style={style}>
+        {paragraphs.map((p, i) => {
+          const a = pAligns[i] ?? blockAlign;
+          return (
+            <p
+              key={i}
+              style={{
+                margin: 0,
+                textAlign: a,
+                breakInside: "avoid" as const,
+                minHeight: p.length === 0 ? "1em" : undefined,
+              }}
+            >
+              {p.length === 0 ? "\u00a0" : p}
+            </p>
+          );
+        })}
+      </div>
+    );
   }
   if (block.kind === "image") {
     const borderStyle = block.borderWidth
@@ -1314,11 +1375,13 @@ function BlockToolbar({
   onChange,
   onRemove,
   onReorder,
+  caretParagraph,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
   onReorder: (action: "front" | "back" | "forward" | "backward") => void;
+  caretParagraph?: number | null;
 }) {
   const ctx = useLayoutEdit();
   const global = useSnapSettings();
@@ -1351,7 +1414,7 @@ function BlockToolbar({
       }}
     >
       <span style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#666" }}>{block.kind}</span>
-      {block.kind === "text" && <TextControls block={block} onChange={onChange} />}
+      {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
@@ -1396,7 +1459,27 @@ function BlockToolbar({
 }
 
 
-function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "text" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+function TextControls({
+  block,
+  onChange,
+  caretParagraph,
+}: {
+  block: Extract<CustomBlock, { kind: "text" }>;
+  onChange: (p: Partial<CustomBlock>) => void;
+  caretParagraph?: number | null;
+}) {
+  const paragraphs = block.text.split("\n");
+  const totalParas = paragraphs.length;
+  const pIdx = caretParagraph != null && caretParagraph >= 0 && caretParagraph < totalParas ? caretParagraph : null;
+  const pAligns = block.paragraphAligns ?? [];
+  const currentParaAlign = pIdx != null ? pAligns[pIdx] ?? null : null;
+  const setParaAlign = (a: "left" | "center" | "right" | "justify" | null) => {
+    if (pIdx == null) return;
+    const next = pAligns.slice();
+    while (next.length < totalParas) next.push(null);
+    next[pIdx] = a;
+    onChange({ paragraphAligns: next });
+  };
   return (
     <>
       <select value={block.fontFamily ?? "serif"} onChange={(e) => onChange({ fontFamily: e.target.value as "display" | "serif" | "sans" })} style={inputStyle}>
@@ -1452,6 +1535,27 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
           style={{ ...inputStyle, width: 56 }}
         />
       </label>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>
+        {pIdx != null ? `¶ ${pIdx + 1}/${totalParas}` : "¶ (click in text)"}
+      </span>
+      {(["left", "center", "right", "justify"] as const).map((a) => (
+        <button
+          key={a}
+          type="button"
+          title={`Paragraph: ${a}`}
+          disabled={pIdx == null}
+          onClick={() => setParaAlign(a)}
+          style={{ ...btnStyle(currentParaAlign === a ? "active" : "normal"), opacity: pIdx == null ? 0.5 : 1 }}
+        >
+          {a === "left" ? "L" : a === "center" ? "C" : a === "right" ? "R" : "J"}
+        </button>
+      ))}
+      {pIdx != null && currentParaAlign != null && (
+        <button type="button" title="Clear paragraph override" onClick={() => setParaAlign(null)} style={btnStyle("normal")}>
+          ×
+        </button>
+      )}
     </>
   );
 }
