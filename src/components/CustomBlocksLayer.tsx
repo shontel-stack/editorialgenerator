@@ -371,6 +371,9 @@ function CustomBlockView({
   onSelect,
   onChange,
   onRemove,
+  siblingAxesFor,
+  gridSize,
+  onActiveLines,
 }: {
   block: CustomBlock;
   editing: boolean;
@@ -378,6 +381,9 @@ function CustomBlockView({
   onSelect: () => void;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
+  siblingAxesFor?: (dragId: string) => { xs: number[]; ys: number[] };
+  gridSize?: number;
+  onActiveLines?: (lines: { xs: number[]; ys: number[] }) => void;
 }) {
   const ctx = useLayoutEdit();
   const pageScale = ctx?.scale ?? 1;
@@ -386,6 +392,33 @@ function CustomBlockView({
   const dragRef = useRef<{ mode: "move" | "resize"; x: number; y: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
   const rotRef = useRef<{ cx: number; cy: number; startAngle: number; startRotate: number } | null>(null);
   const [editingText, setEditingText] = useState(false);
+
+  /** Combined snap-axis pools — page guides ⊕ sibling-block edges/centers. */
+  const combinedAxes = useCallback((): { xs: number[]; ys: number[]; threshold: number } => {
+    const baseG = ctx?.guides;
+    const sib = siblingAxesFor ? siblingAxesFor(block.id) : { xs: [], ys: [] };
+    const xs = [...(baseG?.xs ?? []), ...sib.xs];
+    const ys = [...(baseG?.ys ?? []), ...sib.ys];
+    const threshold = baseG?.threshold ?? snapCfg.edgeTolerancePx;
+    return { xs, ys, threshold };
+  }, [ctx?.guides, siblingAxesFor, block.id, snapCfg.edgeTolerancePx]);
+
+  /** Snap a horizontal coordinate against all axes + grid. Returns delta and
+   *  matched guide (for line rendering). */
+  const snapX = (v: number) => {
+    const g = combinedAxes();
+    const ax = snapEdgeWithMatch(v, g.xs, g.threshold);
+    const gr = snapGrid(v, gridSize ?? 0, g.threshold);
+    if (Math.abs(ax.delta) > 0 && Math.abs(ax.delta) <= Math.abs(gr.delta || g.threshold + 1)) return ax;
+    return gr.delta !== 0 ? gr : ax;
+  };
+  const snapY = (v: number) => {
+    const g = combinedAxes();
+    const ay = snapEdgeWithMatch(v, g.ys, g.threshold);
+    const gr = snapGrid(v, gridSize ?? 0, g.threshold);
+    if (Math.abs(ay.delta) > 0 && Math.abs(ay.delta) <= Math.abs(gr.delta || g.threshold + 1)) return ay;
+    return gr.delta !== 0 ? gr : ay;
+  };
 
   const startDrag = (mode: "move" | "resize", e: RPointerEvent<HTMLDivElement>) => {
     if (!editing || editingText) return;
@@ -421,7 +454,6 @@ function CustomBlockView({
     const { cx, cy, startAngle, startRotate } = rotRef.current;
     const a = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
     let next = startRotate + (a - startAngle);
-    // Wrap to [-180, 180]
     while (next > 180) next -= 360;
     while (next < -180) next += 360;
     onChange({ rotate: snapRotationWith(next, snapCfg) } as Partial<CustomBlock>);
@@ -432,47 +464,52 @@ function CustomBlockView({
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
 
+  /** Apply snap to the move delta, choosing the best of leading/center/trailing
+   *  edge per axis. Returns the snapped position + matched guide lines. */
+  const computeMoveSnap = (nx: number, ny: number, w: number, h: number) => {
+    const xCands = [nx, nx + w / 2, nx + w];
+    const yCands = [ny, ny + h / 2, ny + h];
+    let bestX: { delta: number; match: number | null } = { delta: 0, match: null };
+    for (const c of xCands) {
+      const s = snapX(c);
+      if (Math.abs(s.delta) > 0 && (bestX.match === null || Math.abs(s.delta) < Math.abs(bestX.delta))) bestX = s;
+    }
+    let bestY: { delta: number; match: number | null } = { delta: 0, match: null };
+    for (const c of yCands) {
+      const s = snapY(c);
+      if (Math.abs(s.delta) > 0 && (bestY.match === null || Math.abs(s.delta) < Math.abs(bestY.delta))) bestY = s;
+    }
+    return { nx: nx + bestX.delta, ny: ny + bestY.delta, matchX: bestX.match, matchY: bestY.match };
+  };
 
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
     const s = pageScale || 1;
     const dx = (e.clientX - dragRef.current.x) / s;
     const dy = (e.clientY - dragRef.current.y) / s;
-    const g = ctx?.guides;
     if (dragRef.current.mode === "move") {
-      let nx = dragRef.current.box.x + dx;
-      let ny = dragRef.current.box.y + dy;
-      if (g) {
-        // Snap leading edge, center, or trailing edge — whichever is closest.
-        const w = dragRef.current.box.w;
-        const h = dragRef.current.box.h;
-        const ax = [
-          snapEdge(nx, g.xs, g.threshold),
-          snapEdge(nx + w / 2, g.xs, g.threshold),
-          snapEdge(nx + w, g.xs, g.threshold),
-        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
-        const ay = [
-          snapEdge(ny, g.ys, g.threshold),
-          snapEdge(ny + h / 2, g.ys, g.threshold),
-          snapEdge(ny + h, g.ys, g.threshold),
-        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
-        nx += ax;
-        ny += ay;
-      }
-      onChange({ x: nx, y: ny });
+      const w = dragRef.current.box.w;
+      const h = dragRef.current.box.h;
+      const r = computeMoveSnap(dragRef.current.box.x + dx, dragRef.current.box.y + dy, w, h);
+      onChange({ x: r.nx, y: r.ny });
+      onActiveLines?.({
+        xs: r.matchX !== null ? [r.matchX] : [],
+        ys: r.matchY !== null ? [r.matchY] : [],
+      });
     } else {
       let nw = Math.max(80, dragRef.current.box.w + dx);
       let nh = Math.max(40, dragRef.current.box.h + dy);
-      if (g) {
-        // Bottom-right handle: snap the right & bottom edges.
-        const right = dragRef.current.box.x + nw;
-        const bottom = dragRef.current.box.y + nh;
-        const ax = snapEdge(right, g.xs, g.threshold);
-        const ay = snapEdge(bottom, g.ys, g.threshold);
-        nw = Math.max(80, nw + ax);
-        nh = Math.max(40, nh + ay);
-      }
+      const right = dragRef.current.box.x + nw;
+      const bottom = dragRef.current.box.y + nh;
+      const rx = snapX(right);
+      const ry = snapY(bottom);
+      if (rx.delta !== 0) nw = Math.max(80, nw + rx.delta);
+      if (ry.delta !== 0) nh = Math.max(40, nh + ry.delta);
       onChange({ w: nw, h: nh });
+      onActiveLines?.({
+        xs: rx.match !== null ? [rx.match] : [],
+        ys: ry.match !== null ? [ry.match] : [],
+      });
     }
   };
   const onUp = (e: RPointerEvent<HTMLDivElement>) => {
@@ -480,50 +517,35 @@ function CustomBlockView({
     const s = pageScale || 1;
     const dx = (e.clientX - dragRef.current.x) / s;
     const dy = (e.clientY - dragRef.current.y) / s;
-    const g = ctx?.guides;
     if (dragRef.current.mode === "move") {
-      let nx = dragRef.current.box.x + dx;
-      let ny = dragRef.current.box.y + dy;
-      let usedGuideX = false;
-      let usedGuideY = false;
-      if (g) {
-        const w = dragRef.current.box.w;
-        const h = dragRef.current.box.h;
-        const ax = [
-          snapEdge(nx, g.xs, g.threshold),
-          snapEdge(nx + w / 2, g.xs, g.threshold),
-          snapEdge(nx + w, g.xs, g.threshold),
-        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
-        const ay = [
-          snapEdge(ny, g.ys, g.threshold),
-          snapEdge(ny + h / 2, g.ys, g.threshold),
-          snapEdge(ny + h, g.ys, g.threshold),
-        ].reduce((a, b) => (Math.abs(b) > 0 && Math.abs(b) < Math.abs(a || g.threshold + 1) ? b : a), 0);
-        if (ax !== 0) { nx += ax; usedGuideX = true; }
-        if (ay !== 0) { ny += ay; usedGuideY = true; }
-      }
+      const w = dragRef.current.box.w;
+      const h = dragRef.current.box.h;
+      const r = computeMoveSnap(dragRef.current.box.x + dx, dragRef.current.box.y + dy, w, h);
       onChange({
-        x: usedGuideX ? Math.round(nx) : snap(nx),
-        y: usedGuideY ? Math.round(ny) : snap(ny),
+        x: r.matchX !== null ? Math.round(r.nx) : snap(r.nx),
+        y: r.matchY !== null ? Math.round(r.ny) : snap(r.ny),
       });
     } else {
       let nw = Math.max(80, dragRef.current.box.w + dx);
       let nh = Math.max(40, dragRef.current.box.h + dy);
-      let usedGuideW = false;
-      let usedGuideH = false;
-      if (g) {
-        const ax = snapEdge(dragRef.current.box.x + nw, g.xs, g.threshold);
-        const ay = snapEdge(dragRef.current.box.y + nh, g.ys, g.threshold);
-        if (ax !== 0) { nw = Math.max(80, nw + ax); usedGuideW = true; }
-        if (ay !== 0) { nh = Math.max(40, nh + ay); usedGuideH = true; }
-      }
+      const right = dragRef.current.box.x + nw;
+      const bottom = dragRef.current.box.y + nh;
+      const rx = snapX(right);
+      const ry = snapY(bottom);
+      let usedW = false;
+      let usedH = false;
+      if (rx.delta !== 0) { nw = Math.max(80, nw + rx.delta); usedW = true; }
+      if (ry.delta !== 0) { nh = Math.max(40, nh + ry.delta); usedH = true; }
       onChange({
-        w: usedGuideW ? Math.round(nw) : snap(nw),
-        h: usedGuideH ? Math.round(nh) : snap(nh),
+        w: usedW ? Math.round(nw) : snap(nw),
+        h: usedH ? Math.round(nh) : snap(nh),
       });
     }
     dragRef.current = null;
+    onActiveLines?.({ xs: [], ys: [] });
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
+
 
   const rotate = (block as { rotate?: number }).rotate ?? 0;
   const wrapper: CSSProperties = {
