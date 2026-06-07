@@ -2386,6 +2386,7 @@ function Index() {
         pageDim={{ inches: dimInches, px: dimPx }}
       />
     </main>
+    </BrandKitProvider>
   );
 }
 
