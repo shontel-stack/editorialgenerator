@@ -717,6 +717,8 @@ function BlockContent({
   stopEditingText: () => void;
 }) {
   if (block.kind === "text") {
+    const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
+    const gap = Math.max(0, block.columnGap ?? 32);
     const style: CSSProperties = {
       width: "100%",
       height: "100%",
@@ -731,9 +733,16 @@ function BlockContent({
       background: block.bg ?? "transparent",
       lineHeight: 1.25,
       overflow: "hidden",
-      whiteSpace: "pre-wrap",
+      whiteSpace: cols > 1 ? "pre-wrap" : "pre-wrap",
       wordBreak: "break-word",
       outline: "none",
+      ...(cols > 1
+        ? {
+            columnCount: cols,
+            columnGap: `${gap}px`,
+            columnFill: "balance" as const,
+          }
+        : null),
     };
     if (editingText) {
       return (
@@ -1405,6 +1414,34 @@ function TextControls({ block, onChange }: { block: Extract<CustomBlock, { kind:
       <label style={labelStyle}>
         Color
         <input type="color" value={block.color ?? "#0a0a0a"} onChange={(e) => onChange({ color: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+      </label>
+      <label style={labelStyle}>
+        Cols
+        <input
+          type="number"
+          min={1}
+          max={6}
+          value={block.columns ?? 1}
+          onChange={(e) => {
+            const n = Math.max(1, Math.min(6, Math.floor(Number(e.target.value) || 1)));
+            onChange({ columns: n });
+          }}
+          style={{ ...inputStyle, width: 50 }}
+        />
+      </label>
+      <label style={labelStyle}>
+        Gap
+        <input
+          type="number"
+          min={0}
+          max={400}
+          value={block.columnGap ?? 32}
+          onChange={(e) => {
+            const v = Math.max(0, Math.min(400, Math.floor(Number(e.target.value) || 0)));
+            onChange({ columnGap: v });
+          }}
+          style={{ ...inputStyle, width: 56 }}
+        />
       </label>
     </>
   );
