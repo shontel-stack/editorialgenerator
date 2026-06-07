@@ -464,6 +464,52 @@ function CustomBlockView({
               zIndex: 200,
             }}
           />
+          {/* Rotate handle (top-center, above the block) */}
+          <div
+            title="Drag to rotate"
+            onPointerDown={startRotate}
+            onPointerMove={onRotateMove}
+            onPointerUp={onRotateUp}
+            onPointerCancel={onRotateUp}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: 28,
+              height: 28,
+              transform: `translate(-50%, -180%) scale(${inv})`,
+              transformOrigin: "center center",
+              background: "white",
+              border: "2px solid #2563eb",
+              color: "#2563eb",
+              borderRadius: "50%",
+              cursor: "grab",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 210,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+              touchAction: "none",
+            }}
+          >
+            <RotateCw size={14} />
+          </div>
+          {/* Tether line from block top to rotate handle */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: 2,
+              height: 28,
+              transform: `translate(-50%, -100%) scaleY(${inv})`,
+              transformOrigin: "bottom center",
+              background: "#2563eb",
+              opacity: 0.5,
+              pointerEvents: "none",
+              zIndex: 205,
+            }}
+          />
           {/* Quick delete */}
           <button
             type="button"
@@ -496,6 +542,7 @@ function CustomBlockView({
           </button>
         </>
       )}
+
     </div>
   );
 }
