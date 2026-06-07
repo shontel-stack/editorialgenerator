@@ -761,6 +761,7 @@ function BlockContent({
   stopEditingText: () => void;
   onCaretParagraphChange?: (n: number | null) => void;
 }) {
+  const brandKit = useBrandKit();
   if (block.kind === "text") {
     const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
     const gap = Math.max(0, block.columnGap ?? 32);
