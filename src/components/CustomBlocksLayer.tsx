@@ -1375,11 +1375,13 @@ function BlockToolbar({
   onChange,
   onRemove,
   onReorder,
+  caretParagraph,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
   onReorder: (action: "front" | "back" | "forward" | "backward") => void;
+  caretParagraph?: number | null;
 }) {
   const ctx = useLayoutEdit();
   const global = useSnapSettings();
@@ -1412,7 +1414,7 @@ function BlockToolbar({
       }}
     >
       <span style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#666" }}>{block.kind}</span>
-      {block.kind === "text" && <TextControls block={block} onChange={onChange} />}
+      {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
