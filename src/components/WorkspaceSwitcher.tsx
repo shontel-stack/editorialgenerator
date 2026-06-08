@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Building2, CalendarIcon, Check, ChevronDown, Copy, Download, Plus, Settings2, Upload } from "lucide-react";
+import { Building2, CalendarIcon, Check, ChevronDown, Copy, Download, Pencil, Plus, Settings2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -173,6 +173,35 @@ export function WorkspaceSwitcher() {
   type DateFormat = "month-year" | "year-month" | "iso-date";
   const [dateFormat, setDateFormat] = useState<DateFormat>("month-year");
   const [issueDate, setIssueDate] = useState<Date>(() => new Date());
+
+  // Rename publication dialog state.
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+
+  const openRenameDialog = () => {
+    if (!active) return;
+    setRenameValue(active.name);
+    setRenameOpen(true);
+  };
+
+  const confirmRename = async () => {
+    if (!active || renaming) return;
+    const next = renameValue.trim();
+    if (!next || next === active.name) {
+      setRenameOpen(false);
+      return;
+    }
+    setRenaming(true);
+    try {
+      await update(active.id, { name: next });
+      setRenameOpen(false);
+    } catch (e) {
+      alert(`Could not rename publication: ${(e as Error).message}`);
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   // Human-readable suffix for the chosen format and selected issue date.
   const formatIssueDate = (fmt: DateFormat, d: Date): string => {
@@ -414,6 +443,9 @@ export function WorkspaceSwitcher() {
           <DropdownMenuSeparator />
           {active ? (
             <>
+              <DropdownMenuItem onClick={openRenameDialog}>
+                <Pencil className="h-3.5 w-3.5 mr-2" /> Rename publication…
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEditOpen(true)}>
                 <Settings2 className="h-3.5 w-3.5 mr-2" /> Edit page size…
               </DropdownMenuItem>
@@ -724,6 +756,47 @@ export function WorkspaceSwitcher() {
         rules={scheduleRules}
         onChange={updateScheduleRules}
       />
+
+      {/* Rename publication */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename publication</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
+              Name
+            </label>
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void confirmRename();
+                }
+              }}
+              className="w-full border border-input bg-background px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-foreground"
+              placeholder="Publication name"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Updates the name shown in the publication list and switcher.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameOpen(false)} disabled={renaming}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRename}
+              disabled={renaming || !renameValue.trim() || renameValue.trim() === active?.name}
+            >
+              {renaming ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
