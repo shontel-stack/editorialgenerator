@@ -2006,7 +2006,16 @@ function Index() {
           </Section>
           </PopoverContent>
         </Popover>
-      </div>
+        <button
+          title="Ask the editor"
+          aria-label="Ask the editor"
+          aria-pressed={assistantOpen}
+          onClick={() => setAssistantOpen((v) => !v)}
+          className="mt-auto h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition"
+        >
+          <Sparkles className="h-[18px] w-[18px]" />
+        </button>
+      </aside>
 
       {/* Canvas ribbon — page-specific controls, sticky alongside the header */}
       <div className="border-t border-foreground/20 bg-foreground text-background px-3 py-1.5 flex items-center gap-2 flex-wrap">
