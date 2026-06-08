@@ -1707,7 +1707,7 @@ function Index() {
               <Settings2 className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">_SNAP_
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">
 
           <SnapSettingsPanel
             pageLabel={selected.pageType}
@@ -1733,7 +1733,7 @@ function Index() {
               <BookOpen className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">_MASTER_
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
@@ -1823,7 +1823,7 @@ function Index() {
               <Type className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">_TYPO_
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">
 
           <Section title="Typography" defaultOpen={false}>
             <FontPicker
@@ -1860,7 +1860,7 @@ function Index() {
               <Download className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">_EXPORT_
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">
 
           <Section title="Issue · Save & Export" defaultOpen>
             {(() => {
