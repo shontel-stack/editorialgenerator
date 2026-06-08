@@ -42,3 +42,31 @@ export function clearAutosave(key: string): void {
     // ignore
   }
 }
+
+const LAST_ID_PREFIX = "pageluxe.lastIssue.v1";
+
+export function lastIssueIdKey(userId: string | null | undefined): string {
+  return `${LAST_ID_PREFIX}:${userId ?? "anon"}`;
+}
+
+export function loadLastIssueId(userId: string | null | undefined): string | null {
+  try {
+    return localStorage.getItem(lastIssueIdKey(userId));
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastIssueId(userId: string | null | undefined, issueId: string): void {
+  try {
+    localStorage.setItem(lastIssueIdKey(userId), issueId);
+  } catch {
+    // ignore
+  }
+}
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
