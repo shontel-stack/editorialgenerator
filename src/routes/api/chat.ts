@@ -206,7 +206,7 @@ export const Route = createFileRoute("/api/chat")({
         const model = gateway("google/gemini-2.5-flash");
 
         const attachments = body.attachments ?? [];
-        const messagesWithRefs = attachVisualRefsToLastUserMessage(
+        const messagesWithRefs = await attachVisualRefsToLastUserMessage(
           body.messages,
           attachments,
           body.selectedPageId,
