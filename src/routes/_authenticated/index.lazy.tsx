@@ -17,6 +17,8 @@ import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { AttachmentControl } from "@/components/AttachmentControl";
 import { PageReferencesEditor } from "@/components/PageReferencesEditor";
+import { PageBackgroundUploader, type BackgroundAssignment } from "@/components/PageBackgroundUploader";
+import { deleteBackground } from "@/lib/pageBackgrounds";
 
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
