@@ -183,6 +183,7 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [brandKitOpen, setBrandKitOpen] = useState(false);
+  const [pagesQuery, setPagesQuery] = useState("");
   const { userId, active: activePublication } = useActivePublication();
 
   // ----- Continue where I left off: swap to last opened issueId on login. -----
