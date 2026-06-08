@@ -1,5 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { EditorRail, type RailItem } from "@/components/editor/EditorRail";
+import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
 import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -1328,7 +1330,10 @@ function Index() {
 
   return (
     <BrandKitProvider value={brandKitContextValue}>
-    <main className="min-h-screen bg-background text-foreground" style={{ scrollPaddingTop: stickyH }}>
+    <main
+      className="min-h-screen bg-background text-foreground md:pl-14 pb-10"
+      style={{ scrollPaddingTop: stickyH, ["--rail-top" as never]: `${stickyH}px`, ["--statusbar-h" as never]: "2rem" }}
+    >
       <div ref={stickyRef} className="sticky top-0 z-30 bg-background">
 
       <header className="border-b border-border bg-card">
@@ -1370,21 +1375,6 @@ function Index() {
               </div>
             </div>
             <div className="h-8 w-px bg-border mx-2" />
-            <AutosaveIndicator
-              status={autosave.status}
-              lastSavedAt={autosave.lastSavedAt}
-              onSaveNow={autosave.saveNow}
-              cloudStatus={cloudSync.status}
-              cloudLastSyncedAt={cloudSync.lastSyncedAt}
-              cloudError={cloudSync.error ?? queueDrainer.lastError}
-              onSyncNow={() => {
-                cloudSync.syncNow();
-                queueDrainer.drainNow();
-              }}
-              queuePending={queueDrainer.pending}
-              queueDraining={queueDrainer.draining}
-              onRetryQueue={queueDrainer.drainNow}
-            />
             <DraftConflictDialog
               open={conflict != null}
               localTs={conflict?.local.ts ?? 0}
@@ -1394,45 +1384,13 @@ function Index() {
               onResolve={handleConflictResolve}
             />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <AttachmentControl
-              label="Layout template (whole issue)"
+              label="Layout template"
               attachment={attachments.template}
               onUpload={(file) => attachments.upload({ pageId: null, kind: "template", file })}
               onRemove={() => attachments.template ? attachments.remove(attachments.template) : Promise.resolve()}
             />
-            <button
-              onClick={() => setAttachmentsOpen((v) => !v)}
-              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
-              title="Open attachments panel"
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-              Files
-            </button>
-            <button
-              onClick={() => setStaffOpen((v) => !v)}
-              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
-              title="Editorial &amp; marketing staff"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Staff
-            </button>
-            <button
-              onClick={() => setChecklistOpen((v) => !v)}
-              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
-              title="Production checklist, board, and calendar"
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Production
-            </button>
-            <button
-              onClick={() => setBrandKitOpen((v) => !v)}
-              className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition"
-              title="Brand kit · fonts &amp; swatches"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              Brand kit
-            </button>
             <button
               onClick={() => setAssistantOpen((v) => !v)}
               className="bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-4 py-2 text-[10px] tracking-[0.3em] uppercase hover:bg-[color:var(--ruby-deep)] transition flex items-center gap-2 rounded-sm"
@@ -2349,12 +2307,50 @@ function Index() {
       </div>
 
 
-      <footer className="border-t border-border mt-8">
-        <div className="mx-auto max-w-full px-4 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
-          <span>Pageluxe Issue Builder</span>
-          <span>Page size · {dimInches.w} × {dimInches.h} in</span>
-        </div>
-      </footer>
+      <EditorRail
+        items={[
+          { key: "files", label: "Files", icon: Paperclip, active: attachmentsOpen, onClick: () => setAttachmentsOpen((v) => !v) },
+          { key: "brand", label: "Brand kit", icon: BookOpen, active: brandKitOpen, onClick: () => setBrandKitOpen((v) => !v) },
+          { key: "staff", label: "Staff", icon: Users, active: staffOpen, onClick: () => setStaffOpen((v) => !v) },
+          { key: "production", label: "Production", icon: ClipboardList, active: checklistOpen, onClick: () => setChecklistOpen((v) => !v) },
+        ]}
+        footerItems={[
+          { key: "assistant", label: "Ask the editor", icon: Sparkles, accent: true, active: assistantOpen, onClick: () => setAssistantOpen((v) => !v) },
+        ]}
+      />
+
+      <EditorStatusBar
+        left={
+          <AutosaveIndicator
+            status={autosave.status}
+            lastSavedAt={autosave.lastSavedAt}
+            onSaveNow={autosave.saveNow}
+            cloudStatus={cloudSync.status}
+            cloudLastSyncedAt={cloudSync.lastSyncedAt}
+            cloudError={cloudSync.error ?? queueDrainer.lastError}
+            onSyncNow={() => {
+              cloudSync.syncNow();
+              queueDrainer.drainNow();
+            }}
+            queuePending={queueDrainer.pending}
+            queueDraining={queueDrainer.draining}
+            onRetryQueue={queueDrainer.drainNow}
+          />
+        }
+        center={
+          <span className="hidden md:inline">
+            Pageluxe · {labelForNode(selected)} · {selected.pageType}
+          </span>
+        }
+        right={
+          <>
+            <span className="tabular-nums">{dimInches.w}″ × {dimInches.h}″</span>
+            <span className="hidden sm:inline">·</span>
+            <span className="tabular-nums hidden sm:inline">{zoomPct}%</span>
+          </>
+        }
+      />
+
 
       <AttachmentsPanel
         open={attachmentsOpen}
