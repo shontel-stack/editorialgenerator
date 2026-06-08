@@ -17,6 +17,9 @@ import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { AttachmentControl } from "@/components/AttachmentControl";
 import { PageReferencesEditor } from "@/components/PageReferencesEditor";
+import { PageBackgroundUploader, type BackgroundAssignment } from "@/components/PageBackgroundUploader";
+import { deleteBackground } from "@/lib/pageBackgrounds";
+import { toast } from "sonner";
 
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
@@ -87,6 +90,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   ARTICLE_LAYOUTS,
   DEFAULT_AD,
@@ -1050,6 +1054,35 @@ function Index() {
   };
 
 
+  /** Set or clear the per-page background artwork. */
+  const setBackgroundArtwork = (
+    id: string,
+    art: IssuePageNode["backgroundArtwork"] | null,
+  ) => {
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id ? ({ ...p, backgroundArtwork: art ?? undefined } as IssuePageNode) : p,
+      ),
+    }));
+  };
+
+  const setBackgroundMode = (id: string, mode: "overlay" | "replace") => {
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id && p.backgroundArtwork
+          ? ({ ...p, backgroundArtwork: { ...p.backgroundArtwork, mode } } as IssuePageNode)
+          : p,
+      ),
+    }));
+  };
+
+  // Background uploader modal state
+  const [bgUploadOpen, setBgUploadOpen] = useState(false);
+  const [bgUploadSpread, setBgUploadSpread] = useState(false);
+
+
   const movePage = (id: string, dir: -1 | 1) =>
     setIssue((d) => {
       const idx = d.pages.findIndex((p) => p.id === id);
@@ -1773,6 +1806,117 @@ function Index() {
                 </Section>
               )}
 
+              <Section title="Background artwork">
+                {selected.backgroundArtwork ? (
+                  <div className="space-y-3">
+                    <div className="flex gap-3 items-start border border-border rounded-md p-2">
+                      <img
+                        src={selected.backgroundArtwork.url}
+                        alt=""
+                        className="h-16 w-16 object-cover rounded shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate" title={selected.backgroundArtwork.sourceFileName}>
+                          {selected.backgroundArtwork.sourceFileName ?? "Background"}
+                        </div>
+                        <div className="text-[10px] tracking-widest uppercase text-muted-foreground mt-0.5">
+                          {selected.backgroundArtwork.sourceKind.toUpperCase()}
+                          {selected.backgroundArtwork.pdfPageIndex
+                            ? ` · p.${selected.backgroundArtwork.pdfPageIndex}`
+                            : ""}
+                          {selected.backgroundArtwork.crop && selected.backgroundArtwork.crop !== "full"
+                            ? ` · ${selected.backgroundArtwork.crop} half`
+                            : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Mode</Label>
+                      <div className="mt-1 grid grid-cols-2 gap-1 border border-border rounded-md p-1">
+                        <button
+                          type="button"
+                          onClick={() => setBackgroundMode(selected.id, "replace")}
+                          className={`text-[11px] tracking-wider uppercase py-1.5 rounded transition ${
+                            selected.backgroundArtwork.mode === "replace"
+                              ? "bg-foreground text-background"
+                              : "hover:bg-secondary"
+                          }`}
+                        >
+                          Replace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBackgroundMode(selected.id, "overlay")}
+                          className={`text-[11px] tracking-wider uppercase py-1.5 rounded transition ${
+                            selected.backgroundArtwork.mode === "overlay"
+                              ? "bg-foreground text-background"
+                              : "hover:bg-secondary"
+                          }`}
+                        >
+                          Overlay
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
+                        Replace: hide template, blocks still editable on top. Overlay: render template + blocks over the artwork.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setBgUploadSpread(false); setBgUploadOpen(true); }}
+                        className="flex-1 text-[11px] tracking-wider uppercase py-1.5 border border-border rounded hover:bg-secondary transition"
+                      >
+                        Replace…
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm("Remove background artwork from this page?")) return;
+                          const path = selected.backgroundArtwork?.sourcePath;
+                          setBackgroundArtwork(selected.id, null);
+                          if (path) { try { await deleteBackground(path); } catch { /* ignore */ } }
+                        }}
+                        className="flex-1 text-[11px] tracking-wider uppercase py-1.5 border border-border rounded hover:bg-destructive hover:text-destructive-foreground transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {spreadView && spread?.right && (
+                      <button
+                        type="button"
+                        onClick={() => { setBgUploadSpread(true); setBgUploadOpen(true); }}
+                        className="w-full text-[11px] tracking-wider uppercase py-1.5 border border-border rounded hover:bg-secondary transition"
+                      >
+                        Upload for whole spread…
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => { setBgUploadSpread(false); setBgUploadOpen(true); }}
+                      className="w-full text-[11px] tracking-wider uppercase py-2 border border-dashed border-border rounded hover:bg-secondary transition"
+                    >
+                      Upload PDF / image / IDML+PDF
+                    </button>
+                    {spreadView && spread?.right && (
+                      <button
+                        type="button"
+                        onClick={() => { setBgUploadSpread(true); setBgUploadOpen(true); }}
+                        className="w-full text-[11px] tracking-wider uppercase py-2 border border-dashed border-border rounded hover:bg-secondary transition"
+                      >
+                        Upload for whole spread…
+                      </button>
+                    )}
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Use a PDF page or image as the page art. IDML uploads also need a companion PDF for the visual.
+                    </p>
+                  </div>
+                )}
+              </Section>
+
+
               <Section title="Export · this page">
                 <div className="grid grid-cols-3 gap-2">
                   <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
@@ -2307,7 +2451,7 @@ function Index() {
                 snapSettings={effectiveSnapFor(spread.left)}
                 onRequestEdit={() => { setSelectedId(spread.left.id); setEditLayout(true); }}
               >
-                <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} hideFolio={spread.left.hideFolio} />
+                <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} hideFolio={spread.left.hideFolio} background={spread.left.backgroundArtwork ? { url: spread.left.backgroundArtwork.url, mode: spread.left.backgroundArtwork.mode, crop: spread.left.backgroundArtwork.crop } : undefined} />
               </LayoutEditProvider>
               {showGuides && (
                 <GuidesOverlay
@@ -2348,7 +2492,7 @@ function Index() {
                   snapSettings={effectiveSnapFor(spread.right)}
                   onRequestEdit={() => { setSelectedId(spread.right!.id); setEditLayout(true); }}
                 >
-                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} hideFolio={spread.right.hideFolio} />
+                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} hideFolio={spread.right.hideFolio} background={spread.right.backgroundArtwork ? { url: spread.right.backgroundArtwork.url, mode: spread.right.backgroundArtwork.mode, crop: spread.right.backgroundArtwork.crop } : undefined} />
                 </LayoutEditProvider>
                 {showGuides && (
                   <GuidesOverlay
@@ -2394,10 +2538,51 @@ function Index() {
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
           >
-            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} hideFolio={p.hideFolio} />
+            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} hideFolio={p.hideFolio} background={p.backgroundArtwork ? { url: p.backgroundArtwork.url, mode: p.backgroundArtwork.mode, crop: p.backgroundArtwork.crop } : undefined} />
           </LayoutEditProvider>
         ))}
       </div>
+
+      <PageBackgroundUploader
+        open={bgUploadOpen}
+        onClose={() => setBgUploadOpen(false)}
+        issueId={issue.meta.issueId}
+        pageId={!bgUploadSpread ? selected.id : undefined}
+        spread={bgUploadSpread && spread?.right ? { left: spread.left.id, right: spread.right.id } : undefined}
+        defaultMode={selected.backgroundArtwork?.mode ?? "replace"}
+        onApply={(assignments: BackgroundAssignment[], idmlFields) => {
+          setIssue((d) => ({
+            ...d,
+            pages: d.pages.map((p) => {
+              const a = assignments.find((x) => x.pageId === p.id);
+              if (!a) return p;
+              return {
+                ...p,
+                backgroundArtwork: {
+                  url: a.url,
+                  sourceKind: a.sourceKind,
+                  sourcePath: a.sourcePath,
+                  sourceFileName: a.sourceFileName,
+                  pdfPageIndex: a.pdfPageIndex,
+                  crop: a.crop,
+                  mode: a.mode,
+                  width: a.width,
+                  height: a.height,
+                },
+              } as IssuePageNode;
+            }),
+          }));
+          if (idmlFields) {
+            console.info("[bg] IDML suggestions", idmlFields);
+            toast.info(
+              `IDML text extracted: ${[idmlFields.section, idmlFields.headline].filter(Boolean).join(" · ") || "(no clear fields)"}`,
+            );
+          }
+        }}
+      />
+
+
+
 
 
 

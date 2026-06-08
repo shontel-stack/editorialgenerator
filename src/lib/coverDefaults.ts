@@ -354,6 +354,20 @@ export type IssuePageNode = AnyPageData & {
   paritySkip?: number;
   /** Hide the running header (folio + rule) on this page in both preview and export. */
   hideFolio?: boolean;
+  /** Uploaded artwork used as the page background (PDF page raster or image).
+   *  In "replace" mode, the template renderer is skipped and only custom blocks
+   *  render on top. In "overlay" mode, template + blocks render over the art. */
+  backgroundArtwork?: {
+    url: string;
+    sourceKind: "pdf" | "image" | "idml+pdf";
+    sourcePath?: string;      // storage path of rendered PNG (for deletion)
+    sourceFileName?: string;  // original upload filename for UI display
+    pdfPageIndex?: number;    // 1-based, when from PDF
+    crop?: "left" | "right" | "full"; // when one PDF page is split across a spread
+    mode: "overlay" | "replace";
+    width: number;
+    height: number;
+  };
 };
 
 
