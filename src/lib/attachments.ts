@@ -196,8 +196,8 @@ export async function uploadAttachment(opts: {
   if (file.size > MAX_ATTACHMENT_BYTES) {
     throw new Error(`File too large (max ${Math.floor(MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB).`);
   }
-  if (!ACCEPTED_MIME.includes(file.type)) {
-    throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
+  if (!isAcceptedFile(file)) {
+    throw new Error(`Unsupported file type: ${file.type || file.name}.`);
   }
 
   // Templates are unique per (issue, publication) — replace on upload.
