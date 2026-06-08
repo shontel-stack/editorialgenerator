@@ -21,21 +21,22 @@ type Props = {
   pageType: PageType;
   data: AnyData;
   dim?: { w: number; h: number };
+  hideFolio?: boolean;
 };
 
 export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePreview(
-  { pageType, data, dim },
+  { pageType, data, dim, hideFolio },
   ref,
 ) {
   switch (pageType) {
     case "cover":
       return <CoverPreview ref={ref} data={data as CoverData} dim={dim} />;
     case "article":
-      return <ArticlePreview ref={ref} data={data as ArticleData} dim={dim} />;
+      return <ArticlePreview ref={ref} data={data as ArticleData} dim={dim} hideFolio={hideFolio} />;
     case "photo":
       return <PhotoPreview ref={ref} data={data as PhotoData} dim={dim} />;
     case "contents":
-      return <ContentsPreview ref={ref} data={data as ContentsData} dim={dim} />;
+      return <ContentsPreview ref={ref} data={data as ContentsData} dim={dim} hideFolio={hideFolio} />;
     case "ad":
       return <AdPreview ref={ref} data={data as AdData} dim={dim} />;
     case "back":
