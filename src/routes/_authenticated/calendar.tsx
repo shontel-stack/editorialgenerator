@@ -17,7 +17,7 @@ import {
 export const Route = createFileRoute("/_authenticated/calendar")({
   head: () => ({
     meta: [
-      { title: "Editorial calendar — The Arts Today" },
+      { title: "Editorial calendar — Pageluxe Issue Builder" },
       { name: "description", content: "Month-by-month due dates for every page in production." },
     ],
   }),
