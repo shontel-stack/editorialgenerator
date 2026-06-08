@@ -89,7 +89,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Pageluxe Issue Builder" },
-      { name: "twitter:description", content: "Artful Layout Studio generates interactive magazine layouts for print and digital publication." },
+      { name: "twitter:description", content: "Pageluxe Issue Builder generates interactive magazine layouts for print and digital publication." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/2M9SU22tHATssWru6maBVc6Gtz13/social-images/social-1780505534804-logo.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/2M9SU22tHATssWru6maBVc6Gtz13/social-images/social-1780505534804-logo.webp" },
     ],
