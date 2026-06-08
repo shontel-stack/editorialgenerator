@@ -112,11 +112,29 @@ MIRRORING AN ISSUE TEMPLATE (when the user says "mirror this template", "match t
 }
 
 /** Attach visual references (PDF/image) as file parts on the latest user message. */
-function attachVisualRefsToLastUserMessage(
+/** Max bytes the Lovable AI Gateway can inline per file. PDFs larger than
+ *  this are dropped before the request goes out and replaced with a short
+ *  text note so the model can still reason about them by name. */
+const MAX_INLINE_PDF_BYTES = 15 * 1024 * 1024;
+
+async function pdfTooLarge(url: string): Promise<{ tooLarge: boolean; bytes: number | null }> {
+  try {
+    const head = await fetch(url, { method: "HEAD" });
+    const len = head.headers.get("content-length");
+    if (!len) return { tooLarge: false, bytes: null };
+    const bytes = Number(len);
+    if (!Number.isFinite(bytes)) return { tooLarge: false, bytes: null };
+    return { tooLarge: bytes > MAX_INLINE_PDF_BYTES, bytes };
+  } catch {
+    return { tooLarge: false, bytes: null };
+  }
+}
+
+async function attachVisualRefsToLastUserMessage(
   messages: UIMessage[],
   attachments: ChatAttachment[],
   selectedPageId: string | undefined,
-): UIMessage[] {
+): Promise<UIMessage[]> {
   if (!messages.length) return messages;
   const lastIdx = messages.length - 1;
   const last = messages[lastIdx];
@@ -130,12 +148,28 @@ function attachVisualRefsToLastUserMessage(
   );
   if (!visual.length) return messages;
 
-  const fileParts = visual.map((a) => ({
-    type: "file" as const,
-    mediaType: a.mime_type,
-    url: a.signed_url!,
-    filename: a.file_name,
-  }));
+  // Pre-flight each PDF; downscale step = skip oversized PDFs and substitute
+  // a text note so the assistant can still discuss them.
+  const fileParts: Array<{ type: "file"; mediaType: string; url: string; filename: string } | { type: "text"; text: string }> = [];
+  for (const a of visual) {
+    if (a.mime_type === "application/pdf") {
+      const { tooLarge, bytes } = await pdfTooLarge(a.signed_url!);
+      if (tooLarge) {
+        const mb = bytes ? (bytes / (1024 * 1024)).toFixed(1) : "?";
+        fileParts.push({
+          type: "text",
+          text: `[Attachment "${a.file_name}" (${mb} MB PDF) was skipped — too large for inline vision. Export a lower-resolution PDF (e.g. 144 DPI) or split into individual pages so I can read it.]`,
+        });
+        continue;
+      }
+    }
+    fileParts.push({
+      type: "file",
+      mediaType: a.mime_type,
+      url: a.signed_url!,
+      filename: a.file_name,
+    });
+  }
 
   const next: UIMessage = {
     ...last,
@@ -172,7 +206,7 @@ export const Route = createFileRoute("/api/chat")({
         const model = gateway("google/gemini-2.5-flash");
 
         const attachments = body.attachments ?? [];
-        const messagesWithRefs = attachVisualRefsToLastUserMessage(
+        const messagesWithRefs = await attachVisualRefsToLastUserMessage(
           body.messages,
           attachments,
           body.selectedPageId,

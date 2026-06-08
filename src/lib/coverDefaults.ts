@@ -352,6 +352,8 @@ export type IssuePageNode = AnyPageData & {
    * instead of the array index. Default 0.
    */
   paritySkip?: number;
+  /** Hide the running header (folio + rule) on this page in both preview and export. */
+  hideFolio?: boolean;
 };
 
 

@@ -1659,6 +1659,23 @@ function Index() {
                   </Section>
                 )}
 
+              {selected.pageType !== "cover" && selected.pageType !== "back" && (
+                <Section title="Running header">
+                  <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={!!selected.hideFolio}
+                      onChange={(e) => updateNode(selected.id, { hideFolio: e.target.checked || undefined })}
+                      className="accent-[color:var(--ruby)]"
+                    />
+                    Hide running header on this page
+                  </label>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground mt-2">
+                    Removes the two top boxes (publication name + page label) and the rule beneath them, in both the preview and the exported PDF/PNG.
+                  </p>
+                </Section>
+              )}
+
               {selected.pageType !== "cover" && (
                 <Section title="Physical sheet" defaultOpen={false}>
                   <Field label="Unprinted sheets before this page">
@@ -2191,7 +2208,7 @@ function Index() {
                 snapSettings={effectiveSnapFor(spread.left)}
                 onRequestEdit={() => { setSelectedId(spread.left.id); setEditLayout(true); }}
               >
-                <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} />
+                <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} hideFolio={spread.left.hideFolio} />
               </LayoutEditProvider>
               {showGuides && (
                 <GuidesOverlay
@@ -2232,7 +2249,7 @@ function Index() {
                   snapSettings={effectiveSnapFor(spread.right)}
                   onRequestEdit={() => { setSelectedId(spread.right!.id); setEditLayout(true); }}
                 >
-                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} />
+                  <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} hideFolio={spread.right.hideFolio} />
                 </LayoutEditProvider>
                 {showGuides && (
                   <GuidesOverlay
@@ -2278,7 +2295,7 @@ function Index() {
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
           >
-            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} />
+            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} hideFolio={p.hideFolio} />
           </LayoutEditProvider>
         ))}
       </div>
