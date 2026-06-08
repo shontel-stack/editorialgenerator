@@ -2304,12 +2304,50 @@ function Index() {
       </div>
 
 
-      <footer className="border-t border-border mt-8">
-        <div className="mx-auto max-w-full px-4 py-6 text-[11px] tracking-[0.3em] uppercase text-muted-foreground flex justify-between flex-wrap gap-4">
-          <span>Pageluxe Issue Builder</span>
-          <span>Page size · {dimInches.w} × {dimInches.h} in</span>
-        </div>
-      </footer>
+      <EditorRail
+        items={[
+          { key: "files", label: "Files", icon: Paperclip, active: attachmentsOpen, onClick: () => setAttachmentsOpen((v) => !v) },
+          { key: "brand", label: "Brand kit", icon: BookOpen, active: brandKitOpen, onClick: () => setBrandKitOpen((v) => !v) },
+          { key: "staff", label: "Staff", icon: Users, active: staffOpen, onClick: () => setStaffOpen((v) => !v) },
+          { key: "production", label: "Production", icon: ClipboardList, active: checklistOpen, onClick: () => setChecklistOpen((v) => !v) },
+        ]}
+        footerItems={[
+          { key: "assistant", label: "Ask the editor", icon: Sparkles, accent: true, active: assistantOpen, onClick: () => setAssistantOpen((v) => !v) },
+        ]}
+      />
+
+      <EditorStatusBar
+        left={
+          <AutosaveIndicator
+            status={autosave.status}
+            lastSavedAt={autosave.lastSavedAt}
+            onSaveNow={autosave.saveNow}
+            cloudStatus={cloudSync.status}
+            cloudLastSyncedAt={cloudSync.lastSyncedAt}
+            cloudError={cloudSync.error ?? queueDrainer.lastError}
+            onSyncNow={() => {
+              cloudSync.syncNow();
+              queueDrainer.drainNow();
+            }}
+            queuePending={queueDrainer.pending}
+            queueDraining={queueDrainer.draining}
+            onRetryQueue={queueDrainer.drainNow}
+          />
+        }
+        center={
+          <span className="hidden md:inline">
+            Pageluxe · {labelForNode(selected)} · {selected.pageType}
+          </span>
+        }
+        right={
+          <>
+            <span className="tabular-nums">{dimInches.w}″ × {dimInches.h}″</span>
+            <span className="hidden sm:inline">·</span>
+            <span className="tabular-nums hidden sm:inline">{zoomPct}%</span>
+          </>
+        }
+      />
+
 
       <AttachmentsPanel
         open={attachmentsOpen}
