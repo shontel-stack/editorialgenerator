@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Building2, CalendarIcon, Check, ChevronDown, Copy, Download, Plus, Settings2, Upload } from "lucide-react";
+import { Building2, CalendarIcon, Check, ChevronDown, Copy, Download, Pencil, Plus, Settings2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
