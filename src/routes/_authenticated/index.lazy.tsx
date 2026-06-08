@@ -1804,6 +1804,117 @@ function Index() {
                 </Section>
               )}
 
+              <Section title="Background artwork">
+                {selected.backgroundArtwork ? (
+                  <div className="space-y-3">
+                    <div className="flex gap-3 items-start border border-border rounded-md p-2">
+                      <img
+                        src={selected.backgroundArtwork.url}
+                        alt=""
+                        className="h-16 w-16 object-cover rounded shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm truncate" title={selected.backgroundArtwork.sourceFileName}>
+                          {selected.backgroundArtwork.sourceFileName ?? "Background"}
+                        </div>
+                        <div className="text-[10px] tracking-widest uppercase text-muted-foreground mt-0.5">
+                          {selected.backgroundArtwork.sourceKind.toUpperCase()}
+                          {selected.backgroundArtwork.pdfPageIndex
+                            ? ` · p.${selected.backgroundArtwork.pdfPageIndex}`
+                            : ""}
+                          {selected.backgroundArtwork.crop && selected.backgroundArtwork.crop !== "full"
+                            ? ` · ${selected.backgroundArtwork.crop} half`
+                            : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Mode</Label>
+                      <div className="mt-1 grid grid-cols-2 gap-1 border border-border rounded-md p-1">
+                        <button
+                          type="button"
+                          onClick={() => setBackgroundMode(selected.id, "replace")}
+                          className={`text-[11px] tracking-wider uppercase py-1.5 rounded transition ${
+                            selected.backgroundArtwork.mode === "replace"
+                              ? "bg-foreground text-background"
+                              : "hover:bg-secondary"
+                          }`}
+                        >
+                          Replace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBackgroundMode(selected.id, "overlay")}
+                          className={`text-[11px] tracking-wider uppercase py-1.5 rounded transition ${
+                            selected.backgroundArtwork.mode === "overlay"
+                              ? "bg-foreground text-background"
+                              : "hover:bg-secondary"
+                          }`}
+                        >
+                          Overlay
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
+                        Replace: hide template, blocks still editable on top. Overlay: render template + blocks over the artwork.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setBgUploadSpread(false); setBgUploadOpen(true); }}
+                        className="flex-1 text-[11px] tracking-wider uppercase py-1.5 border border-border rounded hover:bg-secondary transition"
+                      >
+                        Replace…
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm("Remove background artwork from this page?")) return;
+                          const path = selected.backgroundArtwork?.sourcePath;
+                          setBackgroundArtwork(selected.id, null);
+                          if (path) { try { await deleteBackground(path); } catch { /* ignore */ } }
+                        }}
+                        className="flex-1 text-[11px] tracking-wider uppercase py-1.5 border border-border rounded hover:bg-destructive hover:text-destructive-foreground transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {spreadView && spread?.right && (
+                      <button
+                        type="button"
+                        onClick={() => { setBgUploadSpread(true); setBgUploadOpen(true); }}
+                        className="w-full text-[11px] tracking-wider uppercase py-1.5 border border-border rounded hover:bg-secondary transition"
+                      >
+                        Upload for whole spread…
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => { setBgUploadSpread(false); setBgUploadOpen(true); }}
+                      className="w-full text-[11px] tracking-wider uppercase py-2 border border-dashed border-border rounded hover:bg-secondary transition"
+                    >
+                      Upload PDF / image / IDML+PDF
+                    </button>
+                    {spreadView && spread?.right && (
+                      <button
+                        type="button"
+                        onClick={() => { setBgUploadSpread(true); setBgUploadOpen(true); }}
+                        className="w-full text-[11px] tracking-wider uppercase py-2 border border-dashed border-border rounded hover:bg-secondary transition"
+                      >
+                        Upload for whole spread…
+                      </button>
+                    )}
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Use a PDF page or image as the page art. IDML uploads also need a companion PDF for the visual.
+                    </p>
+                  </div>
+                )}
+              </Section>
+
+
               <Section title="Export · this page">
                 <div className="grid grid-cols-3 gap-2">
                   <ExportBtn onClick={() => doExport("pdf")} busy={busy === "PDF"}>PDF</ExportBtn>
