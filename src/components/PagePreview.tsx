@@ -17,31 +17,130 @@ import { CustomBlocksLayer } from "./CustomBlocksLayer";
 
 type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData;
 
+export type PageBackgroundProp = {
+  url: string;
+  mode: "overlay" | "replace";
+  crop?: "left" | "right" | "full";
+};
+
 type Props = {
   pageType: PageType;
   data: AnyData;
   dim?: { w: number; h: number };
   hideFolio?: boolean;
+  background?: PageBackgroundProp;
 };
 
 export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePreview(
-  { pageType, data, dim, hideFolio },
+  { pageType, data, dim, hideFolio, background },
   ref,
 ) {
-  switch (pageType) {
-    case "cover":
-      return <CoverPreview ref={ref} data={data as CoverData} dim={dim} />;
-    case "article":
-      return <ArticlePreview ref={ref} data={data as ArticleData} dim={dim} hideFolio={hideFolio} />;
-    case "photo":
-      return <PhotoPreview ref={ref} data={data as PhotoData} dim={dim} />;
-    case "contents":
-      return <ContentsPreview ref={ref} data={data as ContentsData} dim={dim} hideFolio={hideFolio} />;
-    case "ad":
-      return <AdPreview ref={ref} data={data as AdData} dim={dim} />;
-    case "back":
-      return <BackCoverPreview ref={ref} data={data as BackCoverData} dim={dim} />;
+  const w = dim?.w ?? COVER_PX.w;
+  const h = dim?.h ?? COVER_PX.h;
+
+  // Compute object-position when a single PDF page is split across a spread.
+  const bgObjectPosition =
+    background?.crop === "left"
+      ? "left center"
+      : background?.crop === "right"
+      ? "right center"
+      : "center center";
+  // For left/right crops we render the image at 2x width and clip via overflow.
+  const bgScaleStyle: React.CSSProperties =
+    background?.crop === "left" || background?.crop === "right"
+      ? { width: "200%", left: background.crop === "right" ? "-100%" : 0 }
+      : { width: "100%", left: 0 };
+
+  if (background?.mode === "replace") {
+    return (
+      <div
+        ref={ref}
+        data-cover-root
+        style={{
+          width: w,
+          height: h,
+          position: "relative",
+          overflow: "hidden",
+          backgroundColor: "#fff",
+          color: "#000",
+          fontFamily: "var(--font-serif)",
+        }}
+      >
+        <img
+          src={background.url}
+          alt=""
+          crossOrigin="anonymous"
+          draggable={false}
+          style={{
+            position: "absolute",
+            top: 0,
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: bgObjectPosition,
+            pointerEvents: "none",
+            userSelect: "none",
+            ...bgScaleStyle,
+          }}
+        />
+        <CustomBlocksLayer />
+      </div>
+    );
   }
+
+  const inner = (() => {
+    switch (pageType) {
+      case "cover":
+        return <CoverPreview ref={background ? undefined : ref} data={data as CoverData} dim={dim} />;
+      case "article":
+        return <ArticlePreview ref={background ? undefined : ref} data={data as ArticleData} dim={dim} hideFolio={hideFolio} />;
+      case "photo":
+        return <PhotoPreview ref={background ? undefined : ref} data={data as PhotoData} dim={dim} />;
+      case "contents":
+        return <ContentsPreview ref={background ? undefined : ref} data={data as ContentsData} dim={dim} hideFolio={hideFolio} />;
+      case "ad":
+        return <AdPreview ref={background ? undefined : ref} data={data as AdData} dim={dim} />;
+      case "back":
+        return <BackCoverPreview ref={background ? undefined : ref} data={data as BackCoverData} dim={dim} />;
+    }
+  })();
+
+  if (!background) return inner;
+
+  // Overlay mode: render bg image below template; neutralize template's own bg color
+  // for the inner [data-cover-root] so the artwork shows through.
+  return (
+    <div
+      ref={ref}
+      style={{
+        width: w,
+        height: h,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <img
+        src={background.url}
+        alt=""
+        crossOrigin="anonymous"
+        draggable={false}
+        style={{
+          position: "absolute",
+          top: 0,
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: bgObjectPosition,
+          pointerEvents: "none",
+          userSelect: "none",
+          zIndex: 0,
+          ...bgScaleStyle,
+        }}
+      />
+      <style>{`[data-bg-overlay-host] > [data-cover-root]{background-color:transparent !important;}`}</style>
+      <div data-bg-overlay-host style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+        {inner}
+      </div>
+    </div>
+  );
 });
 
 /* — shared shell — */
