@@ -1,17 +1,29 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const ATTACHMENT_BUCKET = "issue-attachments";
-export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10MB
+export const MAX_ATTACHMENT_BYTES = 200 * 1024 * 1024; // 200MB
 
+// IDML files often arrive with generic or empty MIME types from the OS, so we
+// also accept by file extension below.
 export const ACCEPTED_MIME = [
   "application/pdf",
   "image/jpeg",
   "image/png",
   "image/webp",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.adobe.indesign-idml-package",
+  "application/octet-stream", // common fallback for .idml uploads
+  "application/zip", // .idml is technically a zip container
+  "",
 ];
 
-export const ACCEPT_ATTR = ".pdf,.jpg,.jpeg,.png,.webp,.docx";
+export const ACCEPT_ATTR = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.idml";
+
+function isAcceptedFile(file: File): boolean {
+  if (ACCEPTED_MIME.includes(file.type)) return true;
+  const name = file.name.toLowerCase();
+  return name.endsWith(".idml");
+}
 
 export type AttachmentKind = "template" | "reference" | "library";
 
@@ -184,8 +196,8 @@ export async function uploadAttachment(opts: {
   if (file.size > MAX_ATTACHMENT_BYTES) {
     throw new Error(`File too large (max ${Math.floor(MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB).`);
   }
-  if (!ACCEPTED_MIME.includes(file.type)) {
-    throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
+  if (!isAcceptedFile(file)) {
+    throw new Error(`Unsupported file type: ${file.type || file.name}.`);
   }
 
   // Templates are unique per (issue, publication) — replace on upload.
@@ -316,8 +328,8 @@ export async function uploadLibraryAttachment(opts: {
   if (file.size > MAX_ATTACHMENT_BYTES) {
     throw new Error(`File too large (max ${Math.floor(MAX_ATTACHMENT_BYTES / 1024 / 1024)} MB).`);
   }
-  if (!ACCEPTED_MIME.includes(file.type)) {
-    throw new Error(`Unsupported file type: ${file.type || "unknown"}.`);
+  if (!isAcceptedFile(file)) {
+    throw new Error(`Unsupported file type: ${file.type || file.name}.`);
   }
 
   const { data: auth } = await supabase.auth.getUser();
