@@ -901,6 +901,7 @@ function BlockContent({
           height: "100%",
           background: block.fill ?? "transparent",
           border: block.strokeWidth ? `${block.strokeWidth}px solid ${block.stroke ?? "#0a0a0a"}` : "none",
+          borderRadius: block.shape === "ellipse" ? "50%" : undefined,
         }}
       />
     );
@@ -1777,11 +1778,12 @@ function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind
 function ShapeControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "shape" }>; onChange: (p: Partial<CustomBlock>) => void }) {
   return (
     <>
-      <select value={block.shape} onChange={(e) => onChange({ shape: e.target.value as "rect" | "line" })} style={inputStyle}>
+      <select value={block.shape} onChange={(e) => onChange({ shape: e.target.value as "rect" | "line" | "ellipse" })} style={inputStyle}>
         <option value="rect">Rectangle</option>
+        <option value="ellipse">Ellipse / circle</option>
         <option value="line">Line / divider</option>
       </select>
-      {block.shape === "rect" && (
+      {block.shape !== "line" && (
         <label style={labelStyle}>
           Fill
           <input type="color" value={block.fill && block.fill !== "transparent" ? block.fill : "#ffffff"} onChange={(e) => onChange({ fill: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
