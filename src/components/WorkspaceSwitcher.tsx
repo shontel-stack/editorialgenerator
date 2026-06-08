@@ -756,6 +756,47 @@ export function WorkspaceSwitcher() {
         rules={scheduleRules}
         onChange={updateScheduleRules}
       />
+
+      {/* Rename publication */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename publication</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
+              Name
+            </label>
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void confirmRename();
+                }
+              }}
+              className="w-full border border-input bg-background px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-foreground"
+              placeholder="Publication name"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Updates the name shown in the publication list and switcher.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameOpen(false)} disabled={renaming}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRename}
+              disabled={renaming || !renameValue.trim() || renameValue.trim() === active?.name}
+            >
+              {renaming ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
