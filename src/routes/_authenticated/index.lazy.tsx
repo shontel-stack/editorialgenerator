@@ -2542,6 +2542,47 @@ function Index() {
         ))}
       </div>
 
+      <PageBackgroundUploader
+        open={bgUploadOpen}
+        onClose={() => setBgUploadOpen(false)}
+        issueId={issue.meta.issueId}
+        pageId={!bgUploadSpread ? selected.id : undefined}
+        spread={bgUploadSpread && spread?.right ? { left: spread.left.id, right: spread.right.id } : undefined}
+        defaultMode={selected.backgroundArtwork?.mode ?? "replace"}
+        onApply={(assignments: BackgroundAssignment[], idmlFields) => {
+          setIssue((d) => ({
+            ...d,
+            pages: d.pages.map((p) => {
+              const a = assignments.find((x) => x.pageId === p.id);
+              if (!a) return p;
+              return {
+                ...p,
+                backgroundArtwork: {
+                  url: a.url,
+                  sourceKind: a.sourceKind,
+                  sourcePath: a.sourcePath,
+                  sourceFileName: a.sourceFileName,
+                  pdfPageIndex: a.pdfPageIndex,
+                  crop: a.crop,
+                  mode: a.mode,
+                  width: a.width,
+                  height: a.height,
+                },
+              } as IssuePageNode;
+            }),
+          }));
+          if (idmlFields) {
+            console.info("[bg] IDML suggestions", idmlFields);
+            toast.info(
+              `IDML text extracted: ${[idmlFields.section, idmlFields.headline].filter(Boolean).join(" · ") || "(no clear fields)"}`,
+            );
+          }
+        }}
+      />
+
+
+
+
 
 
       <EditorStatusBar
