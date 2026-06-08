@@ -2119,9 +2119,46 @@ function Index() {
         {/* Preview */}
         <section
           ref={stageRef}
-          className="relative isolate bg-secondary/60 border border-border overflow-hidden flex-1"
+          className={`relative isolate bg-secondary/60 border border-border flex-1 ${zoomMul > 1 ? "overflow-auto" : "overflow-hidden"}`}
           style={{ minHeight: `calc(70vh - ${stickyH}px)`, aspectRatio: `${stageW / dimPx.h}`, scrollMarginTop: stickyH }}
         >
+          <div className="absolute bottom-3 right-3 z-50 flex items-center gap-0.5 bg-background/95 border border-border rounded-md shadow px-1 py-1 text-[11px] font-medium">
+            <button
+              type="button"
+              onClick={zoomOut}
+              className="px-2 py-1 hover:bg-muted rounded"
+              title="Zoom out"
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={zoomFit}
+              className="px-2 py-1 hover:bg-muted rounded tabular-nums min-w-[3rem] text-center"
+              title="Fit to view"
+            >
+              {zoomPct}%
+            </button>
+            <button
+              type="button"
+              onClick={zoomIn}
+              className="px-2 py-1 hover:bg-muted rounded"
+              title="Zoom in"
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={zoomFit}
+              className="px-2 py-1 hover:bg-muted rounded tracking-wider uppercase text-[10px]"
+              title="Reset to fit"
+            >
+              Fit
+            </button>
+          </div>
+
 
           <div
             className="absolute left-1/2 top-1/2 origin-center"
