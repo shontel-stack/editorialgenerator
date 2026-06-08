@@ -1050,6 +1050,35 @@ function Index() {
   };
 
 
+  /** Set or clear the per-page background artwork. */
+  const setBackgroundArtwork = (
+    id: string,
+    art: IssuePageNode["backgroundArtwork"] | null,
+  ) => {
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id ? ({ ...p, backgroundArtwork: art ?? undefined } as IssuePageNode) : p,
+      ),
+    }));
+  };
+
+  const setBackgroundMode = (id: string, mode: "overlay" | "replace") => {
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) =>
+        p.id === id && p.backgroundArtwork
+          ? ({ ...p, backgroundArtwork: { ...p.backgroundArtwork, mode } } as IssuePageNode)
+          : p,
+      ),
+    }));
+  };
+
+  // Background uploader modal state
+  const [bgUploadOpen, setBgUploadOpen] = useState(false);
+  const [bgUploadSpread, setBgUploadSpread] = useState(false);
+
+
   const movePage = (id: string, dir: -1 | 1) =>
     setIssue((d) => {
       const idx = d.pages.findIndex((p) => p.id === id);
