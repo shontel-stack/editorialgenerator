@@ -19,6 +19,7 @@ import { AttachmentControl } from "@/components/AttachmentControl";
 import { PageReferencesEditor } from "@/components/PageReferencesEditor";
 import { PageBackgroundUploader, type BackgroundAssignment } from "@/components/PageBackgroundUploader";
 import { deleteBackground } from "@/lib/pageBackgrounds";
+import { toast } from "sonner";
 
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
