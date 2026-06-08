@@ -1405,8 +1405,23 @@ function Index() {
       </header>
 
 
-      <div className="px-3 pt-3 pb-2 flex flex-wrap items-center gap-2 border-b border-border bg-card/40">
-        <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mr-1">Tools</span>
+      <aside
+        aria-label="Editor tools"
+        className="fixed left-0 top-[var(--rail-top,4rem)] z-40 hidden md:flex h-[calc(100vh-var(--rail-top,4rem)-var(--statusbar-h,2rem))] w-14 flex-col items-center border-r border-border bg-card/90 backdrop-blur py-3 gap-1.5 overflow-y-auto"
+      >
+        <button title="Files" aria-label="Files" aria-pressed={attachmentsOpen} onClick={() => setAttachmentsOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${attachmentsOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <Paperclip className="h-[18px] w-[18px]" />
+        </button>
+        <button title="Brand kit" aria-label="Brand kit" aria-pressed={brandKitOpen} onClick={() => setBrandKitOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${brandKitOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <BookOpen className="h-[18px] w-[18px]" />
+        </button>
+        <button title="Staff" aria-label="Staff" aria-pressed={staffOpen} onClick={() => setStaffOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${staffOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <Users className="h-[18px] w-[18px]" />
+        </button>
+        <button title="Production" aria-label="Production" aria-pressed={checklistOpen} onClick={() => setChecklistOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${checklistOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <ClipboardList className="h-[18px] w-[18px]" />
+        </button>
+        <div className="my-1 h-px w-8 bg-border/70" />
         <Popover>
           <PopoverTrigger asChild>
             <button title="Pages" aria-label="Pages" className={RAIL_BUTTON_CLASS}>
