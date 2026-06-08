@@ -34,7 +34,7 @@ import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCloudSync } from "@/hooks/useCloudSync";
 import { useSyncQueueDrainer } from "@/hooks/useSyncQueueDrainer";
-import { autosaveKey, loadAutosave } from "@/lib/issueAutosave";
+import { autosaveKey, loadAutosave, loadLastIssueId, saveLastIssueId } from "@/lib/issueAutosave";
 import { fetchIssueDraft, upsertIssueDraft } from "@/lib/issueDrafts";
 import { enqueueDraft } from "@/lib/syncQueue";
 import {
@@ -182,6 +182,26 @@ function Index() {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [brandKitOpen, setBrandKitOpen] = useState(false);
   const { userId, active: activePublication } = useActivePublication();
+
+  // ----- Continue where I left off: swap to last opened issueId on login. -----
+  const lastIssueSwapRef = useRef(false);
+  useEffect(() => {
+    if (!userId || lastIssueSwapRef.current) return;
+    lastIssueSwapRef.current = true;
+    const last = loadLastIssueId(userId);
+    if (last && last !== issue.meta.issueId) {
+      setIssue((curr) => {
+        const next = { ...curr, meta: { ...curr.meta, issueId: last } };
+        lastSavedRef.current = JSON.stringify(next);
+        return next;
+      });
+    }
+  }, [userId, issue.meta.issueId]);
+
+  // Remember which issue this user was last editing so a refresh reopens it.
+  useEffect(() => {
+    if (userId) saveLastIssueId(userId, issue.meta.issueId);
+  }, [userId, issue.meta.issueId]);
 
   // ----- Autosave: persist the IssueDoc per (user, issueId) -----
   const autosaveKeyStr = useMemo(
@@ -836,19 +856,25 @@ function Index() {
 
   /* --- preview stage sizing --- */
   const stageRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.2);
+  const [fitScale, setFitScale] = useState(0.2);
+  const [zoomMul, setZoomMul] = useState(1);
+  const scale = fitScale * zoomMul;
   const stageW = spreadView && spread.right ? dimPx.w * 2 : dimPx.w;
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
     const update = () => {
-      setScale(Math.min(el.clientWidth / stageW, el.clientHeight / dimPx.h));
+      setFitScale(Math.min(el.clientWidth / stageW, el.clientHeight / dimPx.h));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
   }, [stageW, dimPx.h]);
+  const zoomPct = Math.round(zoomMul * 100);
+  const zoomIn = () => setZoomMul((z) => Math.min(4, +(z + 0.25).toFixed(2)));
+  const zoomOut = () => setZoomMul((z) => Math.max(0.25, +(z - 0.25).toFixed(2)));
+  const zoomFit = () => setZoomMul(1);
 
   /* --- live font preview: inject Google Fonts <link> and apply CSS vars --- */
   const fonts = issue.master.fonts;
@@ -2093,9 +2119,46 @@ function Index() {
         {/* Preview */}
         <section
           ref={stageRef}
-          className="relative isolate bg-secondary/60 border border-border overflow-hidden flex-1"
+          className={`relative isolate bg-secondary/60 border border-border flex-1 ${zoomMul > 1 ? "overflow-auto" : "overflow-hidden"}`}
           style={{ minHeight: `calc(70vh - ${stickyH}px)`, aspectRatio: `${stageW / dimPx.h}`, scrollMarginTop: stickyH }}
         >
+          <div className="absolute bottom-3 right-3 z-50 flex items-center gap-0.5 bg-background/95 border border-border rounded-md shadow px-1 py-1 text-[11px] font-medium">
+            <button
+              type="button"
+              onClick={zoomOut}
+              className="px-2 py-1 hover:bg-muted rounded"
+              title="Zoom out"
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={zoomFit}
+              className="px-2 py-1 hover:bg-muted rounded tabular-nums min-w-[3rem] text-center"
+              title="Fit to view"
+            >
+              {zoomPct}%
+            </button>
+            <button
+              type="button"
+              onClick={zoomIn}
+              className="px-2 py-1 hover:bg-muted rounded"
+              title="Zoom in"
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={zoomFit}
+              className="px-2 py-1 hover:bg-muted rounded tracking-wider uppercase text-[10px]"
+              title="Reset to fit"
+            >
+              Fit
+            </button>
+          </div>
+
 
           <div
             className="absolute left-1/2 top-1/2 origin-center"

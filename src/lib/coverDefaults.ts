@@ -284,7 +284,7 @@ export type CustomBlock =
       id: string;
       kind: "shape";
       x: number; y: number; w: number; h: number; z?: number;
-      shape: "rect" | "line";
+      shape: "rect" | "line" | "ellipse";
       fill?: string;
       stroke?: string;
       strokeWidth?: number;
