@@ -1547,7 +1547,28 @@ function Index() {
                   const filtered = issue.pages.filter((p) => {
                     const label = labelForNode(p)?.toString().toLowerCase() ?? "";
                     const type = PAGE_LABELS[p.pageType]?.toLowerCase() ?? "";
-                    return label.includes(q) || type.includes(q);
+                    const data = p.data as Record<string, unknown> | undefined;
+                    const section = typeof data?.section === "string" ? data.section.toLowerCase() : "";
+                    const eyebrow = typeof data?.eyebrow === "string" ? data.eyebrow.toLowerCase() : "";
+                    const layoutKey = typeof data?.layout === "string" ? data.layout : "";
+                    const layoutLabel = layoutKey
+                      ? (PAGE_LAYOUT_LABELS as Record<string, string>)[layoutKey]?.toLowerCase() ?? layoutKey.toLowerCase()
+                      : "";
+                    const masterName = typeof issue.master?.publication === "string"
+                      ? issue.master.publication.toLowerCase()
+                      : "";
+                    // Catch-all: tags, headline, byline, kicker, quote, etc.
+                    let blob = "";
+                    try { blob = JSON.stringify(p.data).toLowerCase(); } catch { /* ignore */ }
+                    return (
+                      label.includes(q) ||
+                      type.includes(q) ||
+                      section.includes(q) ||
+                      eyebrow.includes(q) ||
+                      layoutLabel.includes(q) ||
+                      masterName.includes(q) ||
+                      blob.includes(q)
+                    );
                   });
                   if (filtered.length === 0) {
                     return (
