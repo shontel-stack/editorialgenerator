@@ -370,8 +370,8 @@ function ArticleFooter({
   );
 }
 
-const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData; dim?: { w: number; h: number } }>(function ArticlePreview(
-  { data, dim },
+const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData; dim?: { w: number; h: number }; hideFolio?: boolean }>(function ArticlePreview(
+  { data, dim, hideFolio },
   ref,
 ) {
   const pal = PALETTES[data.palette];
@@ -675,8 +675,8 @@ const ArticlePreview = forwardRef<HTMLDivElement, { data: ArticleData; dim?: { w
     }
   }
 
-  // Header folio (skip for full-image-overlay)
-  const showHeaderFolio = L !== "full-image-overlay";
+  // Header folio (skip for full-image-overlay or when the page opts out)
+  const showHeaderFolio = L !== "full-image-overlay" && !hideFolio;
 
   return (
     <Page innerRef={ref} pal={pal} dim={dim}>
@@ -863,15 +863,15 @@ const PhotoPreview = forwardRef<HTMLDivElement, { data: PhotoData; dim?: { w: nu
 
 /* — CONTENTS — */
 
-const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData; dim?: { w: number; h: number } }>(function ContentsPreview(
-  { data, dim },
+const ContentsPreview = forwardRef<HTMLDivElement, { data: ContentsData; dim?: { w: number; h: number }; hideFolio?: boolean }>(function ContentsPreview(
+  { data, dim, hideFolio },
   ref,
 ) {
   const pal = PALETTES[data.palette];
 
   return (
     <Page innerRef={ref} pal={pal} dim={dim}>
-      <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />
+      {!hideFolio && <Folio left={data.folio} right={`PAGE ${data.pageNumber}`} pal={pal} />}
 
       <Draggable
         blockKey="section"
