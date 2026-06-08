@@ -2394,7 +2394,7 @@ function Index() {
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
           >
-            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} hideFolio={p.hideFolio} />
+            <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} hideFolio={p.hideFolio} background={p.backgroundArtwork ? { url: p.backgroundArtwork.url, mode: p.backgroundArtwork.mode, crop: p.backgroundArtwork.crop } : undefined} />
           </LayoutEditProvider>
         ))}
       </div>
