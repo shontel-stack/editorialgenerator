@@ -1409,13 +1409,12 @@ function Index() {
         <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mr-1">Tools</span>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <Layers className="h-3.5 w-3.5" /> Pages
-              <span className="font-numerals text-foreground/80">{issue.pages.length.toString().padStart(2, "0")}</span>
-              <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Pages" aria-label="Pages" className={RAIL_BUTTON_CLASS}>
+              <Layers className="h-[18px] w-[18px]" />
+              <span className="absolute -bottom-0.5 right-0 px-1 rounded-sm bg-foreground/80 text-background text-[8px] font-numerals leading-none py-px">{issue.pages.length.toString().padStart(2, "0")}</span>
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-0">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-0">
         {/* Page list */}
 
           <div className="border border-border bg-card">
@@ -1514,11 +1513,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <SquarePen className="h-3.5 w-3.5" /> Edit page <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Edit page" aria-label="Edit page" className={RAIL_BUTTON_CLASS}>
+              <SquarePen className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[420px] max-h-[80vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[420px] max-h-[85vh] overflow-y-auto p-3">
             <aside className="space-y-6">
               <Section title="Page layout">
                 <div className="space-y-2">
@@ -1704,11 +1703,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <Settings2 className="h-3.5 w-3.5" /> Snap <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Snap settings" aria-label="Snap settings" className={RAIL_BUTTON_CLASS}>
+              <Settings2 className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">_SNAP_
 
           <SnapSettingsPanel
             pageLabel={selected.pageType}
@@ -1730,11 +1729,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <BookOpen className="h-3.5 w-3.5" /> Master <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Master pages" aria-label="Master pages" className={RAIL_BUTTON_CLASS}>
+              <BookOpen className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">_MASTER_
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
@@ -1820,11 +1819,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <Type className="h-3.5 w-3.5" /> Typography <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Typography" aria-label="Typography" className={RAIL_BUTTON_CLASS}>
+              <Type className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">_TYPO_
 
           <Section title="Typography" defaultOpen={false}>
             <FontPicker
@@ -1857,11 +1856,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-[color:var(--ruby-deep)] transition">
-              <Download className="h-3.5 w-3.5" /> Save &amp; Export <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Save & Export" aria-label="Save and Export" className="h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition">
+              <Download className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">_EXPORT_
 
           <Section title="Issue · Save & Export" defaultOpen>
             {(() => {
