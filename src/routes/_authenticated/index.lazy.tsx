@@ -2330,17 +2330,6 @@ function Index() {
       </div>
 
 
-      <EditorRail
-        items={[
-          { key: "files", label: "Files", icon: Paperclip, active: attachmentsOpen, onClick: () => setAttachmentsOpen((v) => !v) },
-          { key: "brand", label: "Brand kit", icon: BookOpen, active: brandKitOpen, onClick: () => setBrandKitOpen((v) => !v) },
-          { key: "staff", label: "Staff", icon: Users, active: staffOpen, onClick: () => setStaffOpen((v) => !v) },
-          { key: "production", label: "Production", icon: ClipboardList, active: checklistOpen, onClick: () => setChecklistOpen((v) => !v) },
-        ]}
-        footerItems={[
-          { key: "assistant", label: "Ask the editor", icon: Sparkles, accent: true, active: assistantOpen, onClick: () => setAssistantOpen((v) => !v) },
-        ]}
-      />
 
       <EditorStatusBar
         left={
