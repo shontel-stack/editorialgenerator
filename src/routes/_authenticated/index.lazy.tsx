@@ -1457,12 +1457,32 @@ function Index() {
               </DropdownMenu>
             </div>
 
+            <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+              <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <input
+                type="text"
+                value={pagesQuery}
+                onChange={(e) => setPagesQuery(e.target.value)}
+                placeholder="Search pages…"
+                className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground/60"
+                autoComplete="off"
+              />
+              {pagesQuery && (
+                <button
+                  type="button"
+                  onClick={() => setPagesQuery("")}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
             <div className="divide-y divide-border">
-              <SortableList
-                items={issue.pages}
-                onReorder={reorderPages}
-                isDraggable={(p) => p.pageType !== "cover" && p.pageType !== "back"}
-                renderItem={(p, handle) => {
+              {(() => {
+                const q = pagesQuery.trim().toLowerCase();
+                const renderRow = (p: typeof issue.pages[number], handle: React.ReactNode) => {
                   const i = issue.pages.findIndex((x) => x.id === p.id);
                   const active = p.id === selectedId;
                   const locked = p.pageType === "cover" || p.pageType === "back";
@@ -1521,9 +1541,37 @@ function Index() {
                       )}
                     </div>
                   );
-                }}
-              />
+                };
+
+                if (q) {
+                  const filtered = issue.pages.filter((p) => {
+                    const label = labelForNode(p)?.toString().toLowerCase() ?? "";
+                    const type = PAGE_LABELS[p.pageType]?.toLowerCase() ?? "";
+                    return label.includes(q) || type.includes(q);
+                  });
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="px-3 py-6 text-center text-[11px] tracking-widest uppercase text-muted-foreground">
+                        No pages match "{pagesQuery}"
+                      </div>
+                    );
+                  }
+                  return filtered.map((p) => (
+                    <div key={p.id}>{renderRow(p, null)}</div>
+                  ));
+                }
+
+                return (
+                  <SortableList
+                    items={issue.pages}
+                    onReorder={reorderPages}
+                    isDraggable={(p) => p.pageType !== "cover" && p.pageType !== "back"}
+                    renderItem={renderRow}
+                  />
+                );
+              })()}
             </div>
+
           </div>
           </PopoverContent>
         </Popover>
