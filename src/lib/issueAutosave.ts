@@ -64,9 +64,3 @@ export function saveLastIssueId(userId: string | null | undefined, issueId: stri
     // ignore
   }
 }
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    // ignore
-  }
-}
