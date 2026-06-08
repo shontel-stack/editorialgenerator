@@ -1340,7 +1340,7 @@ function Index() {
               <div className="leading-tight">
                 <div className="font-brand text-[15px] text-foreground">PAGELUXE</div>
                 <div className="text-[9px] tracking-[0.45em] uppercase text-muted-foreground -mt-0.5">
-                  The Arts Today · Issue Builder
+                  Pageluxe Issue Builder
                 </div>
               </div>
             </div>
