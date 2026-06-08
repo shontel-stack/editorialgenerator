@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EditorRail, type RailItem } from "@/components/editor/EditorRail";
+import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
 import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
@@ -1405,17 +1405,31 @@ function Index() {
       </header>
 
 
-      <div className="px-3 pt-3 pb-2 flex flex-wrap items-center gap-2 border-b border-border bg-card/40">
-        <span className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mr-1">Tools</span>
+      <aside
+        aria-label="Editor tools"
+        className="fixed left-0 top-[var(--rail-top,4rem)] z-40 hidden md:flex h-[calc(100vh-var(--rail-top,4rem)-var(--statusbar-h,2rem))] w-14 flex-col items-center border-r border-border bg-card/90 backdrop-blur py-3 gap-1.5 overflow-y-auto"
+      >
+        <button title="Files" aria-label="Files" aria-pressed={attachmentsOpen} onClick={() => setAttachmentsOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${attachmentsOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <Paperclip className="h-[18px] w-[18px]" />
+        </button>
+        <button title="Brand kit" aria-label="Brand kit" aria-pressed={brandKitOpen} onClick={() => setBrandKitOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${brandKitOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <BookOpen className="h-[18px] w-[18px]" />
+        </button>
+        <button title="Staff" aria-label="Staff" aria-pressed={staffOpen} onClick={() => setStaffOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${staffOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <Users className="h-[18px] w-[18px]" />
+        </button>
+        <button title="Production" aria-label="Production" aria-pressed={checklistOpen} onClick={() => setChecklistOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${checklistOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <ClipboardList className="h-[18px] w-[18px]" />
+        </button>
+        <div className="my-1 h-px w-8 bg-border/70" />
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <Layers className="h-3.5 w-3.5" /> Pages
-              <span className="font-numerals text-foreground/80">{issue.pages.length.toString().padStart(2, "0")}</span>
-              <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Pages" aria-label="Pages" className={RAIL_BUTTON_CLASS}>
+              <Layers className="h-[18px] w-[18px]" />
+              <span className="absolute -bottom-0.5 right-0 px-1 rounded-sm bg-foreground/80 text-background text-[8px] font-numerals leading-none py-px">{issue.pages.length.toString().padStart(2, "0")}</span>
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-0">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-0">
         {/* Page list */}
 
           <div className="border border-border bg-card">
@@ -1514,11 +1528,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <SquarePen className="h-3.5 w-3.5" /> Edit page <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Edit page" aria-label="Edit page" className={RAIL_BUTTON_CLASS}>
+              <SquarePen className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[420px] max-h-[80vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[420px] max-h-[85vh] overflow-y-auto p-3">
             <aside className="space-y-6">
               <Section title="Page layout">
                 <div className="space-y-2">
@@ -1704,11 +1718,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <Settings2 className="h-3.5 w-3.5" /> Snap <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Snap settings" aria-label="Snap settings" className={RAIL_BUTTON_CLASS}>
+              <Settings2 className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">
 
           <SnapSettingsPanel
             pageLabel={selected.pageType}
@@ -1730,11 +1744,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <BookOpen className="h-3.5 w-3.5" /> Master <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Master pages" aria-label="Master pages" className={RAIL_BUTTON_CLASS}>
+              <BookOpen className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">
           {/* Master pages — issue-wide folio & page-number defaults */}
           <Section title="Master pages" defaultOpen={false}>
             <Field label="Publication name">
@@ -1820,11 +1834,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-secondary transition">
-              <Type className="h-3.5 w-3.5" /> Typography <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Typography" aria-label="Typography" className={RAIL_BUTTON_CLASS}>
+              <Type className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[80vh] overflow-y-auto p-3">
 
           <Section title="Typography" defaultOpen={false}>
             <FontPicker
@@ -1857,11 +1871,11 @@ function Index() {
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="inline-flex items-center gap-2 bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] px-3 py-2 text-[10px] tracking-[0.3em] uppercase rounded-sm hover:bg-[color:var(--ruby-deep)] transition">
-              <Download className="h-3.5 w-3.5" /> Save &amp; Export <ChevronDown className="h-3 w-3 opacity-70" />
+            <button title="Save & Export" aria-label="Save and Export" className="h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition">
+              <Download className="h-[18px] w-[18px]" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">
 
           <Section title="Issue · Save & Export" defaultOpen>
             {(() => {
@@ -1992,7 +2006,16 @@ function Index() {
           </Section>
           </PopoverContent>
         </Popover>
-      </div>
+        <button
+          title="Ask the editor"
+          aria-label="Ask the editor"
+          aria-pressed={assistantOpen}
+          onClick={() => setAssistantOpen((v) => !v)}
+          className="mt-auto h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition"
+        >
+          <Sparkles className="h-[18px] w-[18px]" />
+        </button>
+      </aside>
 
       {/* Canvas ribbon — page-specific controls, sticky alongside the header */}
       <div className="border-t border-foreground/20 bg-foreground text-background px-3 py-1.5 flex items-center gap-2 flex-wrap">
@@ -2307,17 +2330,6 @@ function Index() {
       </div>
 
 
-      <EditorRail
-        items={[
-          { key: "files", label: "Files", icon: Paperclip, active: attachmentsOpen, onClick: () => setAttachmentsOpen((v) => !v) },
-          { key: "brand", label: "Brand kit", icon: BookOpen, active: brandKitOpen, onClick: () => setBrandKitOpen((v) => !v) },
-          { key: "staff", label: "Staff", icon: Users, active: staffOpen, onClick: () => setStaffOpen((v) => !v) },
-          { key: "production", label: "Production", icon: ClipboardList, active: checklistOpen, onClick: () => setChecklistOpen((v) => !v) },
-        ]}
-        footerItems={[
-          { key: "assistant", label: "Ask the editor", icon: Sparkles, accent: true, active: assistantOpen, onClick: () => setAssistantOpen((v) => !v) },
-        ]}
-      />
 
       <EditorStatusBar
         left={
