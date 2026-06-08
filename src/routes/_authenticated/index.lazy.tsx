@@ -1906,6 +1906,54 @@ function Index() {
           <PopoverContent align="start" className="w-[380px] max-h-[70vh] overflow-y-auto p-3">
 
           <Section title="Issue · Save & Export" defaultOpen>
+            {(() => {
+              const eligible = issue.pages.filter(
+                (p) => p.pageType !== "cover" && p.pageType !== "back",
+              );
+              const hidden = eligible.filter((p) => p.hideFolio);
+              const visible = eligible.length - hidden.length;
+              const hiddenLabels = hidden
+                .map((p) => labelForNode(p))
+                .filter(Boolean)
+                .slice(0, 6);
+              return (
+                <div className="mb-3 rounded-sm border border-border bg-secondary/40 p-3 text-[11px] leading-relaxed">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">
+                    Export checklist · matches preview
+                  </p>
+                  <ul className="space-y-1.5">
+                    <li className="flex gap-2">
+                      <span className="text-[color:var(--ruby)]">✓</span>
+                      <span>
+                        Running headers: <strong>{visible}</strong> shown,{" "}
+                        <strong>{hidden.length}</strong> hidden
+                        {hiddenLabels.length > 0 && (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            ({hiddenLabels.join(", ")}
+                            {hidden.length > hiddenLabels.length ? ", …" : ""})
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-[color:var(--ruby)]">✓</span>
+                      <span>
+                        Render size: <strong>{dimInches.w}″ × {dimInches.h}″</strong>{" "}
+                        at <strong>{dimPx.w} × {dimPx.h}px</strong> (1:1, no downscale)
+                      </span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-[color:var(--ruby)]">✓</span>
+                      <span>
+                        Cover &amp; back render without folio by design; layout, fonts,
+                        and brand colors export exactly as shown in the preview.
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              );
+            })()}
             <button
               onClick={doExportPublication}
               disabled={busy === "PUBLICATION"}
