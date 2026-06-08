@@ -21,7 +21,7 @@ import { STAFF_BY_ID } from "@/lib/staffRoles";
 export const Route = createFileRoute("/_authenticated/board")({
   head: () => ({
     meta: [
-      { title: "Production board — The Arts Today" },
+      { title: "Production board — Pageluxe Issue Builder" },
       { name: "description", content: "Kanban view of every page in production." },
     ],
   }),
