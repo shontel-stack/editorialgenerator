@@ -174,6 +174,35 @@ export function WorkspaceSwitcher() {
   const [dateFormat, setDateFormat] = useState<DateFormat>("month-year");
   const [issueDate, setIssueDate] = useState<Date>(() => new Date());
 
+  // Rename publication dialog state.
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+
+  const openRenameDialog = () => {
+    if (!active) return;
+    setRenameValue(active.name);
+    setRenameOpen(true);
+  };
+
+  const confirmRename = async () => {
+    if (!active || renaming) return;
+    const next = renameValue.trim();
+    if (!next || next === active.name) {
+      setRenameOpen(false);
+      return;
+    }
+    setRenaming(true);
+    try {
+      await update(active.id, { name: next });
+      setRenameOpen(false);
+    } catch (e) {
+      alert(`Could not rename publication: ${(e as Error).message}`);
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   // Human-readable suffix for the chosen format and selected issue date.
   const formatIssueDate = (fmt: DateFormat, d: Date): string => {
     switch (fmt) {
