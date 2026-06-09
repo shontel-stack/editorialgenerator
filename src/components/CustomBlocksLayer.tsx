@@ -821,7 +821,8 @@ function BlockContent({
       );
     }
     // Render each line as its own paragraph so per-paragraph alignment works.
-    const paragraphs = block.text.split("\n");
+    const rawText = tokens ? resolveTextTokens(block.text, tokens) : block.text;
+    const paragraphs = rawText.split("\n");
     const pBefore = block.paragraphSpaceBefore ?? [];
     const pAfter = block.paragraphSpaceAfter ?? [];
     const pLH = block.paragraphLineHeight ?? [];
