@@ -803,3 +803,74 @@ export function pageNumberFor(issue: IssueDoc, nodeId: string): string {
   const n = idx < 0 ? 0 : idx + 1;
   return n.toString().padStart(3, "0");
 }
+
+/**
+ * Token context passed through the LayoutEdit provider so free-form text
+ * blocks placed as headers/footers can show live page numbers, section
+ * names, publication metadata, etc. — and stay accurate as pages are
+ * reordered or the master is edited.
+ */
+export type TokenContext = {
+  page: number;        // 1-indexed page number in this issue
+  pages: number;       // total pages in this issue
+  pageLabel: string;   // formatted per master.pageNumberFormat
+  publication: string;
+  issue: string;
+  date: string;
+  copyright: string;
+  section: string;     // section/title if the page has one, else page type
+};
+
+/** Build a TokenContext for one page given the full issue doc. */
+export function buildTokenContext(doc: IssueDoc, pageId: string): TokenContext {
+  const idx = doc.pages.findIndex((p) => p.id === pageId);
+  const page = idx < 0 ? 1 : idx + 1;
+  const total = doc.pages.length;
+  const pageLabel = formatPageNumber(doc.master, page, total);
+  const yearMatch = doc.meta.date.match(/\b(19|20)\d{2}\b/);
+  const year = yearMatch ? yearMatch[0] : String(new Date().getFullYear());
+  const copyright = `${year} ${doc.master.publication}`.trim();
+  const node = idx >= 0 ? doc.pages[idx] : undefined;
+  const d = (node?.data ?? {}) as { section?: string; title?: string; headline?: string };
+  const section = d.section || d.title || d.headline || (node ? PAGE_LABELS[node.pageType] : "");
+  return {
+    page,
+    pages: total,
+    pageLabel,
+    publication: doc.master.publication,
+    issue: doc.meta.issue,
+    date: doc.meta.date,
+    copyright,
+    section,
+  };
+}
+
+/**
+ * Substitute supported tokens in a text string. Tokens use curly braces so
+ * they survive copy/paste round-trips and don't collide with regular text:
+ *   {page} {pages} {page#} {publication} {issue} {date} {copyright} {section}
+ */
+export function resolveTextTokens(text: string, ctx: TokenContext): string {
+  if (!text || text.indexOf("{") === -1) return text;
+  return text
+    .replace(/\{page#\}/g, ctx.pageLabel)
+    .replace(/\{page\}/g, String(ctx.page))
+    .replace(/\{pages\}/g, String(ctx.pages))
+    .replace(/\{publication\}/g, ctx.publication)
+    .replace(/\{issue\}/g, ctx.issue)
+    .replace(/\{date\}/g, ctx.date)
+    .replace(/\{copyright\}/g, ctx.copyright)
+    .replace(/\{section\}/g, ctx.section);
+}
+
+export const TOKEN_PRESETS: { label: string; token: string }[] = [
+  { label: "Page #", token: "{page#}" },
+  { label: "Page", token: "{page}" },
+  { label: "Of total", token: "{page} / {pages}" },
+  { label: "Section", token: "{section}" },
+  { label: "Publication", token: "{publication}" },
+  { label: "Issue", token: "{issue}" },
+  { label: "Date", token: "{date}" },
+  { label: "Copyright", token: "© {copyright}" },
+];
+

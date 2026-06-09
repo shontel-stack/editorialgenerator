@@ -10,6 +10,7 @@ import {
 import QRCode from "qrcode";
 import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
+import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
 import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
@@ -762,6 +763,8 @@ function BlockContent({
   onCaretParagraphChange?: (n: number | null) => void;
 }) {
   const brandKit = useBrandKit();
+  const editCtx = useLayoutEdit();
+  const tokens = editCtx?.tokenContext;
   if (block.kind === "text") {
     const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
     const gap = Math.max(0, block.columnGap ?? 32);
@@ -818,7 +821,8 @@ function BlockContent({
       );
     }
     // Render each line as its own paragraph so per-paragraph alignment works.
-    const paragraphs = block.text.split("\n");
+    const rawText = tokens ? resolveTextTokens(block.text, tokens) : block.text;
+    const paragraphs = rawText.split("\n");
     const pBefore = block.paragraphSpaceBefore ?? [];
     const pAfter = block.paragraphSpaceAfter ?? [];
     const pLH = block.paragraphLineHeight ?? [];

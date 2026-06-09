@@ -9,7 +9,7 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import { Link2, Move, Type } from "lucide-react";
-import type { CustomBlock } from "@/lib/coverDefaults";
+import type { CustomBlock, TokenContext } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
 
 export type Overrides = Record<string, { dx: number; dy: number }>;
@@ -49,6 +49,9 @@ type Ctx = {
   /** Optional: ask the host to enter edit mode for this page (used when the
    *  add-element palette is shown outside edit mode). */
   onRequestEdit?: () => void;
+  /** Tokens substituted into custom text blocks at render time so user-placed
+   *  header/footer blocks can show live page numbers, section names, etc. */
+  tokenContext?: TokenContext;
 };
 
 type CtxValue = Ctx & {
@@ -79,6 +82,7 @@ export function LayoutEditProvider({
   guides,
   snapSettings,
   onRequestEdit,
+  tokenContext,
   children,
 }: Ctx & { children: ReactNode }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -119,6 +123,7 @@ export function LayoutEditProvider({
         guides,
         snapSettings,
         onRequestEdit,
+        tokenContext,
         selectedKey,
         setSelectedKey,
       }}
