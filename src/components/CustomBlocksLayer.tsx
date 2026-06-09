@@ -1698,23 +1698,32 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
   const ctx = useLayoutEdit();
   const global = useSnapSettings();
   const snap = ctx?.snapSettings ?? global;
+  const fileRef = useRef<HTMLInputElement | null>(null);
   return (
     <>
-      <label style={btnStyle("normal")}>
+      <button
+        type="button"
+        style={btnStyle("normal")}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileRef.current?.click(); }}
+      >
         Upload
-        <input
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (!f) return;
-            const r = new FileReader();
-            r.onload = () => onChange({ imageUrl: String(r.result) });
-            r.readAsDataURL(f);
-          }}
-        />
-      </label>
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (!f) return;
+          const r = new FileReader();
+          r.onload = () => onChange({ imageUrl: String(r.result) });
+          r.onerror = () => console.error("Failed to read image", r.error);
+          r.readAsDataURL(f);
+        }}
+      />
       <select value={block.imageFit ?? "cover"} onChange={(e) => onChange({ imageFit: e.target.value as "cover" | "contain" })} style={inputStyle}>
         <option value="cover">Cover</option>
         <option value="contain">Contain</option>
