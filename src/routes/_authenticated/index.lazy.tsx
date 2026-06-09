@@ -1753,6 +1753,124 @@ function Index() {
                 </Section>
               )}
 
+              <Section title="Header & footer overlays" defaultOpen={false}>
+                <p className="text-[10px] leading-relaxed text-muted-foreground -mt-1 mb-2">
+                  Add free-form text blocks anywhere on the page. Use tokens
+                  for live values — they update when pages move or the master changes.
+                  Tokens: <code>{"{page#}"}</code>, <code>{"{page}"}</code>, <code>{"{pages}"}</code>,
+                  {" "}<code>{"{section}"}</code>, <code>{"{publication}"}</code>,
+                  {" "}<code>{"{issue}"}</code>, <code>{"{date}"}</code>, <code>{"{copyright}"}</code>.
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 mb-3">
+                  {([
+                    { label: "+ Header (left)",   text: "{publication}",         x: 200,  y: 160,  w: 1400, h: 120, align: "left"   as const },
+                    { label: "+ Header (right)",  text: "{issue}",               x: 1600, y: 160,  w: 1400, h: 120, align: "right"  as const },
+                    { label: "+ Footer (left)",   text: "© {copyright}",         x: 200,  y: 4000, w: 1600, h: 110, align: "left"   as const },
+                    { label: "+ Footer (page #)", text: "{page#}",               x: 1600, y: 4000, w: 1400, h: 110, align: "right"  as const },
+                    { label: "+ Section title",   text: "{section}",             x: 200,  y: 280,  w: 2800, h: 100, align: "left"   as const },
+                    { label: "+ Page x of y",     text: "Page {page} of {pages}",x: 1100, y: 4000, w: 1000, h: 110, align: "center" as const },
+                  ]).map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className="text-[10px] uppercase tracking-[0.18em] border border-border bg-card hover:bg-muted text-foreground px-2 py-1.5 rounded-sm text-left"
+                      onClick={() => {
+                        const existing = selected.customBlocks ?? [];
+                        const block = {
+                          id: newId(),
+                          kind: "text" as const,
+                          x: preset.x,
+                          y: preset.y,
+                          z: 80,
+                          w: preset.w,
+                          h: preset.h,
+                          text: preset.text,
+                          fontFamily: "sans" as const,
+                          fontSize: 38,
+                          fontWeight: 500,
+                          align: preset.align,
+                          color: "#0a0a0a",
+                        };
+                        setCustomBlocks(selected.id, [...existing, block]);
+                        if (!editLayout) setEditLayout(true);
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                {(selected.customBlocks ?? []).filter((b) => b.kind === "text").length > 0 && (
+                  <div className="border-t border-border pt-2 space-y-1.5">
+                    <div className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Text blocks on this page</div>
+                    {(selected.customBlocks ?? [])
+                      .filter((b): b is Extract<import("@/lib/coverDefaults").CustomBlock, { kind: "text" }> => b.kind === "text")
+                      .map((b) => (
+                        <div key={b.id} className="flex items-center gap-1.5 text-[11px]">
+                          <span className="flex-1 truncate font-mono text-muted-foreground" title={b.text}>
+                            {b.text.slice(0, 40) || "(empty)"}
+                          </span>
+                          <button
+                            type="button"
+                            title="Copy this block to every other page (great for headers/footers)"
+                            className="text-[9px] uppercase tracking-[0.18em] border border-border hover:bg-muted px-1.5 py-0.5 rounded-sm"
+                            onClick={() => {
+                              const targets = issue.pages.filter((p) => p.id !== selected.id);
+                              setIssue((d) => ({
+                                ...d,
+                                pages: d.pages.map((p) => {
+                                  if (!targets.some((t) => t.id === p.id)) return p;
+                                  const dupe = { ...b, id: newId() };
+                                  return {
+                                    ...p,
+                                    customBlocks: [...(p.customBlocks ?? []), dupe],
+                                  } as IssuePageNode;
+                                }),
+                              }));
+                              toast.success(`Applied to ${targets.length} other page${targets.length === 1 ? "" : "s"}`);
+                            }}
+                          >
+                            Apply to all
+                          </button>
+                          <button
+                            type="button"
+                            title="Remove this block"
+                            className="text-[9px] uppercase tracking-[0.18em] border border-border hover:bg-muted px-1.5 py-0.5 rounded-sm"
+                            onClick={() => {
+                              setCustomBlocks(
+                                selected.id,
+                                (selected.customBlocks ?? []).filter((x) => x.id !== b.id),
+                              );
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                <div className="border-t border-border pt-2 mt-2">
+                  <div className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-1">Insert token (copies to clipboard)</div>
+                  <div className="flex flex-wrap gap-1">
+                    {TOKEN_PRESETS.map((t) => (
+                      <button
+                        key={t.token}
+                        type="button"
+                        className="text-[10px] border border-border bg-card hover:bg-muted px-1.5 py-0.5 rounded-sm font-mono"
+                        onClick={() => {
+                          void navigator.clipboard?.writeText(t.token);
+                          toast.success(`Copied ${t.token} — paste into a text block`);
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </Section>
+
+
               {selected.pageType !== "cover" && (
                 <Section title="Physical sheet" defaultOpen={false}>
                   <Field label="Unprinted sheets before this page">
