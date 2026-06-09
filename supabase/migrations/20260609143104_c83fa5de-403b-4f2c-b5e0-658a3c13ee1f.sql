@@ -1,0 +1,2 @@
+ALTER TABLE public.issue_attachments DROP CONSTRAINT issue_attachments_kind_check;
+ALTER TABLE public.issue_attachments ADD CONSTRAINT issue_attachments_kind_check CHECK (kind = ANY (ARRAY['template'::text, 'reference'::text, 'library'::text]));
