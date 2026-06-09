@@ -1,87 +1,53 @@
-# Page background artwork (PDF / image / IDML+PDF)
+# Free-form header & footer editing
 
-Lets you attach uploaded artwork as the background of any page or spread, with a per-page toggle for whether your template/blocks render over it or the artwork fully replaces the page.
+Today each page/cover template hard-codes the running header (folio + rule) and footer (page number, section, ad slug, etc.) into `PagePreview`. Users can hide a page's header but cannot move, restyle, or add multiple header/footer elements. We'll lift headers and footers into the existing custom-blocks system so they get drag, resize, rich text styling, and per-page overrides — for both internal pages and covers.
 
-## What you'll get
+## What the user gets
 
-- "Background artwork" section in the **Edit page** flyout for the selected page (and a spread variant when spread view is on).
-- Upload accepts: **PDF**, **JPG / PNG / WebP**, **IDML (paired with a PDF)**.
-- Per page: **Overlay** (template + blocks render on top) or **Replace** (only your custom blocks render on top, template is hidden).
-- For spreads: an upload dialog asks **"split one PDF page in half"** or **"two PDF pages = one spread"**, plus which page numbers.
-- For IDML: required companion PDF supplies the visual. Text stories are parsed and offered as a one-click "Fill page fields from IDML" action (section, title, byline where matched).
-- Remove / replace background at any time. Background is stored once, referenced by URL on the page.
+- **Drag & resize** any header/footer element anywhere on the page (with the same snap guides as other blocks).
+- **Rich text styling** — font family, size, weight, italic, alignment, color, letter-spacing.
+- **Multiple elements** per zone: e.g. page number + section title + date in the footer, masthead + issue number + tagline in the header.
+- **Per-page overrides** with an "Apply to all pages" action so a tweak can stay local or be promoted to the master.
+- Works on covers (front, back, inside-front, inside-back) and every internal template.
 
-## Where things live
+## How it works
 
-- Storage: existing `issue-attachments` bucket. New folder convention `{user_id}/{issue_id}/bg/...` for rasterized backgrounds and source uploads.
-- Per-page data: new optional field on `IssuePageNode`:
-  ```ts
-  backgroundArtwork?: {
-    url: string;            // PNG/JPG rendered from PDF page, or uploaded image
-    sourceUrl?: string;     // original PDF/IDML, kept for re-render/export
-    sourceKind: "pdf" | "image" | "idml+pdf";
-    pdfPageIndex?: number;  // 1-based, when from PDF
-    crop?: "left" | "right" | "full"; // when splitting one PDF page across a spread
-    mode: "overlay" | "replace";
-    width: number; height: number; // intrinsic px
-  }
-  ```
-  Persisted via the existing `issue_drafts` JSON — no schema migration needed.
+### Data model (`coverDefaults.ts`)
+- Add `headerElements: HFElement[]` and `footerElements: HFElement[]` to `MasterPages` (issue-wide default) and to `IssuePageNode` (per-page override).
+- `HFElement` = `{ id, kind: "folio"|"page-number"|"section"|"date"|"masthead"|"text"|"divider", text?, token?, x, y, w, h, style: TextStyle, align, zone: "header"|"footer" }` where `token` is a placeholder resolved at render time (`{page}`, `{section}`, `{issue}`, `{date}`, etc.).
+- Migration helper converts the legacy single-`folio` string into a default `HFElement` array so existing issues render identically.
+- `hideHeader` stays; add matching `hideFooter`. `headerElements`/`footerElements: null` means "inherit from master".
 
-## Rendering
+### Rendering (`PagePreview.tsx`, `CoverPreview.tsx`)
+- Replace inline header/footer JSX in every template with a new `<HeaderFooterLayer page={...} master={...} side={...} />`.
+- The layer resolves effective elements (page override ?? master), expands tokens, and renders each element as an absolutely-positioned block using the existing intrinsic page coordinate space so export PDFs stay pixel-identical.
+- `replace`-mode background artwork already skips templates; we keep header/footer hidden in that mode unless explicitly toggled.
 
-- `PagePreview` gets a new optional `backgroundUrl` + `mode` prop. When set:
-  - draws an `<img>` at the page's intrinsic size, behind everything.
-  - in `replace` mode, the template renderer (cover/article/photo/ad/contents) is skipped — only `CustomBlocksLayer` renders on top, so blocks/QR/text stay editable.
-  - in `overlay` mode, template still renders. Useful for stamping a folio over uploaded art.
-- Export paths (`idmlExport`, IDML export, PDF download): include the background image as the base layer.
+### Editing UI
+- Extend `CustomBlocksLayer` so header/footer elements participate in the same selection / drag / resize / snap pipeline as user blocks. They carry a `system: true` flag so deleting reverts to master instead of removing.
+- New **Header & Footer** section in the right-hand Edit-page flyout:
+  - List of elements per zone with reorder, add (`+ Text`, `+ Page #`, `+ Section`, `+ Date`, `+ Divider`), and remove.
+  - Selected element shows the existing text-style controls (font, size, weight, italic, align, color) plus position/size inputs.
+  - Buttons: **Reset to master**, **Apply to all pages** (writes current zone back to `MasterPages`).
+- A small **Header / Footer** tab in the Cover editor (front/back/inside) reuses the same component.
 
-## PDF handling (client-side)
+### Persistence
+- Header/footer overrides live inside the existing `issue.pages[*]` JSON blob, so no schema migration is required.
+- Master changes write through the existing `MasterPages` persistence path.
+- Autosave + draft-conflict flow already covers these fields once they're part of the issue JSON.
 
-- Add `pdfjs-dist` (worker entry imported via Vite `?url`).
-- On upload: open the PDF, show a thumbnail picker; user chooses page index (and for spreads, the split / two-page mode).
-- Rasterize the chosen page(s) at 200 DPI to PNG blob, upload to `issue-attachments`, store the original PDF too.
-- Re-render on demand if the user changes the chosen page or DPI.
+## Files touched
 
-## IDML handling
-
-- Add `jszip` (already common, will verify).
-- Parse `Stories/Story_*.xml` for `Content` text. Surface a small "Imported text" list in the panel.
-- Require a companion PDF in the same upload step ("IDML needs a PDF for the visual"). The PDF becomes the background; IDML stays as metadata + text.
-- One-click "Fill from IDML" maps the first long-ish run to `headline`/`title`, first short uppercase run to `section`, etc. (best-effort, user reviews).
-
-## UI flow
-
-- **Edit page flyout** → new "Background artwork" section:
-  - Empty state: `Upload PDF / image / IDML+PDF` button.
-  - Filled state: thumbnail, filename, page chip (e.g. "PDF p.3"), Overlay/Replace segmented control, Replace and Remove buttons.
-- Upload dialog (modal):
-  - File picker (multi for IDML+PDF).
-  - When PDF + spread: radio "split one page" vs "two pages = spread" + page-number inputs with thumbnails.
-  - When IDML: shows parsed story preview + asks for the PDF.
-- Toast on success / error.
+- `src/lib/coverDefaults.ts` — types, defaults, legacy-folio migration, token resolver.
+- `src/components/HeaderFooterLayer.tsx` *(new)* — render + edit-mode interactions.
+- `src/components/PagePreview.tsx` — swap inline header/footer JSX in every template for `HeaderFooterLayer`.
+- `src/components/CoverPreview.tsx` — same swap for cover templates.
+- `src/components/CustomBlocksLayer.tsx` — allow system blocks (header/footer) to share the drag/resize/snap pipeline.
+- `src/routes/_authenticated/index.lazy.tsx` — new Header & Footer section in the Edit flyout, plus cover tab.
+- Minor: `src/lib/idmlExport.ts` / `exportCover.ts` to emit the new elements at export time.
 
 ## Out of scope
+- Page-by-page header/footer image uploads (covered already by Background artwork).
+- Sectional master pages (different masters for different chapters). Can be added later by extending `MasterPages` to a map keyed by section.
 
-- No server-side rendering. No InDesign-quality IDML rendering.
-- No automatic block placement from IDML text frames (only text extraction + one-shot field fill).
-- No edits to autosave, RLS, or `issue_drafts` schema.
-- No new database tables; uses existing storage bucket and per-page JSON.
-
-## Files to touch
-
-- `src/lib/coverDefaults.ts` — add `backgroundArtwork` to `IssuePageNode`.
-- `src/components/PagePreview.tsx` — render background + honor `replace` mode.
-- `src/routes/_authenticated/index.lazy.tsx` — Edit page flyout: background section + upload dialog wiring.
-- New: `src/components/PageBackgroundUploader.tsx` — modal handling PDF/image/IDML, page picker, spread split.
-- New: `src/lib/pdfRender.ts` — pdf.js worker setup + `rasterizePdfPage(file, pageIndex, dpi)`.
-- New: `src/lib/idmlParse.ts` — unzip + extract stories.
-- `package.json` — add `pdfjs-dist`, `jszip` (if missing).
-
-## Risks / notes
-
-- pdf.js worker must be configured for Vite (`?url` import) or rendering fails silently — covered in the helper.
-- Large PDFs: cap rasterization to one page at a time; warn if file > 25 MB.
-- Storage usage will grow — original PDF + rendered PNG per use. Acceptable, and "Remove background" deletes both.
-
-Approve and I'll build it end-to-end in one pass.
+Confirm and I'll build it.
