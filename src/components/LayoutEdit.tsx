@@ -49,6 +49,9 @@ type Ctx = {
   /** Optional: ask the host to enter edit mode for this page (used when the
    *  add-element palette is shown outside edit mode). */
   onRequestEdit?: () => void;
+  /** Tokens substituted into custom text blocks at render time so user-placed
+   *  header/footer blocks can show live page numbers, section names, etc. */
+  tokenContext?: TokenContext;
 };
 
 type CtxValue = Ctx & {
