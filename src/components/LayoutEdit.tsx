@@ -123,6 +123,7 @@ export function LayoutEditProvider({
         guides,
         snapSettings,
         onRequestEdit,
+        tokenContext,
         selectedKey,
         setSelectedKey,
       }}
