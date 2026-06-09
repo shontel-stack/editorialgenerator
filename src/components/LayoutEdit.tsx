@@ -82,6 +82,7 @@ export function LayoutEditProvider({
   guides,
   snapSettings,
   onRequestEdit,
+  tokenContext,
   children,
 }: Ctx & { children: ReactNode }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
