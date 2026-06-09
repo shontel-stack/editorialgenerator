@@ -2494,6 +2494,7 @@ function Index() {
                   guides={showGuides ? guidesFor(spread.right) : undefined}
                   snapSettings={effectiveSnapFor(spread.right)}
                   onRequestEdit={() => { setSelectedId(spread.right!.id); setEditLayout(true); }}
+                  tokenContext={buildTokenContext(issue, spread.right.id)}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} hideFolio={spread.right.hideFolio} background={spread.right.backgroundArtwork ? { url: spread.right.backgroundArtwork.url, mode: spread.right.backgroundArtwork.mode, crop: spread.right.backgroundArtwork.crop } : undefined} />
                 </LayoutEditProvider>
