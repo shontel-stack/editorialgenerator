@@ -288,6 +288,8 @@ export type CustomBlock =
       fill?: string;
       stroke?: string;
       strokeWidth?: number;
+      cornerRadius?: number;
+      opacity?: number;
       rotate?: number;
       link?: string;
     }
