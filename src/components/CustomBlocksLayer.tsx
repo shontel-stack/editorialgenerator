@@ -1057,7 +1057,7 @@ function QrPreview({ url, color, bg }: { url: string; color: string; bg: string 
 
 /* --------------------- floating toolbars --------------------- */
 
-function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"]) => void; onOpenTemplates: () => void }) {
+function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
