@@ -106,7 +106,9 @@ function resolveFontFamily(
   return "var(--font-serif)";
 }
 
-function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
+type ShapeVariant = "rect" | "ellipse" | "line";
+
+function defaultBlock(kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }): CustomBlock {
   const id = newId();
   const base = { id, x: 600, y: 600, z: 50 } as const;
   switch (kind) {
@@ -146,8 +148,16 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
         bg: d.bg,
       };
     }
-    case "shape":
-      return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
+    case "shape": {
+      const variant = opts?.shape ?? "rect";
+      if (variant === "line") {
+        return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
+      }
+      if (variant === "ellipse") {
+        return { ...base, kind: "shape", w: 800, h: 800, shape: "ellipse", fill: "#6b1320", stroke: "transparent", strokeWidth: 0 };
+      }
+      return { ...base, kind: "shape", w: 1000, h: 700, shape: "rect", fill: "#6b1320", stroke: "transparent", strokeWidth: 0 };
+    }
     case "embed":
       return { ...base, kind: "embed", w: 480, h: 160, embed: "button", url: "https://", label: "Read more", color: "#ffffff", bg: "#6b1320" };
     case "video": {
