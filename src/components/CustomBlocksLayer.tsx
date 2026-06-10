@@ -765,12 +765,14 @@ function BlockContent({
   onTextChange,
   stopEditingText,
   onCaretParagraphChange,
+  onChange,
 }: {
   block: CustomBlock;
   editingText: boolean;
   onTextChange: (text: string) => void;
   stopEditingText: () => void;
   onCaretParagraphChange?: (n: number | null) => void;
+  onChange?: (patch: Partial<CustomBlock>) => void;
 }) {
   const brandKit = useBrandKit();
   const editCtx = useLayoutEdit();
