@@ -871,25 +871,47 @@ function BlockContent({
       : {};
     if (!block.imageUrl) {
       return (
-        <div
+        <label
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           style={{
             width: "100%",
             height: "100%",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            gap: 8,
             background: "repeating-linear-gradient(45deg, #eee 0 16px, #ddd 16px 32px)",
-            color: "#666",
+            color: "#555",
             fontFamily: "var(--font-sans)",
             fontSize: 18,
             letterSpacing: 2,
             textTransform: "uppercase",
             boxSizing: "border-box",
+            cursor: onChange ? "pointer" : "default",
             ...borderStyle,
           }}
         >
-          Select element → upload
-        </div>
+          <ImageIcon size={28} />
+          <span>Click to upload</span>
+          {onChange && (
+            <input
+              type="file"
+              accept="image/*"
+              style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = () => onChange({ imageUrl: String(r.result) } as Partial<CustomBlock>);
+                r.onerror = () => console.error("Failed to read image", r.error);
+                r.readAsDataURL(f);
+              }}
+            />
+          )}
+        </label>
       );
     }
     return (
