@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
 import type { CustomBlock } from "@/lib/coverDefaults";
 import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
@@ -106,7 +106,9 @@ function resolveFontFamily(
   return "var(--font-serif)";
 }
 
-function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
+type ShapeVariant = "rect" | "ellipse" | "line";
+
+function defaultBlock(kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }): CustomBlock {
   const id = newId();
   const base = { id, x: 600, y: 600, z: 50 } as const;
   switch (kind) {
@@ -146,8 +148,16 @@ function defaultBlock(kind: CustomBlock["kind"]): CustomBlock {
         bg: d.bg,
       };
     }
-    case "shape":
-      return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
+    case "shape": {
+      const variant = opts?.shape ?? "rect";
+      if (variant === "line") {
+        return { ...base, kind: "shape", w: 1200, h: 40, shape: "line", fill: "transparent", stroke: "#6b1320", strokeWidth: 6 };
+      }
+      if (variant === "ellipse") {
+        return { ...base, kind: "shape", w: 800, h: 800, shape: "ellipse", fill: "#6b1320", stroke: "transparent", strokeWidth: 0 };
+      }
+      return { ...base, kind: "shape", w: 1000, h: 700, shape: "rect", fill: "#6b1320", stroke: "transparent", strokeWidth: 0 };
+    }
     case "embed":
       return { ...base, kind: "embed", w: 480, h: 160, embed: "button", url: "https://", label: "Read more", color: "#ffffff", bg: "#6b1320" };
     case "video": {
@@ -253,10 +263,10 @@ export function CustomBlocksLayer() {
   );
   const requestEdit = ctx?.onRequestEdit;
   const add = useCallback(
-    (kind: CustomBlock["kind"]) => {
+    (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => {
       if (!setBlocks) return;
       if (!editing) requestEdit?.();
-      const b = defaultBlock(kind);
+      const b = defaultBlock(kind, opts);
       setBlocks([...blocks, b]);
       setSelectedId(b.id);
     },
@@ -610,6 +620,7 @@ function CustomBlockView({
         onCaretParagraphChange?.(null);
       }}
       onCaretParagraphChange={onCaretParagraphChange}
+      onChange={onChange}
     />
   );
 
@@ -755,12 +766,14 @@ function BlockContent({
   onTextChange,
   stopEditingText,
   onCaretParagraphChange,
+  onChange,
 }: {
   block: CustomBlock;
   editingText: boolean;
   onTextChange: (text: string) => void;
   stopEditingText: () => void;
   onCaretParagraphChange?: (n: number | null) => void;
+  onChange?: (patch: Partial<CustomBlock>) => void;
 }) {
   const brandKit = useBrandKit();
   const editCtx = useLayoutEdit();
@@ -859,25 +872,47 @@ function BlockContent({
       : {};
     if (!block.imageUrl) {
       return (
-        <div
+        <label
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           style={{
             width: "100%",
             height: "100%",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            gap: 8,
             background: "repeating-linear-gradient(45deg, #eee 0 16px, #ddd 16px 32px)",
-            color: "#666",
+            color: "#555",
             fontFamily: "var(--font-sans)",
             fontSize: 18,
             letterSpacing: 2,
             textTransform: "uppercase",
             boxSizing: "border-box",
+            cursor: onChange ? "pointer" : "default",
             ...borderStyle,
           }}
         >
-          Select element → upload
-        </div>
+          <ImageIcon size={28} />
+          <span>Click to upload</span>
+          {onChange && (
+            <input
+              type="file"
+              accept="image/*"
+              style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = () => onChange({ imageUrl: String(r.result) } as Partial<CustomBlock>);
+                r.onerror = () => console.error("Failed to read image", r.error);
+                r.readAsDataURL(f);
+              }}
+            />
+          )}
+        </label>
       );
     }
     return (
@@ -1047,7 +1082,7 @@ function QrPreview({ url, color, bg }: { url: string; color: string; bg: string 
 
 /* --------------------- floating toolbars --------------------- */
 
-function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"]) => void; onOpenTemplates: () => void }) {
+function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
@@ -1078,7 +1113,9 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
         <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
         <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
         <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
-        <PaletteBtn label="Shape" icon={<Square size={14} />} onClick={() => onAdd("shape")} />
+        <PaletteBtn label="Rectangle" icon={<Square size={14} />} onClick={() => onAdd("shape", { shape: "rect" })} />
+        <PaletteBtn label="Ellipse" icon={<Circle size={14} />} onClick={() => onAdd("shape", { shape: "ellipse" })} />
+        <PaletteBtn label="Line" icon={<Minus size={14} />} onClick={() => onAdd("shape", { shape: "line" })} />
         <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
         <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
         <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
