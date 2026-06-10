@@ -1088,7 +1088,9 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
         <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
         <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
         <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
-        <PaletteBtn label="Shape" icon={<Square size={14} />} onClick={() => onAdd("shape")} />
+        <PaletteBtn label="Rectangle" icon={<Square size={14} />} onClick={() => onAdd("shape", { shape: "rect" })} />
+        <PaletteBtn label="Ellipse" icon={<Circle size={14} />} onClick={() => onAdd("shape", { shape: "ellipse" })} />
+        <PaletteBtn label="Line" icon={<Minus size={14} />} onClick={() => onAdd("shape", { shape: "line" })} />
         <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
         <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
         <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
