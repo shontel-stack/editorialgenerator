@@ -1836,6 +1836,11 @@ function VideoControls({ block, onChange }: { block: Extract<CustomBlock, { kind
 }
 
 function ShapeControls({ block, onChange }: { block: Extract<CustomBlock, { kind: "shape" }>; onChange: (p: Partial<CustomBlock>) => void }) {
+  const ctx = useLayoutEdit();
+  const global = useSnapSettings();
+  const snap = ctx?.snapSettings ?? global;
+  const fillOn = !!block.fill && block.fill !== "transparent";
+  const strokeOn = (block.strokeWidth ?? 0) > 0;
   return (
     <>
       <select value={block.shape} onChange={(e) => onChange({ shape: e.target.value as "rect" | "line" | "ellipse" })} style={inputStyle}>
@@ -1844,18 +1849,61 @@ function ShapeControls({ block, onChange }: { block: Extract<CustomBlock, { kind
         <option value="line">Line / divider</option>
       </select>
       {block.shape !== "line" && (
-        <label style={labelStyle}>
-          Fill
-          <input type="color" value={block.fill && block.fill !== "transparent" ? block.fill : "#ffffff"} onChange={(e) => onChange({ fill: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
-        </label>
+        <>
+          <button
+            type="button"
+            onClick={() => onChange({ fill: fillOn ? "transparent" : "#6b1320" })}
+            style={btnStyle(fillOn ? "active" : "normal")}
+          >
+            {fillOn ? "Fill on" : "No fill"}
+          </button>
+          {fillOn && (
+            <label style={labelStyle}>
+              Color
+              <input type="color" value={block.fill ?? "#6b1320"} onChange={(e) => onChange({ fill: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+            </label>
+          )}
+          {block.shape === "rect" && (
+            <label style={labelStyle}>
+              Radius
+              <input type="number" min={0} max={2000} value={block.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Math.max(0, Number(e.target.value)) })} style={{ ...inputStyle, width: 64 }} />
+            </label>
+          )}
+        </>
+      )}
+      <button
+        type="button"
+        onClick={() => onChange({ strokeWidth: strokeOn ? 0 : (block.shape === "line" ? 6 : 8) })}
+        style={btnStyle(strokeOn ? "active" : "normal")}
+      >
+        {strokeOn ? "Stroke on" : "No stroke"}
+      </button>
+      {strokeOn && (
+        <>
+          <label style={labelStyle}>
+            Stroke
+            <input type="color" value={block.stroke ?? "#0a0a0a"} onChange={(e) => onChange({ stroke: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+          </label>
+          <label style={labelStyle}>
+            Width
+            <input type="number" min={1} max={400} value={block.strokeWidth ?? 4} onChange={(e) => onChange({ strokeWidth: Math.max(1, Number(e.target.value)) })} style={{ ...inputStyle, width: 64 }} />
+          </label>
+        </>
       )}
       <label style={labelStyle}>
-        Stroke
-        <input type="color" value={block.stroke ?? "#0a0a0a"} onChange={(e) => onChange({ stroke: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
+        Opacity
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={Math.round((block.opacity ?? 1) * 100)}
+          onChange={(e) => onChange({ opacity: Math.max(0, Math.min(1, Number(e.target.value) / 100)) })}
+          style={{ ...inputStyle, width: 56 }}
+        />
       </label>
       <label style={labelStyle}>
-        Width
-        <input type="number" min={0} max={40} value={block.strokeWidth ?? 4} onChange={(e) => onChange({ strokeWidth: Number(e.target.value) })} style={{ ...inputStyle, width: 50 }} />
+        Rotate
+        <input type="number" min={-180} max={180} value={block.rotate ?? 0} onChange={(e) => onChange({ rotate: snapRotationWith(Number(e.target.value), snap) })} style={{ ...inputStyle, width: 56 }} />
       </label>
     </>
   );
