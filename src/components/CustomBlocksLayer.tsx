@@ -620,6 +620,7 @@ function CustomBlockView({
         onCaretParagraphChange?.(null);
       }}
       onCaretParagraphChange={onCaretParagraphChange}
+      onChange={onChange}
     />
   );
 
