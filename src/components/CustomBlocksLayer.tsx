@@ -922,6 +922,7 @@ function BlockContent({
     );
   }
   if (block.kind === "shape") {
+    const opacity = block.opacity ?? 1;
     if (block.shape === "line") {
       return (
         <div
@@ -929,10 +930,17 @@ function BlockContent({
             width: "100%",
             height: "100%",
             borderTop: `${block.strokeWidth ?? 4}px solid ${block.stroke ?? "#0a0a0a"}`,
+            opacity,
           }}
         />
       );
     }
+    const radius =
+      block.shape === "ellipse"
+        ? "50%"
+        : block.cornerRadius
+          ? `${block.cornerRadius}px`
+          : undefined;
     return (
       <div
         style={{
@@ -940,7 +948,9 @@ function BlockContent({
           height: "100%",
           background: block.fill ?? "transparent",
           border: block.strokeWidth ? `${block.strokeWidth}px solid ${block.stroke ?? "#0a0a0a"}` : "none",
-          borderRadius: block.shape === "ellipse" ? "50%" : undefined,
+          borderRadius: radius,
+          opacity,
+          boxSizing: "border-box",
         }}
       />
     );
