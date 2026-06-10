@@ -263,10 +263,10 @@ export function CustomBlocksLayer() {
   );
   const requestEdit = ctx?.onRequestEdit;
   const add = useCallback(
-    (kind: CustomBlock["kind"]) => {
+    (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => {
       if (!setBlocks) return;
       if (!editing) requestEdit?.();
-      const b = defaultBlock(kind);
+      const b = defaultBlock(kind, opts);
       setBlocks([...blocks, b]);
       setSelectedId(b.id);
     },
