@@ -1092,19 +1092,56 @@ function QrPreview({ url, color, bg }: { url: string; color: string; bg: string 
 
 /* --------------------- floating toolbars --------------------- */
 
+function useDragOffset(inv: number) {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  const onPointerDown = (e: RPointerEvent<HTMLElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    drag.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: RPointerEvent<HTMLElement>) => {
+    if (!drag.current) return;
+    const dx = (e.clientX - drag.current.x) * inv;
+    const dy = (e.clientY - drag.current.y) * inv;
+    setOffset({ x: drag.current.ox + dx, y: drag.current.oy + dy });
+  };
+  const onPointerUp = (e: RPointerEvent<HTMLElement>) => {
+    drag.current = null;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+  };
+  return { offset, dragHandleProps: { onPointerDown, onPointerMove, onPointerUp, style: { cursor: "grab", touchAction: "none" as const } } };
+}
+
+const DRAG_GRIP_STYLE: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  paddingLeft: 4,
+  paddingRight: 6,
+  fontSize: 11,
+  letterSpacing: 2,
+  textTransform: "uppercase",
+  color: "#666",
+  userSelect: "none",
+};
+
 function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
+  const { offset, dragHandleProps } = useDragOffset(inv);
   return (
     <>
       <div
+        data-export-ignore="true"
         onPointerDown={(e) => e.stopPropagation()}
         style={{
           position: "absolute",
           top: 24,
           right: 24,
-          transform: `scale(${inv})`,
+          transform: `translate(${offset.x}px, ${offset.y}px) scale(${inv})`,
           transformOrigin: "top right",
           background: "white",
           border: "2px solid #0a0a0a",
@@ -1117,7 +1154,7 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
           fontFamily: "system-ui, sans-serif",
         }}
       >
-        <span style={{ alignSelf: "center", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#666", paddingLeft: 4, paddingRight: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+        <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, ...dragHandleProps.style }}>
           <Plus size={12} /> Add
         </span>
         <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
@@ -1469,15 +1506,17 @@ function BlockToolbar({
   const snapCfg = ctx?.snapSettings ?? global;
   const inv = 1 / (ctx?.scale ?? 1);
   const rotate = (block as { rotate?: number }).rotate ?? 0;
+  const { offset, dragHandleProps } = useDragOffset(inv);
   return (
     <div
+      data-export-ignore="true"
       onPointerDown={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
         bottom: 24,
         left: 24,
         right: 24,
-        transform: `scale(${inv})`,
+        transform: `translate(${offset.x}px, ${offset.y}px) scale(${inv})`,
         transformOrigin: "bottom left",
         background: "white",
         border: "2px solid #2563eb",
@@ -1494,7 +1533,7 @@ function BlockToolbar({
         color: "#0a0a0a",
       }}
     >
-      <span style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#666" }}>{block.kind}</span>
+      <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", ...dragHandleProps.style }}>⋮⋮ {block.kind}</span>
       {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
