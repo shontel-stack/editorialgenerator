@@ -193,14 +193,20 @@ export async function exportNewsletterInteractivePdf(
   const nlRect = newsletterNode.getBoundingClientRect();
   const nlW = Math.max(600, Math.round(nlRect.width));
   const nlH = Math.max(800, Math.round(nlRect.height));
-  const newsletterJpeg = await toJpeg(newsletterNode, {
-    width: nlW,
-    height: nlH,
-    pixelRatio: 2,
-    cacheBust: true,
-    quality: 0.95,
-    backgroundColor: "#f5f3ee",
-  });
+  const restoreNl = swapMediaForPosters(newsletterNode);
+  let newsletterJpeg: string;
+  try {
+    newsletterJpeg = await toJpeg(newsletterNode, {
+      width: nlW,
+      height: nlH,
+      pixelRatio: 2,
+      cacheBust: true,
+      quality: 0.95,
+      backgroundColor: "#f5f3ee",
+    });
+  } finally {
+    restoreNl();
+  }
 
   // 2) Render each highlight target page (de-duped, in order).
   const seen = new Set<string>();
@@ -215,14 +221,20 @@ export async function exportNewsletterInteractivePdf(
   const pageJpegs: Array<{ id: string; jpeg: string }> = [];
   for (const id of orderedIds) {
     const node = pageNodes.get(id)!;
-    const jpeg = await toJpeg(node, {
-      width: pageDim.px.w,
-      height: pageDim.px.h,
-      pixelRatio: 1,
-      cacheBust: true,
-      quality: 0.95,
-      backgroundColor: "#ffffff",
-    });
+    const restorePage = swapMediaForPosters(node);
+    let jpeg: string;
+    try {
+      jpeg = await toJpeg(node, {
+        width: pageDim.px.w,
+        height: pageDim.px.h,
+        pixelRatio: 1,
+        cacheBust: true,
+        quality: 0.95,
+        backgroundColor: "#ffffff",
+      });
+    } finally {
+      restorePage();
+    }
     pageJpegs.push({ id, jpeg });
   }
 
