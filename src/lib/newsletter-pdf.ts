@@ -1,6 +1,7 @@
 import type { ExportDim } from "./exportCover";
 import type { PDFDocument, PDFRef, PDFDict } from "pdf-lib";
 import { loadHtmlToImage, loadPdfLib } from "./browser-export-deps";
+import { swapMediaForPosters } from "./exportVideoPosters";
 
 type PdfLib = typeof import("pdf-lib");
 
