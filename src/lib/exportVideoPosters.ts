@@ -76,6 +76,9 @@ export function swapMediaForPosters(root: HTMLElement): () => void {
         // ignore — node may already be gone
       }
     }
+    for (const h of hidden) {
+      h.el.style.visibility = h.prev;
+    }
   };
 }
 
