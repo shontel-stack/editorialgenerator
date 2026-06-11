@@ -21,25 +21,35 @@ const DEFAULT_DIM: ExportDim = {
 
 async function renderNodeToPng(node: HTMLElement, dim: ExportDim): Promise<string> {
   const { toPng } = await loadHtmlToImage();
-  return toPng(node, {
-    width: dim.px.w,
-    height: dim.px.h,
-    pixelRatio: 1,
-    cacheBust: true,
-    backgroundColor: "#ffffff",
-  });
+  const restore = swapMediaForPosters(node);
+  try {
+    return await toPng(node, {
+      width: dim.px.w,
+      height: dim.px.h,
+      pixelRatio: 1,
+      cacheBust: true,
+      backgroundColor: "#ffffff",
+    });
+  } finally {
+    restore();
+  }
 }
 
 async function renderNodeToJpeg(node: HTMLElement, dim: ExportDim): Promise<string> {
   const { toJpeg } = await loadHtmlToImage();
-  return toJpeg(node, {
-    width: dim.px.w,
-    height: dim.px.h,
-    pixelRatio: 1,
-    cacheBust: true,
-    quality: 0.95,
-    backgroundColor: "#ffffff",
-  });
+  const restore = swapMediaForPosters(node);
+  try {
+    return await toJpeg(node, {
+      width: dim.px.w,
+      height: dim.px.h,
+      pixelRatio: 1,
+      cacheBust: true,
+      quality: 0.95,
+      backgroundColor: "#ffffff",
+    });
+  } finally {
+    restore();
+  }
 }
 
 function downloadDataUrl(dataUrl: string, filename: string) {
