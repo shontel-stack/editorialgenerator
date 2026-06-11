@@ -1,6 +1,7 @@
 import { COVER_INCHES, COVER_PX, type PageType } from "./coverDefaults";
 import type { PDFDocument, PDFRef, PDFDict } from "pdf-lib";
 import { loadHtmlToImage, loadJsPdf, loadPdfLib } from "./browser-export-deps";
+import { swapMediaForPosters } from "./exportVideoPosters";
 
 type PdfLib = typeof import("pdf-lib");
 
