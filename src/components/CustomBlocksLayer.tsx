@@ -1531,7 +1531,7 @@ function BlockToolbar({
         color: "#0a0a0a",
       }}
     >
-      <span style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#666" }}>{block.kind}</span>
+      <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", ...dragHandleProps.style }}>⋮⋮ {block.kind}</span>
       {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
