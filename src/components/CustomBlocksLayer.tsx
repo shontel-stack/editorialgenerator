@@ -1506,15 +1506,17 @@ function BlockToolbar({
   const snapCfg = ctx?.snapSettings ?? global;
   const inv = 1 / (ctx?.scale ?? 1);
   const rotate = (block as { rotate?: number }).rotate ?? 0;
+  const { offset, dragHandleProps } = useDragOffset(inv);
   return (
     <div
+      data-export-ignore="true"
       onPointerDown={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
         bottom: 24,
         left: 24,
         right: 24,
-        transform: `scale(${inv})`,
+        transform: `translate(${offset.x}px, ${offset.y}px) scale(${inv})`,
         transformOrigin: "bottom left",
         background: "white",
         border: "2px solid #2563eb",
