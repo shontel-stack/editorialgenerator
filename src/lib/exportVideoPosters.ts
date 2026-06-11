@@ -3,15 +3,26 @@
  * blank/black, cross-origin iframes are skipped). Before exporting a node to
  * an image we temporarily swap each video/iframe for a poster <img> (or a
  * black placeholder with a play glyph) so the PDF/PNG/JPEG captures
- * something meaningful. Call the returned `restore()` after rasterizing.
+ * something meaningful. We also hide any element marked
+ * `data-export-ignore="true"` (floating editor toolbars). Call the returned
+ * `restore()` after rasterizing.
  */
 export function swapMediaForPosters(root: HTMLElement): () => void {
   const swaps: Array<{ original: Element; replacement: HTMLElement; parent: Node; next: Node | null }> = [];
+  const hidden: Array<{ el: HTMLElement; prev: string }> = [];
+
+  // Hide editor-only chrome from the raster.
+  const ignored = root.querySelectorAll<HTMLElement>('[data-export-ignore="true"]');
+  ignored.forEach((el) => {
+    hidden.push({ el, prev: el.style.visibility });
+    el.style.visibility = "hidden";
+  });
 
   const targets: Element[] = [
     ...Array.from(root.querySelectorAll("video")),
     ...Array.from(root.querySelectorAll("iframe")),
   ];
+
 
   for (const el of targets) {
     const rect = (el as HTMLElement).getBoundingClientRect();
