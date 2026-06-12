@@ -1440,3 +1440,37 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData; dim?:
     </Page>
   );
 });
+
+/* — BLANK — minimal page with only the bottom footer (folio + page number) — */
+
+const BlankPreview = forwardRef<HTMLDivElement, { data: BlankData; dim?: { w: number; h: number } }>(function BlankPreview(
+  { data, dim },
+  ref,
+) {
+  const pal = PALETTES[data.palette];
+  return (
+    <Page innerRef={ref} pal={pal} dim={dim}>
+      <Draggable
+        blockKey="blank-footer"
+        style={{
+          position: "absolute",
+          bottom: 100,
+          left: 160,
+          right: 160,
+          borderTop: `1px solid ${pal.rule}`,
+          paddingTop: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          fontFamily: "var(--font-sans)",
+          fontSize: 20,
+          letterSpacing: 4,
+          textTransform: "uppercase",
+          color: pal.muted,
+        }}
+      >
+        <span>{data.folio}</span>
+        <span>{data.pageNumber}</span>
+      </Draggable>
+    </Page>
+  );
+});
