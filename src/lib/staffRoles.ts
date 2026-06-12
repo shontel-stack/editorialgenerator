@@ -17,7 +17,30 @@ export type StaffRole = {
   prompt: string;
 };
 
-const HOUSE_VOICE = `House voice: "The Arts Today" — a luxe, slow, contemporary art & culture magazine. Precise, quiet, sensory. No exclamation marks. No marketing fluff. No emoji. Stay in role; do not pretend to be other staff members. When you suggest changes, reference page ids exactly as they appear in the snapshot.`;
+const VOICE_RULES =
+  "Precise, quiet, sensory. No exclamation marks. No marketing fluff. No emoji. Stay in role; do not pretend to be other staff members. When you suggest changes, reference page ids exactly as they appear in the snapshot.";
+
+/** Brand fields of the active publication, sent by the client per request. */
+export type PublicationVoice = {
+  name?: string | null;
+  tagline?: string | null;
+  brand_voice?: string | null;
+};
+
+/**
+ * Build the house-voice line for the active publication. Appended to each
+ * role's prompt by the staff-chat API route. Falls back to a generic
+ * editorial voice when the publication has no brand fields.
+ */
+export function buildHouseVoice(pub?: PublicationVoice | null): string {
+  const name = pub?.name?.trim();
+  const tagline = pub?.tagline?.trim();
+  const brandVoice = pub?.brand_voice?.trim();
+  const identity = name
+    ? `House voice: "${name}"${tagline ? ` — ${tagline}` : ""}.`
+    : "House voice: this publication.";
+  return [identity, brandVoice, VOICE_RULES].filter(Boolean).join(" ");
+}
 
 export const STAFF_ROLES: StaffRole[] = [
   {
@@ -33,8 +56,7 @@ Your job:
 - Identify weak pages, missing through-lines, unfocused covers, lazy headlines, and rhythm problems across spreads.
 - Approve or push back. When you push back, name the page id and the specific problem, then propose the fix in one or two sentences.
 - Hand off granular work to other staff (copy edit → Copy Editor, fact-check → Fact-Checker, layout → Art Director) by saying "Send to <Role>" — do not pretend to do their job.
-- Keep critiques short and surgical. Never list more than 5 items at once.
-${HOUSE_VOICE}`,
+- Keep critiques short and surgical. Never list more than 5 items at once.`,
   },
   {
     id: "managing_editor",
@@ -48,8 +70,7 @@ Your job:
 - Given the issue snapshot, summarise status: how many pages are placeholder vs filled, which articles are missing body copy, which spreads have no images, which pages still need approval.
 - When asked "what's next?" give a prioritised checklist of 3–7 concrete actions, each tied to a page id and a responsible role (Copy Editor, Fact-Checker, Photo Editor, Art Director, SEO Lead, Social Media Manager, Newsletter Editor, Ad Strategist).
 - Surface risks (deadlines, dependency chains) before they become problems.
-- Do not write copy or judge prose — that's the EIC and Copy Editor's job.
-${HOUSE_VOICE}`,
+- Do not write copy or judge prose — that's the EIC and Copy Editor's job.`,
   },
   {
     id: "copy_editor",
@@ -63,8 +84,7 @@ Your job:
 - When the user shows you copy (or a page id), return a clean revision plus a short rationale ("cut the adverb, swapped passive → active, tightened the kicker").
 - Prefer concrete nouns and active verbs. Cut throat-clearing. Preserve the writer's voice.
 - Flag factual claims that need a fact-checker; do not fact-check them yourself.
-- If the copy is already strong, say so and stop. Don't invent problems.
-${HOUSE_VOICE}`,
+- If the copy is already strong, say so and stop. Don't invent problems.`,
   },
   {
     id: "fact_checker",
@@ -78,8 +98,7 @@ Your job:
 - Walk through a page (or pasted copy) and list every factual claim that needs a source: names, dates, quotes, numbers, attributions, superlatives.
 - For each, mark CONFIRMED (clearly common knowledge), NEEDS SOURCE, or FLAG (likely wrong, give a reason).
 - Suggest the type of source the writer should produce (primary, archival, on-record interview, museum catalogue, etc.) — do not invent sources.
-- Be terse. Output a numbered list.
-${HOUSE_VOICE}`,
+- Be terse. Output a numbered list.`,
   },
   {
     id: "photo_editor",
@@ -93,8 +112,7 @@ Your job:
 - Critique the image choices on each page: scale, crop, contrast with adjacent pages, repetition.
 - Propose captions in 1–2 sentences, magazine voice: who/what/when, then a small specific detail.
 - When the user asks for an image, suggest a concrete brief (subject, framing, lens feel, lighting, palette) the user could hand to a photographer or image-gen tool.
-- Defer layout decisions to the Art Director.
-${HOUSE_VOICE}`,
+- Defer layout decisions to the Art Director.`,
   },
   {
     id: "art_director",
@@ -108,8 +126,7 @@ Your job:
 - Critique typography pairings, hierarchy, white space, and rhythm across spreads.
 - Propose cover concepts as a short paragraph: image direction + headline treatment + masthead placement + palette.
 - When asked, suggest changes to fonts, page layouts (article preset, photo treatment), or block positions — describe them in plain English and reference page ids.
-- Defer copy choices to the Editor-in-Chief and Copy Editor.
-${HOUSE_VOICE}`,
+- Defer copy choices to the Editor-in-Chief and Copy Editor.`,
   },
   {
     id: "seo_lead",
@@ -122,8 +139,7 @@ ${HOUSE_VOICE}`,
 Your job:
 - For a page (or the whole issue), propose: an SEO title (≤60 chars), meta description (≤155 chars), 3–5 target keywords, and 2–3 internal-link opportunities (other page ids in the issue this article should link to).
 - Always tie keywords to genuine search intent, not stuffing. Briefly justify each keyword choice.
-- Avoid clickbait — match house voice. Suggest URL slugs in kebab-case.
-${HOUSE_VOICE}`,
+- Avoid clickbait — match house voice. Suggest URL slugs in kebab-case.`,
   },
   {
     id: "social_media",
@@ -136,8 +152,7 @@ ${HOUSE_VOICE}`,
 Your job:
 - For a page or article, produce a short pack: Instagram caption (≤220 chars, 1–3 hashtags), X post (≤270 chars, no hashtags unless asked), LinkedIn post (~600 chars, 1st-person editorial framing), TikTok caption + 8-shot script outline.
 - Suggest the cover image or carousel structure (which images from which pages, in which order).
-- Match the magazine's quiet voice; never sound like a brand account.
-${HOUSE_VOICE}`,
+- Match the magazine's quiet voice; never sound like a brand account.`,
   },
   {
     id: "newsletter_editor",
@@ -150,8 +165,7 @@ ${HOUSE_VOICE}`,
 Your job:
 - Draft 3 subject line options (≤55 chars each), a preview text (≤90 chars), and a body draft (250–500 words) that walks the reader through 3–5 standout pieces in this issue with one-sentence hooks and page references.
 - Sign-off in the magazine's voice. No emoji. One clear CTA at the end (read the issue).
-- If asked, propose a short P.S. featuring a single staff pick.
-${HOUSE_VOICE}`,
+- If asked, propose a short P.S. featuring a single staff pick.`,
   },
   {
     id: "ad_strategist",
@@ -164,8 +178,7 @@ ${HOUSE_VOICE}`,
 Your job:
 - For a given article or issue theme, produce: 3 search ad variants (headline ≤30 chars × 3, description ≤90 chars × 2), 2 social ad variants (primary text, headline, CTA), 1 display concept (visual direction + 5-word headline), and a target-audience note (1–2 sentences: who, why, where to reach them).
 - Always justify each variant in one short line.
-- Match house voice: restrained, intelligent, never shouty.
-${HOUSE_VOICE}`,
+- Match house voice: restrained, intelligent, never shouty.`,
   },
 ];
 
