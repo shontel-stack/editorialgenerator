@@ -171,6 +171,29 @@ export async function exportIssuePdf(
     });
   }
 
+  // Video links — make rasterized video posters clickable. Each video/iframe
+  // rendered by CustomBlocksLayer carries data-video-link with the original
+  // watch URL. The live elements are back in the DOM at this point because
+  // swapMediaForPosters restores them after each page is captured.
+  for (let i = 0; i < pages.length; i++) {
+    const { node } = pages[i];
+    const page = doc.getPages()[i];
+    const nodeRect = node.getBoundingClientRect();
+    const videoEls = node.querySelectorAll<HTMLElement>("[data-video-link]");
+    videoEls.forEach((el) => {
+      const url = (el.dataset.videoLink ?? "").trim();
+      if (!/^https?:\/\//i.test(url)) return;
+      const r = el.getBoundingClientRect();
+      const sx = PAGE_W / nodeRect.width;
+      const sy = PAGE_H / nodeRect.height;
+      const x1 = (r.left - nodeRect.left) * sx;
+      const x2 = (r.right - nodeRect.left) * sx;
+      const y2 = PAGE_H - (r.top - nodeRect.top) * sy;
+      const y1 = PAGE_H - (r.bottom - nodeRect.top) * sy;
+      addExternalLink(pdfLib, doc, page.ref, url, [x1, y1, x2, y2]);
+    });
+  }
+
   buildOutline(
     pdfLib,
     doc,
@@ -205,6 +228,38 @@ function addInternalLink(
     Rect: rect,
     Border: [0, 0, 0],
     Dest: [targetPageRef, "Fit"],
+  });
+  const annotRef = doc.context.register(annot);
+  const hostPage = doc.context.lookup(hostPageRef) as PDFDict;
+  const existing = hostPage.get(PDFName.of("Annots"));
+  const annotsArr = PDFArray.withContext(doc.context);
+  if (existing instanceof PDFArray) {
+    existing.asArray().forEach((e) => annotsArr.push(e));
+  }
+  annotsArr.push(annotRef);
+  hostPage.set(PDFName.of("Annots"), annotsArr);
+}
+
+function addExternalLink(
+  pdfLib: PdfLib,
+  doc: PDFDocument,
+  hostPageRef: PDFRef,
+  url: string,
+  rect: [number, number, number, number],
+) {
+  const { PDFArray, PDFName, PDFString } = pdfLib;
+  const annot = doc.context.obj({
+    Type: "Annot",
+    Subtype: "Link",
+    Rect: rect,
+    Border: [0, 0, 0],
+    A: {
+      Type: "Action",
+      S: "URI",
+      // Must be a PDFString — context.obj would coerce a bare JS string
+      // into a PDFName, which corrupts URLs.
+      URI: PDFString.of(url),
+    },
   });
   const annotRef = doc.context.register(annot);
   const hostPage = doc.context.lookup(hostPageRef) as PDFDict;
