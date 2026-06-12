@@ -1723,6 +1723,12 @@ function Index() {
                   set={(p) => updateData<typeof selected>(selected.id, p)}
                 />
               )}
+              {selected.pageType === "blank" && (
+                <BlankEditor
+                  data={selected.data as BlankData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
 
               {selected.pageType !== "cover" &&
                 selected.pageType !== "back" &&
