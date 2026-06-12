@@ -2928,6 +2928,8 @@ function labelForNode(p: IssuePageNode): string {
       return p.data.brand || "Advertisement";
     case "back":
       return "Back cover";
+    case "blank":
+      return "Blank page";
   }
 }
 
