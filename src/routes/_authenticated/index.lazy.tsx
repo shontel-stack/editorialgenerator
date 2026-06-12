@@ -96,6 +96,7 @@ import {
   DEFAULT_AD,
   DEFAULT_ARTICLE,
   DEFAULT_BACK,
+  DEFAULT_BLANK,
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
   DEFAULT_FONTS,
@@ -1124,7 +1125,7 @@ function Index() {
       return { ...d, pages: d.pages.filter((x) => x.id !== id) };
     });
 
-  const addPage = (pageType: "article" | "photo" | "ad" | "contents") => {
+  const addPage = (pageType: "article" | "photo" | "ad" | "contents" | "blank") => {
     const node = (() => {
       switch (pageType) {
         case "article":
@@ -1135,6 +1136,8 @@ function Index() {
           return makeNode("ad", { ...DEFAULT_AD }, false);
         case "contents":
           return makeNode("contents", { ...DEFAULT_CONTENTS, entries: [] }, false);
+        case "blank":
+          return makeNode("blank", { ...DEFAULT_BLANK }, false);
       }
     })();
     setIssue((d) => {
@@ -1483,6 +1486,7 @@ function Index() {
                   <DropdownMenuItem onClick={() => addPage("photo")}><ImageIcon className="h-3.5 w-3.5 mr-2" /> Photo essay</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("ad")}><Megaphone className="h-3.5 w-3.5 mr-2" /> Advertisement</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Contents page</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("blank")}><FileText className="h-3.5 w-3.5 mr-2" /> Blank page (footer only)</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Two-page spread</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => addSpread("article", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Article + Photo</DropdownMenuItem>
