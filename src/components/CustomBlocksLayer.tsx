@@ -1009,11 +1009,13 @@ function VideoPreview({ block }: { block: Extract<CustomBlock, { kind: "video" }
     );
   }
   const embed = toEmbedUrl(url);
+  const linkUrl = (block.link ?? "").trim() || url;
   if (embed) {
     return (
       <iframe
         src={embed}
         title="Video"
+        data-video-link={linkUrl}
         style={{ width: "100%", height: "100%", border: 0, display: "block", background: "#000" }}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen
@@ -1025,6 +1027,7 @@ function VideoPreview({ block }: { block: Extract<CustomBlock, { kind: "video" }
   return (
     <video
       src={url}
+      data-video-link={linkUrl}
       poster={block.poster || undefined}
       controls={showControls}
       muted={block.muted}
