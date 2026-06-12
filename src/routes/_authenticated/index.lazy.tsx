@@ -132,6 +132,7 @@ import {
   type ArticleData,
   type ArticleLayout,
   type BackCoverData,
+  type BlankData,
   type ContentsData,
   type CoverData,
   type FontOption,
