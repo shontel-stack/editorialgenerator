@@ -3571,3 +3571,17 @@ function FontPicker({
     </label>
   );
 }
+
+function BlankEditor({ data, set }: { data: BlankData; set: (p: Partial<BlankData>) => void }) {
+  return (
+    <>
+      <Section title="Blank page (footer only)">
+        <Field label="Folio text"><Input value={data.folio} onChange={(v) => set({ folio: v })} /></Field>
+        <Field label="Page number"><Input value={data.pageNumber} onChange={(v) => set({ pageNumber: v })} /></Field>
+      </Section>
+      <Section title="Style">
+        <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+      </Section>
+    </>
+  );
+}
