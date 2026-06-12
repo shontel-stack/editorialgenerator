@@ -65,6 +65,8 @@ export function snapshotIssue(issue: IssueDoc): IssueSnapshot {
           };
         case "back":
           return { ...base, title: "Back cover", palette: p.data.palette };
+        case "blank":
+          return { ...base, title: "Blank (footer only)", palette: p.data.palette };
       }
     }),
   };

@@ -96,6 +96,7 @@ import {
   DEFAULT_AD,
   DEFAULT_ARTICLE,
   DEFAULT_BACK,
+  DEFAULT_BLANK,
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
   DEFAULT_FONTS,
@@ -131,6 +132,7 @@ import {
   type ArticleData,
   type ArticleLayout,
   type BackCoverData,
+  type BlankData,
   type ContentsData,
   type CoverData,
   type FontOption,
@@ -1124,7 +1126,7 @@ function Index() {
       return { ...d, pages: d.pages.filter((x) => x.id !== id) };
     });
 
-  const addPage = (pageType: "article" | "photo" | "ad" | "contents") => {
+  const addPage = (pageType: "article" | "photo" | "ad" | "contents" | "blank") => {
     const node = (() => {
       switch (pageType) {
         case "article":
@@ -1135,6 +1137,8 @@ function Index() {
           return makeNode("ad", { ...DEFAULT_AD }, false);
         case "contents":
           return makeNode("contents", { ...DEFAULT_CONTENTS, entries: [] }, false);
+        case "blank":
+          return makeNode("blank", { ...DEFAULT_BLANK }, false);
       }
     })();
     setIssue((d) => {
@@ -1483,6 +1487,7 @@ function Index() {
                   <DropdownMenuItem onClick={() => addPage("photo")}><ImageIcon className="h-3.5 w-3.5 mr-2" /> Photo essay</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("ad")}><Megaphone className="h-3.5 w-3.5 mr-2" /> Advertisement</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Contents page</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("blank")}><FileText className="h-3.5 w-3.5 mr-2" /> Blank page (footer only)</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Two-page spread</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => addSpread("article", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Article + Photo</DropdownMenuItem>
@@ -1716,6 +1721,12 @@ function Index() {
               {selected.pageType === "back" && (
                 <BackCoverEditor
                   data={selected.data as BackCoverData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                />
+              )}
+              {selected.pageType === "blank" && (
+                <BlankEditor
+                  data={selected.data as BlankData}
                   set={(p) => updateData<typeof selected>(selected.id, p)}
                 />
               )}
@@ -2928,6 +2939,8 @@ function labelForNode(p: IssuePageNode): string {
       return p.data.brand || "Advertisement";
     case "back":
       return "Back cover";
+    case "blank":
+      return "Blank page";
   }
 }
 
@@ -3556,5 +3569,19 @@ function FontPicker({
         {current?.label ?? "Aa"} — The Quick Brown Fox
       </span>
     </label>
+  );
+}
+
+function BlankEditor({ data, set }: { data: BlankData; set: (p: Partial<BlankData>) => void }) {
+  return (
+    <>
+      <Section title="Blank page (footer only)">
+        <Field label="Folio text"><Input value={data.folio} onChange={(v) => set({ folio: v })} /></Field>
+        <Field label="Page number"><Input value={data.pageNumber} onChange={(v) => set({ pageNumber: v })} /></Field>
+      </Section>
+      <Section title="Style">
+        <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+      </Section>
+    </>
   );
 }

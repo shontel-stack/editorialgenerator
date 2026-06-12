@@ -6,6 +6,7 @@ import {
   type ArticleData,
   type ArticleLayout,
   type BackCoverData,
+  type BlankData,
   type ContentsData,
   type CoverData,
   type PageType,
@@ -15,7 +16,7 @@ import { CoverPreview } from "./CoverPreview";
 import { Draggable } from "./LayoutEdit";
 import { CustomBlocksLayer } from "./CustomBlocksLayer";
 
-type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData;
+type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData | BlankData;
 
 export type PageBackgroundProp = {
   url: string;
@@ -101,6 +102,8 @@ export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePrevie
         return <AdPreview ref={background ? undefined : ref} data={data as AdData} dim={dim} />;
       case "back":
         return <BackCoverPreview ref={background ? undefined : ref} data={data as BackCoverData} dim={dim} />;
+      case "blank":
+        return <BlankPreview ref={background ? undefined : ref} data={data as BlankData} dim={dim} />;
     }
   })();
 
@@ -1432,6 +1435,40 @@ const BackCoverPreview = forwardRef<HTMLDivElement, { data: BackCoverData; dim?:
         }}
       >
         <span>The Arts Today · Pageluxe</span>
+        <span>{data.pageNumber}</span>
+      </Draggable>
+    </Page>
+  );
+});
+
+/* — BLANK — minimal page with only the bottom footer (folio + page number) — */
+
+const BlankPreview = forwardRef<HTMLDivElement, { data: BlankData; dim?: { w: number; h: number } }>(function BlankPreview(
+  { data, dim },
+  ref,
+) {
+  const pal = PALETTES[data.palette];
+  return (
+    <Page innerRef={ref} pal={pal} dim={dim}>
+      <Draggable
+        blockKey="blank-footer"
+        style={{
+          position: "absolute",
+          bottom: 100,
+          left: 160,
+          right: 160,
+          borderTop: `1px solid ${pal.rule}`,
+          paddingTop: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          fontFamily: "var(--font-sans)",
+          fontSize: 20,
+          letterSpacing: 4,
+          textTransform: "uppercase",
+          color: pal.muted,
+        }}
+      >
+        <span>{data.folio}</span>
         <span>{data.pageNumber}</span>
       </Draggable>
     </Page>
