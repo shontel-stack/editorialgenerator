@@ -187,6 +187,14 @@ const collectPageText = (
         imageUrl: d.imageUrl,
       };
     }
+    case "blank": {
+      return {
+        heading: "",
+        body: "",
+        folio,
+        pageNumber: pn,
+      };
+    }
     default:
       return {
         heading: "",
