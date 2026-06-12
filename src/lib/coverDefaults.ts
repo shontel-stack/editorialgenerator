@@ -102,7 +102,7 @@ export function matchPresetKey(w: number, h: number): string {
   return hit?.key ?? "custom";
 }
 
-export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back";
+export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back" | "blank";
 
 export type Palette = "paper" | "ink" | "burgundy";
 
@@ -238,13 +238,20 @@ export type ContentsData = {
 
 /* --- Issue document — dynamic list of pages --- */
 
+export type BlankData = {
+  folio: string;
+  pageNumber: string;
+  palette: Palette;
+};
+
 export type AnyPageData =
   | { pageType: "cover"; data: CoverData }
   | { pageType: "contents"; data: ContentsData }
   | { pageType: "article"; data: ArticleData }
   | { pageType: "photo"; data: PhotoData }
   | { pageType: "ad"; data: AdData }
-  | { pageType: "back"; data: BackCoverData };
+  | { pageType: "back"; data: BackCoverData }
+  | { pageType: "blank"; data: BlankData };
 
 export type CustomBlock =
   | {
@@ -602,6 +609,7 @@ export const PAGE_LABELS: Record<PageType, string> = {
   photo: "Photo Essay",
   ad: "Advertisement",
   back: "Back Cover",
+  blank: "Blank (footer only)",
 };
 
 export const PALETTES: Record<
@@ -711,6 +719,12 @@ export const DEFAULT_CONTENTS: ContentsData = {
   palette: "paper",
 };
 
+export const DEFAULT_BLANK: BlankData = {
+  folio: "THE ARTS TODAY",
+  pageNumber: "000",
+  palette: "paper",
+};
+
 /* --- Helpers --- */
 
 let _seq = 0;
@@ -795,6 +809,8 @@ export function deriveContentsEntries(issue: IssueDoc): ContentsEntry[] {
           return { section: "BACK", title: p.data.quote, byline: "—", page: pageNum, link: p.id };
         case "contents":
           return { section: "CONTENTS", title: "Inside this issue", byline: "—", page: pageNum, link: p.id };
+        case "blank":
+          return { section: "", title: "", byline: "", page: pageNum, link: p.id };
       }
     });
 }
