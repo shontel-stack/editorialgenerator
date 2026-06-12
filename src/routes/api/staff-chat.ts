@@ -3,7 +3,7 @@ import { convertToModelMessages, streamText, stepCountIs, tool, type UIMessage }
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { requireAuthFromRequest } from "@/lib/require-auth.server";
-import { getRole } from "@/lib/staffRoles";
+import { getRole, buildHouseVoice, type PublicationVoice } from "@/lib/staffRoles";
 import type { IssueSnapshot } from "@/lib/issue-snapshot";
 
 type AttachmentBrief = {
@@ -24,6 +24,7 @@ type StaffChatBody = {
   issueSnapshot?: IssueSnapshot;
   selectedPageId?: string;
   attachments?: AttachmentBrief[];
+  publicationVoice?: PublicationVoice | null;
 };
 
 const createNoteSchema = z.object({
@@ -105,6 +106,7 @@ export const Route = createFileRoute("/api/staff-chat")({
 
         const systemParts: string[] = [
           role.prompt,
+          buildHouseVoice(body.publicationVoice),
           `You are speaking with the user about issue: ${body.issueId ?? "(unknown)"}.`,
           `INBOX: When you have an actionable item the user should be able to track and resolve later (a specific edit suggestion, a fact to verify, a production status change, a blocker, or any concrete to-do), call the create_note tool in addition to your reply. Keep the note title under ~12 words. Use page_id from the snapshot. Do not create notes for chit-chat or for the user's own questions.`,
           `PLACEMENT: When the user asks you to place, pin, move, or assign an uploaded file (image / document / pdf / text reference) to a page or region, call the place_attachment tool. Use attachment_id from the attachments list. Region must be 'header', 'footer', or 'column-N' (matching the page's layout column count). Use position_x / position_y (0..1) for a free-form pin, or omit them when using a region. Do not invent attachment ids. If the user is vague, pick the most recently uploaded matching file and explain your choice.`,

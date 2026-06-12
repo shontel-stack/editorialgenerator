@@ -626,6 +626,37 @@ function StaffChat({
   useEffect(() => {
     issueRef.current = issue;
   }, [issue]);
+
+  // Fetch the active publication's brand fields so each staff request can
+  // carry the correct house voice (name, tagline, brand_voice).
+  const publicationVoiceRef = useRef<{
+    name: string | null;
+    tagline: string | null;
+    brand_voice: string | null;
+  } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    publicationVoiceRef.current = null;
+    if (!publicationId) return;
+    void (async () => {
+      const { data } = await supabase
+        .from("publications")
+        .select("name, tagline, brand_voice")
+        .eq("id", publicationId)
+        .maybeSingle();
+      if (!cancelled && data) {
+        publicationVoiceRef.current = data as {
+          name: string | null;
+          tagline: string | null;
+          brand_voice: string | null;
+        };
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [publicationId]);
+
   const selectedPageIdRef = useRef(selectedPageId);
   useEffect(() => {
     selectedPageIdRef.current = selectedPageId;
@@ -732,6 +763,7 @@ function StaffChat({
             issueSnapshot: snapshotIssue(issueRef.current),
             selectedPageId: selectedPageIdRef.current,
             attachments: attachmentsRef.current ?? [],
+            publicationVoice: publicationVoiceRef.current,
           },
         }),
       }),

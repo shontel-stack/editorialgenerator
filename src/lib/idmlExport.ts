@@ -11,7 +11,7 @@
  * IDML reference: Adobe IDML Cookbook + DOMVersion 14.0 schema.
  */
 
-import { zipSync, strToU8 } from "fflate";
+import { zipSync, strToU8, type Zippable } from "fflate";
 import {
   formatPageNumber,
   renderFolio,
@@ -546,11 +546,11 @@ export function buildIdml(issue: IssueDoc, dim?: IdmlDim): Uint8Array {
     spreads.push(buildSpread(page, text, i, body, folio, geom));
   });
 
-  const files: Record<string, Uint8Array> = {};
-  // `mimetype` MUST be the first entry and stored uncompressed in a true
-  // OCF zip. fflate's `zipSync` doesn't expose per-entry compression
-  // ordering controls; in practice InDesign accepts deflated mimetype.
-  files["mimetype"] = strToU8(MIME);
+  const files: Zippable = {};
+  // `mimetype` MUST be the first entry and stored UNCOMPRESSED in a true
+  // OCF/UCF zip — InDesign can reject the .idml as damaged otherwise.
+  // fflate supports per-entry options via [data, opts] tuples; level 0 = stored.
+  files["mimetype"] = [strToU8(MIME), { level: 0 }];
   files["META-INF/container.xml"] = strToU8(containerXml);
   files["designmap.xml"] = strToU8(designmapXml(issue, spreads, stories));
   files["Resources/Fonts.xml"] = strToU8(fontsXml);
