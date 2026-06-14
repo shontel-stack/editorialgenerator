@@ -783,6 +783,19 @@ function BlockContent({
   const brandKit = useBrandKit();
   const editCtx = useLayoutEdit();
   const tokens = editCtx?.tokenContext;
+  const slotResolved = editCtx?.contentsSlotResolved;
+  // Resolve slot-bound text. Returns null when no binding, '' when binding
+  // exists but the slot is empty (lets us still show the placeholder text
+  // typed in the block while editing).
+  const resolveSlotText = (binding: { slotId: string; field: "headline" | "byline" | "pageNumber" | "image" } | undefined): string | null => {
+    if (!binding || !slotResolved) return null;
+    const slot = slotResolved[binding.slotId];
+    if (!slot) return "";
+    if (binding.field === "headline") return slot.headline;
+    if (binding.field === "byline") return slot.byline;
+    if (binding.field === "pageNumber") return slot.pageNumber;
+    return "";
+  };
   if (block.kind === "text") {
     const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
     const gap = Math.max(0, block.columnGap ?? 32);
