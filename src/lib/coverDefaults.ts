@@ -246,6 +246,35 @@ export type BlankData = {
   palette: Palette;
 };
 
+/**
+ * Featured-article slot on a custom-contents page. Authors can either link a
+ * slot to a real article page (the slot then auto-fills with that article's
+ * headline / byline / page number / lead image) or fill the override fields
+ * manually. Overrides always win when present.
+ *
+ * Blocks on the page reference slots via `slotBinding` (see CustomBlock).
+ */
+export type ContentsSlotField = "headline" | "byline" | "pageNumber" | "image";
+
+export type ContentsSlot = {
+  id: string;
+  label: string;
+  articlePageId?: string;
+  overrides?: {
+    headline?: string;
+    byline?: string;
+    pageNumber?: string;
+    imageUrl?: string;
+  };
+};
+
+export type CustomContentsData = {
+  folio: string;
+  pageNumber: string;
+  palette: Palette;
+  slots: ContentsSlot[];
+};
+
 export type AnyPageData =
   | { pageType: "cover"; data: CoverData }
   | { pageType: "contents"; data: ContentsData }
@@ -253,7 +282,8 @@ export type AnyPageData =
   | { pageType: "photo"; data: PhotoData }
   | { pageType: "ad"; data: AdData }
   | { pageType: "back"; data: BackCoverData }
-  | { pageType: "blank"; data: BlankData };
+  | { pageType: "blank"; data: BlankData }
+  | { pageType: "custom-contents"; data: CustomContentsData };
 
 export type CustomBlock =
   | {
