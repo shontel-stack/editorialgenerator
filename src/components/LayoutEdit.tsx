@@ -52,6 +52,15 @@ type Ctx = {
   /** Tokens substituted into custom text blocks at render time so user-placed
    *  header/footer blocks can show live page numbers, section names, etc. */
   tokenContext?: TokenContext;
+  /** When this page is a custom-contents page, the list of editable slots
+   *  (label + binding source). Drives the slot dropdown in the block toolbar. */
+  contentsSlots?: ContentsSlot[];
+  /** Resolved slot values, keyed by slot id. Used at render time to fill
+   *  blocks tagged with `slotBinding`. */
+  contentsSlotResolved?: Record<
+    string,
+    { headline: string; byline: string; pageNumber: string; imageUrl: string }
+  >;
 };
 
 type CtxValue = Ctx & {
