@@ -105,6 +105,8 @@ export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePrevie
         return <BackCoverPreview ref={background ? undefined : ref} data={data as BackCoverData} dim={dim} />;
       case "blank":
         return <BlankPreview ref={background ? undefined : ref} data={data as BlankData} dim={dim} />;
+      case "custom-contents":
+        return <CustomContentsPreview ref={background ? undefined : ref} data={data as CustomContentsData} dim={dim} />;
     }
   })();
 
