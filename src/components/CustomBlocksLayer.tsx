@@ -1886,6 +1886,52 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
           <input type="color" value={block.borderColor ?? "#ffffff"} onChange={(e) => onChange({ borderColor: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
         </label>
       )}
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <label style={labelStyle}>
+        Skew X
+        <input type="number" min={-60} max={60} value={Math.round(block.skewX ?? 0)} onChange={(e) => onChange({ skewX: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      <label style={labelStyle}>
+        Skew Y
+        <input type="number" min={-60} max={60} value={Math.round(block.skewY ?? 0)} onChange={(e) => onChange({ skewY: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      <label style={labelStyle}>
+        Shape
+        <select
+          value={block.frameShape ?? "rect"}
+          onChange={(e) => onChange({ frameShape: e.target.value as "rect" | "ellipse" | "polygon" | "path" })}
+          style={inputStyle}
+        >
+          <option value="rect">Rectangle</option>
+          <option value="ellipse">Ellipse</option>
+          <option value="polygon">Polygon</option>
+          <option value="path">Custom path</option>
+        </select>
+      </label>
+      {(block.frameShape ?? "rect") === "rect" && (
+        <label style={labelStyle}>
+          Radius
+          <input type="number" min={0} max={2000} value={block.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
+        </label>
+      )}
+      {block.frameShape === "polygon" && (
+        <label style={labelStyle}>
+          Sides
+          <input type="number" min={3} max={12} value={block.polygonSides ?? 6} onChange={(e) => onChange({ polygonSides: Math.max(3, Math.min(12, Number(e.target.value) || 6)) })} style={{ ...inputStyle, width: 50 }} />
+        </label>
+      )}
+      {block.frameShape === "path" && (
+        <label style={labelStyle}>
+          Path (0..100)
+          <input
+            type="text"
+            value={block.clipPath ?? ""}
+            placeholder="M 50 0 L 100 100 L 0 100 Z"
+            onChange={(e) => onChange({ clipPath: e.target.value })}
+            style={{ ...inputStyle, width: 200 }}
+          />
+        </label>
+      )}
       {block.imageUrl && (
         <button type="button" onClick={() => onChange({ imageUrl: "" })} style={btnStyle("normal")}>
           Clear
