@@ -173,6 +173,8 @@ export type ArticleData = {
   imageY: number;
   palette: Palette;
   layout: ArticleLayout;
+  /** When true, this article shows up in custom-contents slot pickers. */
+  featuredInContents?: boolean;
 };
 
 // Backwards-compatible alias — earlier code referenced FeatureData.
