@@ -94,6 +94,7 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
           case "photo":   return makeNode("photo",   { ...DEFAULT_PHOTO },   true);
           case "ad":      return makeNode("ad",      { ...DEFAULT_AD },      false);
           case "contents":return makeNode("contents",{ ...DEFAULT_CONTENTS, entries: [] }, false);
+          case "custom-contents": return makeNode("custom-contents", { ...DEFAULT_CUSTOM_CONTENTS, slots: DEFAULT_CUSTOM_CONTENTS.slots.map((s) => ({ ...s })) }, false);
         }
       })();
       const backIdx = issue.pages.findIndex((p) => p.pageType === "back");
