@@ -514,6 +514,17 @@ function Index() {
     }
     return out;
   }, [pendingSpatial]);
+
+  /** Resolve slots + their effective values for a single page. Returns
+   *  undefined when the page is not a custom-contents page so the
+   *  LayoutEditProvider does not show the slot dropdown. */
+  const slotsForPage = (p: IssuePageNode) => {
+    if (p.pageType !== "custom-contents") return { slots: undefined, resolved: undefined };
+    const data = p.data as CustomContentsData;
+    const resolved: Record<string, { headline: string; byline: string; pageNumber: string; imageUrl: string }> = {};
+    for (const s of data.slots) resolved[s.id] = resolveContentsSlot(issue, s);
+    return { slots: data.slots, resolved };
+  };
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
   const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
   const brandFonts = useBrandFonts(activePublication?.id ?? null);
