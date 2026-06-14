@@ -2648,6 +2648,8 @@ function Index() {
                   snapSettings={effectiveSnapFor(spread.right)}
                   onRequestEdit={() => { setSelectedId(spread.right!.id); setEditLayout(true); }}
                   tokenContext={buildTokenContext(issue, spread.right.id)}
+                  contentsSlots={slotsForPage(spread.right).slots}
+                  contentsSlotResolved={slotsForPage(spread.right).resolved}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} hideFolio={spread.right.hideFolio} background={spread.right.backgroundArtwork ? { url: spread.right.backgroundArtwork.url, mode: spread.right.backgroundArtwork.mode, crop: spread.right.backgroundArtwork.crop } : undefined} />
                 </LayoutEditProvider>
