@@ -92,6 +92,8 @@ export function LayoutEditProvider({
   snapSettings,
   onRequestEdit,
   tokenContext,
+  contentsSlots,
+  contentsSlotResolved,
   children,
 }: Ctx & { children: ReactNode }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
