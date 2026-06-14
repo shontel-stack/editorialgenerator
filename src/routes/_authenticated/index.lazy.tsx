@@ -1130,7 +1130,7 @@ function Index() {
       return { ...d, pages: d.pages.filter((x) => x.id !== id) };
     });
 
-  const addPage = (pageType: "article" | "photo" | "ad" | "contents" | "blank") => {
+  const addPage = (pageType: "article" | "photo" | "ad" | "contents" | "blank" | "custom-contents") => {
     const node = (() => {
       switch (pageType) {
         case "article":
@@ -1143,6 +1143,12 @@ function Index() {
           return makeNode("contents", { ...DEFAULT_CONTENTS, entries: [] }, false);
         case "blank":
           return makeNode("blank", { ...DEFAULT_BLANK }, false);
+        case "custom-contents":
+          return makeNode(
+            "custom-contents",
+            { ...DEFAULT_CUSTOM_CONTENTS, slots: DEFAULT_CUSTOM_CONTENTS.slots.map((s) => ({ ...s, id: newId() })) },
+            false,
+          );
       }
     })();
     setIssue((d) => {
