@@ -1752,6 +1752,13 @@ function Index() {
                   set={(p) => updateData<typeof selected>(selected.id, p)}
                 />
               )}
+              {selected.pageType === "custom-contents" && (
+                <CustomContentsEditor
+                  data={selected.data as CustomContentsData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                  issue={issue}
+                />
+              )}
 
               {selected.pageType !== "cover" &&
                 selected.pageType !== "back" &&
