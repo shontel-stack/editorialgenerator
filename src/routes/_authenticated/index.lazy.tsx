@@ -2941,6 +2941,8 @@ function labelForNode(p: IssuePageNode): string {
       return "Back cover";
     case "blank":
       return "Blank page";
+    case "custom-contents":
+      return "Custom contents";
   }
 }
 
