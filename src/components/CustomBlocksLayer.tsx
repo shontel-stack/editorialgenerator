@@ -591,6 +591,11 @@ function CustomBlockView({
 
 
   const rotate = (block as { rotate?: number }).rotate ?? 0;
+  const sx = block.kind === "image" ? (block.skewX ?? 0) : 0;
+  const sy = block.kind === "image" ? (block.skewY ?? 0) : 0;
+  const transformParts: string[] = [];
+  if (rotate) transformParts.push(`rotate(${rotate}deg)`);
+  if (sx || sy) transformParts.push(`skew(${sx}deg, ${sy}deg)`);
   const wrapper: CSSProperties = {
     position: "absolute",
     left: block.x,
@@ -599,7 +604,7 @@ function CustomBlockView({
     height: block.h,
     zIndex: block.z ?? 50,
     boxSizing: "border-box",
-    transform: rotate ? `rotate(${rotate}deg)` : undefined,
+    transform: transformParts.length ? transformParts.join(" ") : undefined,
     transformOrigin: "center center",
     cursor: editing ? (editingText ? "text" : "move") : block.link ? "pointer" : "default",
     outline: editing
