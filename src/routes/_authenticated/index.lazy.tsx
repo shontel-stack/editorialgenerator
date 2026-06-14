@@ -3631,3 +3631,132 @@ function BlankEditor({ data, set }: { data: BlankData; set: (p: Partial<BlankDat
     </>
   );
 }
+
+function CustomContentsEditor({
+  data,
+  set,
+  issue,
+}: {
+  data: CustomContentsData;
+  set: (p: Partial<CustomContentsData>) => void;
+  issue: IssueDoc;
+}) {
+  // Featured articles list — articles flagged via the article editor toggle.
+  // Hybrid: articles that are NOT flagged are still selectable under "All".
+  const featured = issue.pages.filter(
+    (p) => p.pageType === "article" && (p.data as ArticleData).featuredInContents,
+  );
+  const allArticles = issue.pages.filter((p) => p.pageType === "article");
+  const setSlots = (slots: ContentsSlot[]) => set({ slots });
+  const updateSlot = (id: string, patch: Partial<ContentsSlot>) =>
+    setSlots(data.slots.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const updateOverride = (id: string, k: keyof NonNullable<ContentsSlot["overrides"]>, v: string) =>
+    setSlots(
+      data.slots.map((s) =>
+        s.id === id ? { ...s, overrides: { ...(s.overrides ?? {}), [k]: v || undefined } } : s,
+      ),
+    );
+  const addSlot = () =>
+    setSlots([
+      ...data.slots,
+      { id: newId(), label: `Feature ${data.slots.length + 1}` },
+    ]);
+  const removeSlot = (id: string) => setSlots(data.slots.filter((s) => s.id !== id));
+  const moveSlot = (id: string, dir: -1 | 1) => {
+    const idx = data.slots.findIndex((s) => s.id === id);
+    if (idx < 0) return;
+    const j = idx + dir;
+    if (j < 0 || j >= data.slots.length) return;
+    const next = [...data.slots];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setSlots(next);
+  };
+  return (
+    <>
+      <Section title="Custom contents (footer)">
+        <Field label="Folio text"><Input value={data.folio} onChange={(v) => set({ folio: v })} /></Field>
+        <Field label="Page number"><Input value={data.pageNumber} onChange={(v) => set({ pageNumber: v })} /></Field>
+      </Section>
+      <Section title="Style">
+        <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+      </Section>
+      <Section title="Featured slots">
+        <p className="text-xs text-muted-foreground -mt-1">
+          Each slot can auto-link to an article (its headline, byline, page
+          number, and lead image then flow into any block on this page that
+          you tag with the slot). Type into the override fields to pin a
+          custom value.
+        </p>
+        <div className="space-y-3">
+          {data.slots.map((s, i) => {
+            const linked = s.articlePageId
+              ? issue.pages.find((p) => p.id === s.articlePageId)
+              : null;
+            const linkedArt = linked && linked.pageType === "article" ? (linked.data as ArticleData) : null;
+            return (
+              <div key={s.id} className="border border-border rounded-sm p-2 space-y-2 bg-muted/30">
+                <div className="flex items-center gap-1">
+                  <Input value={s.label} onChange={(v) => updateSlot(s.id, { label: v })} />
+                  <button type="button" className="px-1.5 text-xs" onClick={() => moveSlot(s.id, -1)} disabled={i === 0}>↑</button>
+                  <button type="button" className="px-1.5 text-xs" onClick={() => moveSlot(s.id, 1)} disabled={i === data.slots.length - 1}>↓</button>
+                  <button type="button" className="px-1.5 text-xs text-destructive" onClick={() => removeSlot(s.id)}>✕</button>
+                </div>
+                <Field label="Linked article">
+                  <select
+                    value={s.articlePageId ?? ""}
+                    onChange={(e) => updateSlot(s.id, { articlePageId: e.target.value || undefined })}
+                    className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+                  >
+                    <option value="">— none (manual only) —</option>
+                    {featured.length > 0 && (
+                      <optgroup label="Featured articles">
+                        {featured.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {(p.data as ArticleData).headline || "Untitled article"}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="All articles">
+                      {allArticles
+                        .filter((p) => !featured.find((f) => f.id === p.id))
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {(p.data as ArticleData).headline || "Untitled article"}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                </Field>
+                <Field label={`Headline override${linkedArt ? ` (auto: ${linkedArt.headline})` : ""}`}>
+                  <Input value={s.overrides?.headline ?? ""} onChange={(v) => updateOverride(s.id, "headline", v)} />
+                </Field>
+                <Field label="Byline override">
+                  <Input value={s.overrides?.byline ?? ""} onChange={(v) => updateOverride(s.id, "byline", v)} />
+                </Field>
+                <Field label="Page # override">
+                  <Input value={s.overrides?.pageNumber ?? ""} onChange={(v) => updateOverride(s.id, "pageNumber", v)} />
+                </Field>
+                <Field label="Image URL override">
+                  <Input value={s.overrides?.imageUrl ?? ""} onChange={(v) => updateOverride(s.id, "imageUrl", v)} />
+                </Field>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={addSlot}
+          className="mt-2 w-full border border-dashed border-border py-1.5 text-xs uppercase tracking-[0.3em] text-muted-foreground hover:bg-muted/40"
+        >
+          + Add slot
+        </button>
+        <p className="text-[10px] text-muted-foreground pt-1">
+          Add text or image blocks via the canvas toolbar, then use the
+          <em> Slot </em> dropdown in each block's toolbar to bind it to a
+          slot field (headline, byline, page #, image).
+        </p>
+      </Section>
+    </>
+  );
+}
