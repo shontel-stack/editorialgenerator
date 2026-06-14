@@ -102,7 +102,7 @@ export function matchPresetKey(w: number, h: number): string {
   return hit?.key ?? "custom";
 }
 
-export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back" | "blank";
+export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back" | "blank" | "custom-contents";
 
 export type Palette = "paper" | "ink" | "burgundy";
 
