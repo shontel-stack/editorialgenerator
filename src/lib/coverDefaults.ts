@@ -784,6 +784,17 @@ export const DEFAULT_BLANK: BlankData = {
   palette: "paper",
 };
 
+export const DEFAULT_CUSTOM_CONTENTS: CustomContentsData = {
+  folio: "THE ARTS TODAY",
+  pageNumber: "005",
+  palette: "paper",
+  slots: [
+    { id: "s1", label: "Feature 1" },
+    { id: "s2", label: "Feature 2" },
+    { id: "s3", label: "Feature 3" },
+  ],
+};
+
 /* --- Helpers --- */
 
 let _seq = 0;
