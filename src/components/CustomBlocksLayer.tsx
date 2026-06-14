@@ -2121,3 +2121,53 @@ function btnStyle(variant: "normal" | "active" | "danger"): CSSProperties {
     cursor: "pointer",
   };
 }
+
+/* — Slot binding picker — shown on text / image blocks when the parent page
+   is a custom-contents page. Bound blocks render the slot's resolved value
+   (overrides > linked article). */
+function SlotBindingControl({
+  block,
+  onChange,
+  slots,
+}: {
+  block: Extract<CustomBlock, { kind: "text" | "image" }>;
+  onChange: (p: Partial<CustomBlock>) => void;
+  slots: ContentsSlot[];
+}) {
+  const binding = block.slotBinding;
+  const fields: { value: ContentsSlotField; label: string; for: "text" | "image" }[] = [
+    { value: "headline", label: "Headline", for: "text" },
+    { value: "byline", label: "Byline", for: "text" },
+    { value: "pageNumber", label: "Page #", for: "text" },
+    { value: "image", label: "Image", for: "image" },
+  ];
+  const allowed = fields.filter((f) => f.for === block.kind);
+  const value = binding ? `${binding.slotId}::${binding.field}` : "";
+  return (
+    <label style={labelStyle}>
+      Slot
+      <select
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (!v) {
+            onChange({ slotBinding: undefined } as Partial<CustomBlock>);
+            return;
+          }
+          const [slotId, field] = v.split("::") as [string, ContentsSlotField];
+          onChange({ slotBinding: { slotId, field } } as Partial<CustomBlock>);
+        }}
+        style={inputStyle}
+      >
+        <option value="">— none —</option>
+        {slots.map((s) =>
+          allowed.map((f) => (
+            <option key={`${s.id}::${f.value}`} value={`${s.id}::${f.value}`}>
+              {s.label} · {f.label}
+            </option>
+          )),
+        )}
+      </select>
+    </label>
+  );
+}
