@@ -1762,7 +1762,8 @@ function Index() {
 
               {selected.pageType !== "cover" &&
                 selected.pageType !== "back" &&
-                selected.pageType !== "contents" && (
+                selected.pageType !== "contents" &&
+                selected.pageType !== "custom-contents" && (
                   <Section title="Contents listing">
                     <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
                       <input
