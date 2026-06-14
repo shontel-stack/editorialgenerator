@@ -135,6 +135,8 @@ export function LayoutEditProvider({
         snapSettings,
         onRequestEdit,
         tokenContext,
+        contentsSlots,
+        contentsSlotResolved,
         selectedKey,
         setSelectedKey,
       }}
