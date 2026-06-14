@@ -285,6 +285,17 @@ export type AnyPageData =
   | { pageType: "blank"; data: BlankData }
   | { pageType: "custom-contents"; data: CustomContentsData };
 
+/** Binds a text or image block to one field of a custom-contents slot.
+ *  When set, the block renders the resolved slot value (or stays as a
+ *  placeholder when the slot is empty). */
+export type SlotBinding = {
+  slotId: string;
+  field: ContentsSlotField;
+};
+
+/** Frame shape applied to image blocks via CSS clip-path. */
+export type ImageFrameShape = "rect" | "ellipse" | "polygon" | "path";
+
 export type CustomBlock =
   | {
       id: string;
@@ -306,6 +317,8 @@ export type CustomBlock =
       link?: string;
       columns?: number;
       columnGap?: number;
+      /** Custom-contents page only — pull text from a slot field. */
+      slotBinding?: SlotBinding;
     }
   | {
       id: string;
@@ -318,6 +331,19 @@ export type CustomBlock =
       borderColor?: string;
       bg?: string;
       link?: string;
+      /** Custom-contents page only — pull the image from a slot. */
+      slotBinding?: SlotBinding;
+      /** Skew in degrees, applied as CSS skew transform. */
+      skewX?: number;
+      skewY?: number;
+      /** Frame shape applied as CSS clip-path. */
+      frameShape?: ImageFrameShape;
+      /** Corner radius when frameShape === "rect" (page-px). */
+      cornerRadius?: number;
+      /** Sides for frameShape === "polygon" (3–12). */
+      polygonSides?: number;
+      /** SVG path-data string for frameShape === "path" (in a 0..100 viewBox). */
+      clipPath?: string;
     }
   | {
       id: string;
