@@ -890,7 +890,36 @@ function BlockContent({
     const borderStyle = block.borderWidth
       ? { border: `${block.borderWidth}px solid ${block.borderColor ?? "#ffffff"}`, background: block.bg ?? "#ffffff" }
       : {};
-    if (!block.imageUrl) {
+    // Resolve slot-bound image URL when applicable.
+    const slotImg =
+      block.slotBinding && block.slotBinding.field === "image" && slotResolved
+        ? slotResolved[block.slotBinding.slotId]?.imageUrl ?? ""
+        : null;
+    const effectiveUrl = slotImg != null ? slotImg : block.imageUrl;
+    const frame = block.frameShape ?? "rect";
+    const clipPath = (() => {
+      if (frame === "ellipse") return "ellipse(50% 50% at 50% 50%)";
+      if (frame === "polygon") {
+        const n = Math.max(3, Math.min(12, Math.round(block.polygonSides ?? 6)));
+        const pts: string[] = [];
+        for (let i = 0; i < n; i++) {
+          const a = (Math.PI * 2 * i) / n - Math.PI / 2;
+          const x = 50 + 50 * Math.cos(a);
+          const y = 50 + 50 * Math.sin(a);
+          pts.push(`${x.toFixed(2)}% ${y.toFixed(2)}%`);
+        }
+        return `polygon(${pts.join(", ")})`;
+      }
+      if (frame === "path" && block.clipPath) {
+        return `path('${block.clipPath.replace(/'/g, "\\'")}')`;
+      }
+      return undefined;
+    })();
+    const radiusStyle =
+      frame === "rect" && block.cornerRadius
+        ? { borderRadius: `${block.cornerRadius}px`, overflow: "hidden" as const }
+        : {};
+    if (!effectiveUrl) {
       return (
         <label
           onPointerDown={(e) => e.stopPropagation()}
@@ -911,12 +940,14 @@ function BlockContent({
             textTransform: "uppercase",
             boxSizing: "border-box",
             cursor: onChange ? "pointer" : "default",
+            clipPath,
             ...borderStyle,
+            ...radiusStyle,
           }}
         >
           <ImageIcon size={28} />
-          <span>Click to upload</span>
-          {onChange && (
+          <span>{slotImg != null ? "Slot empty" : "Click to upload"}</span>
+          {onChange && slotImg == null && (
             <input
               type="file"
               accept="image/*"
@@ -936,8 +967,8 @@ function BlockContent({
       );
     }
     return (
-      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", ...borderStyle }}>
-        <img src={block.imageUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />
+      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", clipPath, ...borderStyle, ...radiusStyle }}>
+        <img src={effectiveUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />
       </div>
     );
   }
