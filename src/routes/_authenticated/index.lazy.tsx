@@ -1498,6 +1498,7 @@ function Index() {
                   <DropdownMenuItem onClick={() => addPage("ad")}><Megaphone className="h-3.5 w-3.5 mr-2" /> Advertisement</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Contents page</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("blank")}><FileText className="h-3.5 w-3.5 mr-2" /> Blank page (footer only)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("custom-contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Custom contents</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Two-page spread</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => addSpread("article", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Article + Photo</DropdownMenuItem>
