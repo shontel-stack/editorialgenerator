@@ -9,6 +9,7 @@ import {
   type BlankData,
   type ContentsData,
   type CoverData,
+  type CustomContentsData,
   type PageType,
   type PhotoData,
 } from "@/lib/coverDefaults";
@@ -16,7 +17,7 @@ import { CoverPreview } from "./CoverPreview";
 import { Draggable } from "./LayoutEdit";
 import { CustomBlocksLayer } from "./CustomBlocksLayer";
 
-type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData | BlankData;
+type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData | BlankData | CustomContentsData;
 
 export type PageBackgroundProp = {
   url: string;
