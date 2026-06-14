@@ -6,6 +6,7 @@ import {
   DEFAULT_AD,
   DEFAULT_ARTICLE,
   DEFAULT_CONTENTS,
+  DEFAULT_CUSTOM_CONTENTS,
   DEFAULT_PHOTO,
   makeNode,
   type ArticleData,
