@@ -115,6 +115,7 @@ import {
   SANS_FONTS,
   SERIF_FONTS,
   deriveContentsEntries,
+  resolveContentsSlot,
   formatPageNumber,
   googleFontsUrl,
   makeNode,
