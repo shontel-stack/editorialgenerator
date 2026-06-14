@@ -668,6 +668,7 @@ export const PAGE_LABELS: Record<PageType, string> = {
   ad: "Advertisement",
   back: "Back Cover",
   blank: "Blank (footer only)",
+  "custom-contents": "Custom contents",
 };
 
 export const PALETTES: Record<
