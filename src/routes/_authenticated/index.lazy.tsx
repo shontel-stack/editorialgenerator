@@ -97,6 +97,7 @@ import {
   DEFAULT_ARTICLE,
   DEFAULT_BACK,
   DEFAULT_BLANK,
+  DEFAULT_CUSTOM_CONTENTS,
   DEFAULT_CONTENTS,
   DEFAULT_COVER,
   DEFAULT_FONTS,
@@ -114,6 +115,7 @@ import {
   SANS_FONTS,
   SERIF_FONTS,
   deriveContentsEntries,
+  resolveContentsSlot,
   formatPageNumber,
   googleFontsUrl,
   makeNode,
@@ -133,6 +135,8 @@ import {
   type ArticleLayout,
   type BackCoverData,
   type BlankData,
+  type ContentsSlot,
+  type CustomContentsData,
   type ContentsData,
   type CoverData,
   type FontOption,
@@ -510,6 +514,17 @@ function Index() {
     }
     return out;
   }, [pendingSpatial]);
+
+  /** Resolve slots + their effective values for a single page. Returns
+   *  undefined when the page is not a custom-contents page so the
+   *  LayoutEditProvider does not show the slot dropdown. */
+  const slotsForPage = (p: IssuePageNode) => {
+    if (p.pageType !== "custom-contents") return { slots: undefined, resolved: undefined };
+    const data = p.data as CustomContentsData;
+    const resolved: Record<string, { headline: string; byline: string; pageNumber: string; imageUrl: string }> = {};
+    for (const s of data.slots) resolved[s.id] = resolveContentsSlot(issue, s);
+    return { slots: data.slots, resolved };
+  };
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
   const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
   const brandFonts = useBrandFonts(activePublication?.id ?? null);
@@ -1126,7 +1141,7 @@ function Index() {
       return { ...d, pages: d.pages.filter((x) => x.id !== id) };
     });
 
-  const addPage = (pageType: "article" | "photo" | "ad" | "contents" | "blank") => {
+  const addPage = (pageType: "article" | "photo" | "ad" | "contents" | "blank" | "custom-contents") => {
     const node = (() => {
       switch (pageType) {
         case "article":
@@ -1139,6 +1154,12 @@ function Index() {
           return makeNode("contents", { ...DEFAULT_CONTENTS, entries: [] }, false);
         case "blank":
           return makeNode("blank", { ...DEFAULT_BLANK }, false);
+        case "custom-contents":
+          return makeNode(
+            "custom-contents",
+            { ...DEFAULT_CUSTOM_CONTENTS, slots: DEFAULT_CUSTOM_CONTENTS.slots.map((s) => ({ ...s, id: newId() })) },
+            false,
+          );
       }
     })();
     setIssue((d) => {
@@ -1488,6 +1509,7 @@ function Index() {
                   <DropdownMenuItem onClick={() => addPage("ad")}><Megaphone className="h-3.5 w-3.5 mr-2" /> Advertisement</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Contents page</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addPage("blank")}><FileText className="h-3.5 w-3.5 mr-2" /> Blank page (footer only)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addPage("custom-contents")}><ListOrdered className="h-3.5 w-3.5 mr-2" /> Custom contents</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Two-page spread</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => addSpread("article", "photo")}><Layers className="h-3.5 w-3.5 mr-2" /> Article + Photo</DropdownMenuItem>
@@ -1730,10 +1752,18 @@ function Index() {
                   set={(p) => updateData<typeof selected>(selected.id, p)}
                 />
               )}
+              {selected.pageType === "custom-contents" && (
+                <CustomContentsEditor
+                  data={selected.data as CustomContentsData}
+                  set={(p) => updateData<typeof selected>(selected.id, p)}
+                  issue={issue}
+                />
+              )}
 
               {selected.pageType !== "cover" &&
                 selected.pageType !== "back" &&
-                selected.pageType !== "contents" && (
+                selected.pageType !== "contents" &&
+                selected.pageType !== "custom-contents" && (
                   <Section title="Contents listing">
                     <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground">
                       <input
@@ -2582,6 +2612,8 @@ function Index() {
                 snapSettings={effectiveSnapFor(spread.left)}
                 onRequestEdit={() => { setSelectedId(spread.left.id); setEditLayout(true); }}
                 tokenContext={buildTokenContext(issue, spread.left.id)}
+                contentsSlots={slotsForPage(spread.left).slots}
+                contentsSlotResolved={slotsForPage(spread.left).resolved}
               >
                 <PagePreview pageType={spread.left.pageType} data={spread.left.data} dim={dimPx} hideFolio={spread.left.hideFolio} background={spread.left.backgroundArtwork ? { url: spread.left.backgroundArtwork.url, mode: spread.left.backgroundArtwork.mode, crop: spread.left.backgroundArtwork.crop } : undefined} />
               </LayoutEditProvider>
@@ -2624,6 +2656,8 @@ function Index() {
                   snapSettings={effectiveSnapFor(spread.right)}
                   onRequestEdit={() => { setSelectedId(spread.right!.id); setEditLayout(true); }}
                   tokenContext={buildTokenContext(issue, spread.right.id)}
+                  contentsSlots={slotsForPage(spread.right).slots}
+                  contentsSlotResolved={slotsForPage(spread.right).resolved}
                 >
                   <PagePreview pageType={spread.right.pageType} data={spread.right.data} dim={dimPx} hideFolio={spread.right.hideFolio} background={spread.right.backgroundArtwork ? { url: spread.right.backgroundArtwork.url, mode: spread.right.backgroundArtwork.mode, crop: spread.right.backgroundArtwork.crop } : undefined} />
                 </LayoutEditProvider>
@@ -2671,6 +2705,8 @@ function Index() {
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
             tokenContext={buildTokenContext(issue, p.id)}
+            contentsSlots={slotsForPage(p).slots}
+            contentsSlotResolved={slotsForPage(p).resolved}
           >
             <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} hideFolio={p.hideFolio} background={p.backgroundArtwork ? { url: p.backgroundArtwork.url, mode: p.backgroundArtwork.mode, crop: p.backgroundArtwork.crop } : undefined} />
           </LayoutEditProvider>
@@ -2941,6 +2977,8 @@ function labelForNode(p: IssuePageNode): string {
       return "Back cover";
     case "blank":
       return "Blank page";
+    case "custom-contents":
+      return "Custom contents";
   }
 }
 
@@ -3038,6 +3076,15 @@ function ArticleEditor({
         <Field label="Headline"><Textarea value={data.headline} onChange={(v) => set({ headline: v })} rows={2} /></Field>
         <Field label="Dek"><Textarea value={data.dek} onChange={(v) => set({ dek: v })} rows={3} /></Field>
         <Field label="Byline"><Input value={data.byline} onChange={(v) => set({ byline: v })} /></Field>
+        <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground pt-1">
+          <input
+            type="checkbox"
+            checked={!!data.featuredInContents}
+            onChange={(e) => set({ featuredInContents: e.target.checked })}
+            className="accent-[color:var(--ruby)]"
+          />
+          Featured on contents
+        </label>
       </Section>
       <Section title="Body">
         <Field label="Body copy (blank line = new paragraph)">
@@ -3581,6 +3628,135 @@ function BlankEditor({ data, set }: { data: BlankData; set: (p: Partial<BlankDat
       </Section>
       <Section title="Style">
         <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+      </Section>
+    </>
+  );
+}
+
+function CustomContentsEditor({
+  data,
+  set,
+  issue,
+}: {
+  data: CustomContentsData;
+  set: (p: Partial<CustomContentsData>) => void;
+  issue: IssueDoc;
+}) {
+  // Featured articles list — articles flagged via the article editor toggle.
+  // Hybrid: articles that are NOT flagged are still selectable under "All".
+  const featured = issue.pages.filter(
+    (p) => p.pageType === "article" && (p.data as ArticleData).featuredInContents,
+  );
+  const allArticles = issue.pages.filter((p) => p.pageType === "article");
+  const setSlots = (slots: ContentsSlot[]) => set({ slots });
+  const updateSlot = (id: string, patch: Partial<ContentsSlot>) =>
+    setSlots(data.slots.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const updateOverride = (id: string, k: keyof NonNullable<ContentsSlot["overrides"]>, v: string) =>
+    setSlots(
+      data.slots.map((s) =>
+        s.id === id ? { ...s, overrides: { ...(s.overrides ?? {}), [k]: v || undefined } } : s,
+      ),
+    );
+  const addSlot = () =>
+    setSlots([
+      ...data.slots,
+      { id: newId(), label: `Feature ${data.slots.length + 1}` },
+    ]);
+  const removeSlot = (id: string) => setSlots(data.slots.filter((s) => s.id !== id));
+  const moveSlot = (id: string, dir: -1 | 1) => {
+    const idx = data.slots.findIndex((s) => s.id === id);
+    if (idx < 0) return;
+    const j = idx + dir;
+    if (j < 0 || j >= data.slots.length) return;
+    const next = [...data.slots];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setSlots(next);
+  };
+  return (
+    <>
+      <Section title="Custom contents (footer)">
+        <Field label="Folio text"><Input value={data.folio} onChange={(v) => set({ folio: v })} /></Field>
+        <Field label="Page number"><Input value={data.pageNumber} onChange={(v) => set({ pageNumber: v })} /></Field>
+      </Section>
+      <Section title="Style">
+        <PaletteField value={data.palette} onChange={(p) => set({ palette: p })} />
+      </Section>
+      <Section title="Featured slots">
+        <p className="text-xs text-muted-foreground -mt-1">
+          Each slot can auto-link to an article (its headline, byline, page
+          number, and lead image then flow into any block on this page that
+          you tag with the slot). Type into the override fields to pin a
+          custom value.
+        </p>
+        <div className="space-y-3">
+          {data.slots.map((s, i) => {
+            const linked = s.articlePageId
+              ? issue.pages.find((p) => p.id === s.articlePageId)
+              : null;
+            const linkedArt = linked && linked.pageType === "article" ? (linked.data as ArticleData) : null;
+            return (
+              <div key={s.id} className="border border-border rounded-sm p-2 space-y-2 bg-muted/30">
+                <div className="flex items-center gap-1">
+                  <Input value={s.label} onChange={(v) => updateSlot(s.id, { label: v })} />
+                  <button type="button" className="px-1.5 text-xs" onClick={() => moveSlot(s.id, -1)} disabled={i === 0}>↑</button>
+                  <button type="button" className="px-1.5 text-xs" onClick={() => moveSlot(s.id, 1)} disabled={i === data.slots.length - 1}>↓</button>
+                  <button type="button" className="px-1.5 text-xs text-destructive" onClick={() => removeSlot(s.id)}>✕</button>
+                </div>
+                <Field label="Linked article">
+                  <select
+                    value={s.articlePageId ?? ""}
+                    onChange={(e) => updateSlot(s.id, { articlePageId: e.target.value || undefined })}
+                    className="w-full border border-input bg-background px-2 py-1.5 text-sm"
+                  >
+                    <option value="">— none (manual only) —</option>
+                    {featured.length > 0 && (
+                      <optgroup label="Featured articles">
+                        {featured.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {(p.data as ArticleData).headline || "Untitled article"}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="All articles">
+                      {allArticles
+                        .filter((p) => !featured.find((f) => f.id === p.id))
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {(p.data as ArticleData).headline || "Untitled article"}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                </Field>
+                <Field label={`Headline override${linkedArt ? ` (auto: ${linkedArt.headline})` : ""}`}>
+                  <Input value={s.overrides?.headline ?? ""} onChange={(v) => updateOverride(s.id, "headline", v)} />
+                </Field>
+                <Field label="Byline override">
+                  <Input value={s.overrides?.byline ?? ""} onChange={(v) => updateOverride(s.id, "byline", v)} />
+                </Field>
+                <Field label="Page # override">
+                  <Input value={s.overrides?.pageNumber ?? ""} onChange={(v) => updateOverride(s.id, "pageNumber", v)} />
+                </Field>
+                <Field label="Image URL override">
+                  <Input value={s.overrides?.imageUrl ?? ""} onChange={(v) => updateOverride(s.id, "imageUrl", v)} />
+                </Field>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={addSlot}
+          className="mt-2 w-full border border-dashed border-border py-1.5 text-xs uppercase tracking-[0.3em] text-muted-foreground hover:bg-muted/40"
+        >
+          + Add slot
+        </button>
+        <p className="text-[10px] text-muted-foreground pt-1">
+          Add text or image blocks via the canvas toolbar, then use the
+          <em> Slot </em> dropdown in each block's toolbar to bind it to a
+          slot field (headline, byline, page #, image).
+        </p>
       </Section>
     </>
   );

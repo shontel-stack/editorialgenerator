@@ -9,7 +9,7 @@ import {
 } from "react";
 import QRCode from "qrcode";
 import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
-import type { CustomBlock } from "@/lib/coverDefaults";
+import type { CustomBlock, ContentsSlot, ContentsSlotField } from "@/lib/coverDefaults";
 import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
@@ -591,6 +591,11 @@ function CustomBlockView({
 
 
   const rotate = (block as { rotate?: number }).rotate ?? 0;
+  const sx = block.kind === "image" ? (block.skewX ?? 0) : 0;
+  const sy = block.kind === "image" ? (block.skewY ?? 0) : 0;
+  const transformParts: string[] = [];
+  if (rotate) transformParts.push(`rotate(${rotate}deg)`);
+  if (sx || sy) transformParts.push(`skew(${sx}deg, ${sy}deg)`);
   const wrapper: CSSProperties = {
     position: "absolute",
     left: block.x,
@@ -599,7 +604,7 @@ function CustomBlockView({
     height: block.h,
     zIndex: block.z ?? 50,
     boxSizing: "border-box",
-    transform: rotate ? `rotate(${rotate}deg)` : undefined,
+    transform: transformParts.length ? transformParts.join(" ") : undefined,
     transformOrigin: "center center",
     cursor: editing ? (editingText ? "text" : "move") : block.link ? "pointer" : "default",
     outline: editing
@@ -778,6 +783,19 @@ function BlockContent({
   const brandKit = useBrandKit();
   const editCtx = useLayoutEdit();
   const tokens = editCtx?.tokenContext;
+  const slotResolved = editCtx?.contentsSlotResolved;
+  // Resolve slot-bound text. Returns null when no binding, '' when binding
+  // exists but the slot is empty (lets us still show the placeholder text
+  // typed in the block while editing).
+  const resolveSlotText = (binding: { slotId: string; field: "headline" | "byline" | "pageNumber" | "image" } | undefined): string | null => {
+    if (!binding || !slotResolved) return null;
+    const slot = slotResolved[binding.slotId];
+    if (!slot) return "";
+    if (binding.field === "headline") return slot.headline;
+    if (binding.field === "byline") return slot.byline;
+    if (binding.field === "pageNumber") return slot.pageNumber;
+    return "";
+  };
   if (block.kind === "text") {
     const cols = Math.max(1, Math.min(6, Math.floor(block.columns ?? 1)));
     const gap = Math.max(0, block.columnGap ?? 32);
@@ -834,7 +852,9 @@ function BlockContent({
       );
     }
     // Render each line as its own paragraph so per-paragraph alignment works.
-    const rawText = tokens ? resolveTextTokens(block.text, tokens) : block.text;
+    const slotText = resolveSlotText(block.slotBinding);
+    const baseText = slotText != null ? slotText : block.text;
+    const rawText = tokens ? resolveTextTokens(baseText, tokens) : baseText;
     const paragraphs = rawText.split("\n");
     const pBefore = block.paragraphSpaceBefore ?? [];
     const pAfter = block.paragraphSpaceAfter ?? [];
@@ -870,7 +890,36 @@ function BlockContent({
     const borderStyle = block.borderWidth
       ? { border: `${block.borderWidth}px solid ${block.borderColor ?? "#ffffff"}`, background: block.bg ?? "#ffffff" }
       : {};
-    if (!block.imageUrl) {
+    // Resolve slot-bound image URL when applicable.
+    const slotImg =
+      block.slotBinding && block.slotBinding.field === "image" && slotResolved
+        ? slotResolved[block.slotBinding.slotId]?.imageUrl ?? ""
+        : null;
+    const effectiveUrl = slotImg != null ? slotImg : block.imageUrl;
+    const frame = block.frameShape ?? "rect";
+    const clipPath = (() => {
+      if (frame === "ellipse") return "ellipse(50% 50% at 50% 50%)";
+      if (frame === "polygon") {
+        const n = Math.max(3, Math.min(12, Math.round(block.polygonSides ?? 6)));
+        const pts: string[] = [];
+        for (let i = 0; i < n; i++) {
+          const a = (Math.PI * 2 * i) / n - Math.PI / 2;
+          const x = 50 + 50 * Math.cos(a);
+          const y = 50 + 50 * Math.sin(a);
+          pts.push(`${x.toFixed(2)}% ${y.toFixed(2)}%`);
+        }
+        return `polygon(${pts.join(", ")})`;
+      }
+      if (frame === "path" && block.clipPath) {
+        return `path('${block.clipPath.replace(/'/g, "\\'")}')`;
+      }
+      return undefined;
+    })();
+    const radiusStyle =
+      frame === "rect" && block.cornerRadius
+        ? { borderRadius: `${block.cornerRadius}px`, overflow: "hidden" as const }
+        : {};
+    if (!effectiveUrl) {
       return (
         <label
           onPointerDown={(e) => e.stopPropagation()}
@@ -891,12 +940,14 @@ function BlockContent({
             textTransform: "uppercase",
             boxSizing: "border-box",
             cursor: onChange ? "pointer" : "default",
+            clipPath,
             ...borderStyle,
+            ...radiusStyle,
           }}
         >
           <ImageIcon size={28} />
-          <span>Click to upload</span>
-          {onChange && (
+          <span>{slotImg != null ? "Slot empty" : "Click to upload"}</span>
+          {onChange && slotImg == null && (
             <input
               type="file"
               accept="image/*"
@@ -916,8 +967,8 @@ function BlockContent({
       );
     }
     return (
-      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", ...borderStyle }}>
-        <img src={block.imageUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />
+      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", clipPath, ...borderStyle, ...radiusStyle }}>
+        <img src={effectiveUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />
       </div>
     );
   }
@@ -1537,6 +1588,9 @@ function BlockToolbar({
       }}
     >
       <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", ...dragHandleProps.style }}>⋮⋮ {block.kind}</span>
+      {ctx?.contentsSlots && (block.kind === "text" || block.kind === "image") && (
+        <SlotBindingControl block={block} onChange={onChange} slots={ctx.contentsSlots} />
+      )}
       {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
@@ -1835,6 +1889,52 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
           <input type="color" value={block.borderColor ?? "#ffffff"} onChange={(e) => onChange({ borderColor: e.target.value })} style={{ width: 28, height: 24, padding: 0, border: "1px solid #ddd" }} />
         </label>
       )}
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <label style={labelStyle}>
+        Skew X
+        <input type="number" min={-60} max={60} value={Math.round(block.skewX ?? 0)} onChange={(e) => onChange({ skewX: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      <label style={labelStyle}>
+        Skew Y
+        <input type="number" min={-60} max={60} value={Math.round(block.skewY ?? 0)} onChange={(e) => onChange({ skewY: Number(e.target.value) })} style={{ ...inputStyle, width: 56 }} />
+      </label>
+      <label style={labelStyle}>
+        Shape
+        <select
+          value={block.frameShape ?? "rect"}
+          onChange={(e) => onChange({ frameShape: e.target.value as "rect" | "ellipse" | "polygon" | "path" })}
+          style={inputStyle}
+        >
+          <option value="rect">Rectangle</option>
+          <option value="ellipse">Ellipse</option>
+          <option value="polygon">Polygon</option>
+          <option value="path">Custom path</option>
+        </select>
+      </label>
+      {(block.frameShape ?? "rect") === "rect" && (
+        <label style={labelStyle}>
+          Radius
+          <input type="number" min={0} max={2000} value={block.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
+        </label>
+      )}
+      {block.frameShape === "polygon" && (
+        <label style={labelStyle}>
+          Sides
+          <input type="number" min={3} max={12} value={block.polygonSides ?? 6} onChange={(e) => onChange({ polygonSides: Math.max(3, Math.min(12, Number(e.target.value) || 6)) })} style={{ ...inputStyle, width: 50 }} />
+        </label>
+      )}
+      {block.frameShape === "path" && (
+        <label style={labelStyle}>
+          Path (0..100)
+          <input
+            type="text"
+            value={block.clipPath ?? ""}
+            placeholder="M 50 0 L 100 100 L 0 100 Z"
+            onChange={(e) => onChange({ clipPath: e.target.value })}
+            style={{ ...inputStyle, width: 200 }}
+          />
+        </label>
+      )}
       {block.imageUrl && (
         <button type="button" onClick={() => onChange({ imageUrl: "" })} style={btnStyle("normal")}>
           Clear
@@ -2020,4 +2120,54 @@ function btnStyle(variant: "normal" | "active" | "danger"): CSSProperties {
     fontSize: 12,
     cursor: "pointer",
   };
+}
+
+/* — Slot binding picker — shown on text / image blocks when the parent page
+   is a custom-contents page. Bound blocks render the slot's resolved value
+   (overrides > linked article). */
+function SlotBindingControl({
+  block,
+  onChange,
+  slots,
+}: {
+  block: Extract<CustomBlock, { kind: "text" | "image" }>;
+  onChange: (p: Partial<CustomBlock>) => void;
+  slots: ContentsSlot[];
+}) {
+  const binding = block.slotBinding;
+  const fields: { value: ContentsSlotField; label: string; for: "text" | "image" }[] = [
+    { value: "headline", label: "Headline", for: "text" },
+    { value: "byline", label: "Byline", for: "text" },
+    { value: "pageNumber", label: "Page #", for: "text" },
+    { value: "image", label: "Image", for: "image" },
+  ];
+  const allowed = fields.filter((f) => f.for === block.kind);
+  const value = binding ? `${binding.slotId}::${binding.field}` : "";
+  return (
+    <label style={labelStyle}>
+      Slot
+      <select
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (!v) {
+            onChange({ slotBinding: undefined } as Partial<CustomBlock>);
+            return;
+          }
+          const [slotId, field] = v.split("::") as [string, ContentsSlotField];
+          onChange({ slotBinding: { slotId, field } } as Partial<CustomBlock>);
+        }}
+        style={inputStyle}
+      >
+        <option value="">— none —</option>
+        {slots.map((s) =>
+          allowed.map((f) => (
+            <option key={`${s.id}::${f.value}`} value={`${s.id}::${f.value}`}>
+              {s.label} · {f.label}
+            </option>
+          )),
+        )}
+      </select>
+    </label>
+  );
 }

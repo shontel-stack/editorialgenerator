@@ -123,7 +123,7 @@ export const setFontsSchema = z.object({
 });
 
 export const addPageSchema = z.object({
-  pageType: z.enum(["article", "photo", "ad", "contents", "blank"]),
+  pageType: z.enum(["article", "photo", "ad", "contents", "blank", "custom-contents"]),
 });
 
 export const addSpreadSchema = z.object({

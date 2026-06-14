@@ -102,7 +102,7 @@ export function matchPresetKey(w: number, h: number): string {
   return hit?.key ?? "custom";
 }
 
-export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back" | "blank";
+export type PageType = "cover" | "contents" | "article" | "photo" | "ad" | "back" | "blank" | "custom-contents";
 
 export type Palette = "paper" | "ink" | "burgundy";
 
@@ -173,6 +173,8 @@ export type ArticleData = {
   imageY: number;
   palette: Palette;
   layout: ArticleLayout;
+  /** When true, this article shows up in custom-contents slot pickers. */
+  featuredInContents?: boolean;
 };
 
 // Backwards-compatible alias — earlier code referenced FeatureData.
@@ -244,6 +246,35 @@ export type BlankData = {
   palette: Palette;
 };
 
+/**
+ * Featured-article slot on a custom-contents page. Authors can either link a
+ * slot to a real article page (the slot then auto-fills with that article's
+ * headline / byline / page number / lead image) or fill the override fields
+ * manually. Overrides always win when present.
+ *
+ * Blocks on the page reference slots via `slotBinding` (see CustomBlock).
+ */
+export type ContentsSlotField = "headline" | "byline" | "pageNumber" | "image";
+
+export type ContentsSlot = {
+  id: string;
+  label: string;
+  articlePageId?: string;
+  overrides?: {
+    headline?: string;
+    byline?: string;
+    pageNumber?: string;
+    imageUrl?: string;
+  };
+};
+
+export type CustomContentsData = {
+  folio: string;
+  pageNumber: string;
+  palette: Palette;
+  slots: ContentsSlot[];
+};
+
 export type AnyPageData =
   | { pageType: "cover"; data: CoverData }
   | { pageType: "contents"; data: ContentsData }
@@ -251,7 +282,19 @@ export type AnyPageData =
   | { pageType: "photo"; data: PhotoData }
   | { pageType: "ad"; data: AdData }
   | { pageType: "back"; data: BackCoverData }
-  | { pageType: "blank"; data: BlankData };
+  | { pageType: "blank"; data: BlankData }
+  | { pageType: "custom-contents"; data: CustomContentsData };
+
+/** Binds a text or image block to one field of a custom-contents slot.
+ *  When set, the block renders the resolved slot value (or stays as a
+ *  placeholder when the slot is empty). */
+export type SlotBinding = {
+  slotId: string;
+  field: ContentsSlotField;
+};
+
+/** Frame shape applied to image blocks via CSS clip-path. */
+export type ImageFrameShape = "rect" | "ellipse" | "polygon" | "path";
 
 export type CustomBlock =
   | {
@@ -274,6 +317,8 @@ export type CustomBlock =
       link?: string;
       columns?: number;
       columnGap?: number;
+      /** Custom-contents page only — pull text from a slot field. */
+      slotBinding?: SlotBinding;
     }
   | {
       id: string;
@@ -286,6 +331,19 @@ export type CustomBlock =
       borderColor?: string;
       bg?: string;
       link?: string;
+      /** Custom-contents page only — pull the image from a slot. */
+      slotBinding?: SlotBinding;
+      /** Skew in degrees, applied as CSS skew transform. */
+      skewX?: number;
+      skewY?: number;
+      /** Frame shape applied as CSS clip-path. */
+      frameShape?: ImageFrameShape;
+      /** Corner radius when frameShape === "rect" (page-px). */
+      cornerRadius?: number;
+      /** Sides for frameShape === "polygon" (3–12). */
+      polygonSides?: number;
+      /** SVG path-data string for frameShape === "path" (in a 0..100 viewBox). */
+      clipPath?: string;
     }
   | {
       id: string;
@@ -610,6 +668,7 @@ export const PAGE_LABELS: Record<PageType, string> = {
   ad: "Advertisement",
   back: "Back Cover",
   blank: "Blank (footer only)",
+  "custom-contents": "Custom contents",
 };
 
 export const PALETTES: Record<
@@ -725,6 +784,17 @@ export const DEFAULT_BLANK: BlankData = {
   palette: "paper",
 };
 
+export const DEFAULT_CUSTOM_CONTENTS: CustomContentsData = {
+  folio: "THE ARTS TODAY",
+  pageNumber: "005",
+  palette: "paper",
+  slots: [
+    { id: "s1", label: "Feature 1" },
+    { id: "s2", label: "Feature 2" },
+    { id: "s3", label: "Feature 3" },
+  ],
+};
+
 /* --- Helpers --- */
 
 let _seq = 0;
@@ -811,8 +881,30 @@ export function deriveContentsEntries(issue: IssueDoc): ContentsEntry[] {
           return { section: "CONTENTS", title: "Inside this issue", byline: "—", page: pageNum, link: p.id };
         case "blank":
           return { section: "", title: "", byline: "", page: pageNum, link: p.id };
+        case "custom-contents":
+          return { section: "", title: "", byline: "", page: pageNum, link: p.id };
       }
     });
+}
+
+/** Resolve a slot's effective values for rendering. Overrides win over the
+ *  linked article's fields. Returns empty strings when nothing is set. */
+export function resolveContentsSlot(
+  issue: IssueDoc,
+  slot: ContentsSlot,
+): { headline: string; byline: string; pageNumber: string; imageUrl: string } {
+  const linked = slot.articlePageId
+    ? issue.pages.find((p) => p.id === slot.articlePageId)
+    : undefined;
+  const art =
+    linked && linked.pageType === "article" ? (linked.data as ArticleData) : null;
+  const o = slot.overrides ?? {};
+  return {
+    headline: o.headline ?? art?.headline ?? "",
+    byline: o.byline ?? art?.byline ?? "",
+    pageNumber: o.pageNumber ?? (linked ? pageNumberFor(issue, linked.id) : ""),
+    imageUrl: o.imageUrl ?? art?.imageUrl ?? "",
+  };
 }
 
 /** 1-indexed printable page number for a node, padded to 3 digits. */

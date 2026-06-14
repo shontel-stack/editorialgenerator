@@ -6,6 +6,7 @@ import {
   DEFAULT_AD,
   DEFAULT_ARTICLE,
   DEFAULT_CONTENTS,
+  DEFAULT_CUSTOM_CONTENTS,
   DEFAULT_PHOTO,
   makeNode,
   type ArticleData,
@@ -29,7 +30,7 @@ export type IssuePatch =
   | { kind: "set_article_layout"; pageId: string; layout: ArticleLayout }
   | { kind: "update_master"; patch: MasterPatch }
   | { kind: "set_fonts"; display?: string; serif?: string; sans?: string }
-  | { kind: "add_page"; pageType: "article" | "photo" | "ad" | "contents" }
+  | { kind: "add_page"; pageType: "article" | "photo" | "ad" | "contents" | "custom-contents" }
   | { kind: "add_spread"; left: "article" | "photo" | "ad"; right: "article" | "photo" | "ad" }
   | { kind: "remove_page"; pageId: string; removeSpread?: boolean }
   | { kind: "reorder_pages"; orderedPageIds: string[] }
@@ -93,6 +94,7 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
           case "photo":   return makeNode("photo",   { ...DEFAULT_PHOTO },   true);
           case "ad":      return makeNode("ad",      { ...DEFAULT_AD },      false);
           case "contents":return makeNode("contents",{ ...DEFAULT_CONTENTS, entries: [] }, false);
+          case "custom-contents": return makeNode("custom-contents", { ...DEFAULT_CUSTOM_CONTENTS, slots: DEFAULT_CUSTOM_CONTENTS.slots.map((s) => ({ ...s })) }, false);
         }
       })();
       const backIdx = issue.pages.findIndex((p) => p.pageType === "back");

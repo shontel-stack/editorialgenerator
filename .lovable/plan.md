@@ -1,53 +1,40 @@
-# Free-form header & footer editing
+## Goal
+A new page type **Custom contents** that you can lay out freely on page 5 (or anywhere). Each featured article gets a labeled "slot" — its headline, byline, and page number flow into your text boxes, and its lead image flows into a shape frame you can skew or carve into a custom path.
 
-Today each page/cover template hard-codes the running header (folio + rule) and footer (page number, section, ad slug, etc.) into `PagePreview`. Users can hide a page's header but cannot move, restyle, or add multiple header/footer elements. We'll lift headers and footers into the existing custom-blocks system so they get drag, resize, rich text styling, and per-page overrides — for both internal pages and covers.
+## What you'll get
 
-## What the user gets
+**Add Page → Custom contents** creates a blank canvas (footer only, like the recent Blank page) plus a *Featured slots* panel in the right sidebar.
 
-- **Drag & resize** any header/footer element anywhere on the page (with the same snap guides as other blocks).
-- **Rich text styling** — font family, size, weight, italic, alignment, color, letter-spacing.
-- **Multiple elements** per zone: e.g. page number + section title + date in the footer, masthead + issue number + tagline in the header.
-- **Per-page overrides** with an "Apply to all pages" action so a tweak can stay local or be promoted to the master.
-- Works on covers (front, back, inside-front, inside-back) and every internal template.
+For each slot (Feature 1, Feature 2, …) you can:
+- **Auto-link** it to an article page from a dropdown → its headline, byline, and live page number auto-fill any text box / image frame tagged with that slot.
+- **Override manually** — type a custom headline/byline, or pin a specific page number / image, even when linked.
 
-## How it works
+**Slot tagging on blocks** — every text box and image frame on a custom-contents page gets a new "Slot" dropdown in its block toolbar:
+- `Unassigned` (free text/image)
+- `Feature 1 · headline` / `Feature 1 · byline` / `Feature 1 · page #` / `Feature 1 · image`
+- …same for Feature 2, 3, etc.
 
-### Data model (`coverDefaults.ts`)
-- Add `headerElements: HFElement[]` and `footerElements: HFElement[]` to `MasterPages` (issue-wide default) and to `IssuePageNode` (per-page override).
-- `HFElement` = `{ id, kind: "folio"|"page-number"|"section"|"date"|"masthead"|"text"|"divider", text?, token?, x, y, w, h, style: TextStyle, align, zone: "header"|"footer" }` where `token` is a placeholder resolved at render time (`{page}`, `{section}`, `{issue}`, `{date}`, etc.).
-- Migration helper converts the legacy single-`folio` string into a default `HFElement` array so existing issues render identically.
-- `hideHeader` stays; add matching `hideFooter`. `headerElements`/`footerElements: null` means "inherit from master".
+A block tagged to a slot field renders the slot's value automatically (with manual overrides winning over auto-pulled values). Untagged blocks stay free-form.
 
-### Rendering (`PagePreview.tsx`, `CoverPreview.tsx`)
-- Replace inline header/footer JSX in every template with a new `<HeaderFooterLayer page={...} master={...} side={...} />`.
-- The layer resolves effective elements (page override ?? master), expands tokens, and renders each element as an absolutely-positioned block using the existing intrinsic page coordinate space so export PDFs stay pixel-identical.
-- `replace`-mode background artwork already skips templates; we keep header/footer hidden in that mode unless explicitly toggled.
+**Image frames** gain shape controls on this page type (and reused elsewhere for image blocks):
+- Skew X / Skew Y sliders + rotation (already exists)
+- Frame shape: Rectangle (with corner radius), Ellipse, Polygon (3–12 sides), or Custom path
+- Custom path: drag points on a small editor to draw a clip mask — stored as SVG path, rendered as `clip-path`
 
-### Editing UI
-- Extend `CustomBlocksLayer` so header/footer elements participate in the same selection / drag / resize / snap pipeline as user blocks. They carry a `system: true` flag so deleting reverts to master instead of removing.
-- New **Header & Footer** section in the right-hand Edit-page flyout:
-  - List of elements per zone with reorder, add (`+ Text`, `+ Page #`, `+ Section`, `+ Date`, `+ Divider`), and remove.
-  - Selected element shows the existing text-style controls (font, size, weight, italic, align, color) plus position/size inputs.
-  - Buttons: **Reset to master**, **Apply to all pages** (writes current zone back to `MasterPages`).
-- A small **Header / Footer** tab in the Cover editor (front/back/inside) reuses the same component.
+## Article side
+Each article page gets a "Featured on contents" toggle in its editor. When on, the article appears in the slot dropdown on every custom-contents page. (Hybrid mode: you can also leave it off and still link manually.)
 
-### Persistence
-- Header/footer overrides live inside the existing `issue.pages[*]` JSON blob, so no schema migration is required.
-- Master changes write through the existing `MasterPages` persistence path.
-- Autosave + draft-conflict flow already covers these fields once they're part of the issue JSON.
+## Technical sketch
+- `src/lib/coverDefaults.ts` — add `"custom-contents"` to `PageType`, `CustomContentsData` (slots: `{ id, label, articlePageId?, overrides: { headline?, byline?, pageNumber?, imageUrl? } }[]`, palette, folio), `DEFAULT_CUSTOM_CONTENTS`. Add optional `featuredInContents?: boolean` to `ArticleData`.
+- `src/lib/coverDefaults.ts` — extend block types in `CustomBlock` (already used by CustomBlocksLayer) with `slotBinding?: { slotId: string; field: "headline" | "byline" | "pageNumber" | "image" }`, and add `skewX`, `skewY`, `frameShape: "rect" | "ellipse" | "polygon" | "path"`, `polygonSides`, `clipPath` to image blocks.
+- `src/components/CustomBlocksLayer.tsx` — when rendering on a `custom-contents` page, resolve `slotBinding` against the page's slots + linked article (overrides > article data). Add skew via CSS transform; apply `clip-path` to image blocks based on `frameShape`. Add Slot dropdown + Shape controls to the block toolbar.
+- `src/components/PagePreview.tsx` — new `CustomContentsPreview` (footer-only base, like `BlankPreview`); CustomBlocksLayer does the rest.
+- `src/routes/_authenticated/index.lazy.tsx` — add to Add Page menu; new `CustomContentsEditor` sidebar (slots CRUD, article picker dropdown, per-slot manual override fields); add "Featured on contents" toggle in `ArticleEditor`.
+- `src/lib/issue-snapshot.ts` + `src/lib/chat-tools.ts` — register `"custom-contents"` in `addPageSchema` and snapshot title.
+- `src/lib/idmlExport.ts` — handle `custom-contents` (same path as blank + custom blocks; resolve slot bindings to literal strings during export).
+- `src/lib/issue-patch.ts` — add `"custom-contents"` to `add_page` union.
 
-## Files touched
-
-- `src/lib/coverDefaults.ts` — types, defaults, legacy-folio migration, token resolver.
-- `src/components/HeaderFooterLayer.tsx` *(new)* — render + edit-mode interactions.
-- `src/components/PagePreview.tsx` — swap inline header/footer JSX in every template for `HeaderFooterLayer`.
-- `src/components/CoverPreview.tsx` — same swap for cover templates.
-- `src/components/CustomBlocksLayer.tsx` — allow system blocks (header/footer) to share the drag/resize/snap pipeline.
-- `src/routes/_authenticated/index.lazy.tsx` — new Header & Footer section in the Edit flyout, plus cover tab.
-- Minor: `src/lib/idmlExport.ts` / `exportCover.ts` to emit the new elements at export time.
-
-## Out of scope
-- Page-by-page header/footer image uploads (covered already by Background artwork).
-- Sectional master pages (different masters for different chapters). Can be added later by extending `MasterPages` to a map keyed by section.
-
-Confirm and I'll build it.
+## Out of scope (ask if you want them)
+- Pulling lead image automatically from article hero image (vs. you placing it). Default plan: image auto-pulls if the article has a hero, else slot stays empty until you drop one in.
+- A custom-path drawing tool more elaborate than draggable points (e.g. bezier curves).
+- Reordering slots by drag (will use up/down buttons first).

@@ -9,6 +9,7 @@ import {
   type BlankData,
   type ContentsData,
   type CoverData,
+  type CustomContentsData,
   type PageType,
   type PhotoData,
 } from "@/lib/coverDefaults";
@@ -16,7 +17,7 @@ import { CoverPreview } from "./CoverPreview";
 import { Draggable } from "./LayoutEdit";
 import { CustomBlocksLayer } from "./CustomBlocksLayer";
 
-type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData | BlankData;
+type AnyData = CoverData | ArticleData | PhotoData | ContentsData | AdData | BackCoverData | BlankData | CustomContentsData;
 
 export type PageBackgroundProp = {
   url: string;
@@ -104,6 +105,8 @@ export const PagePreview = forwardRef<HTMLDivElement, Props>(function PagePrevie
         return <BackCoverPreview ref={background ? undefined : ref} data={data as BackCoverData} dim={dim} />;
       case "blank":
         return <BlankPreview ref={background ? undefined : ref} data={data as BlankData} dim={dim} />;
+      case "custom-contents":
+        return <CustomContentsPreview ref={background ? undefined : ref} data={data as CustomContentsData} dim={dim} />;
     }
   })();
 
@@ -1452,6 +1455,41 @@ const BlankPreview = forwardRef<HTMLDivElement, { data: BlankData; dim?: { w: nu
     <Page innerRef={ref} pal={pal} dim={dim}>
       <Draggable
         blockKey="blank-footer"
+        style={{
+          position: "absolute",
+          bottom: 100,
+          left: 160,
+          right: 160,
+          borderTop: `1px solid ${pal.rule}`,
+          paddingTop: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          fontFamily: "var(--font-sans)",
+          fontSize: 20,
+          letterSpacing: 4,
+          textTransform: "uppercase",
+          color: pal.muted,
+        }}
+      >
+        <span>{data.folio}</span>
+        <span>{data.pageNumber}</span>
+      </Draggable>
+    </Page>
+  );
+});
+
+/* — CUSTOM CONTENTS — minimal footer-only page; the whole layout is built
+   with free-form text/image blocks via the CustomBlocksLayer. */
+
+const CustomContentsPreview = forwardRef<HTMLDivElement, { data: CustomContentsData; dim?: { w: number; h: number } }>(function CustomContentsPreview(
+  { data, dim },
+  ref,
+) {
+  const pal = PALETTES[data.palette];
+  return (
+    <Page innerRef={ref} pal={pal} dim={dim}>
+      <Draggable
+        blockKey="custom-contents-footer"
         style={{
           position: "absolute",
           bottom: 100,

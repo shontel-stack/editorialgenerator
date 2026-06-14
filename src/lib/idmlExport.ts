@@ -195,6 +195,14 @@ const collectPageText = (
         pageNumber: pn,
       };
     }
+    case "custom-contents": {
+      return {
+        heading: "Contents",
+        body: "",
+        folio,
+        pageNumber: pn,
+      };
+    }
     default:
       return {
         heading: "",

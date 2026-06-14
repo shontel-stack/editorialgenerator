@@ -67,6 +67,8 @@ export function snapshotIssue(issue: IssueDoc): IssueSnapshot {
           return { ...base, title: "Back cover", palette: p.data.palette };
         case "blank":
           return { ...base, title: "Blank (footer only)", palette: p.data.palette };
+        case "custom-contents":
+          return { ...base, title: "Custom contents", palette: p.data.palette };
       }
     }),
   };
