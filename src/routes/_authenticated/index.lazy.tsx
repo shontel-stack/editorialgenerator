@@ -3075,6 +3075,15 @@ function ArticleEditor({
         <Field label="Headline"><Textarea value={data.headline} onChange={(v) => set({ headline: v })} rows={2} /></Field>
         <Field label="Dek"><Textarea value={data.dek} onChange={(v) => set({ dek: v })} rows={3} /></Field>
         <Field label="Byline"><Input value={data.byline} onChange={(v) => set({ byline: v })} /></Field>
+        <label className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-muted-foreground pt-1">
+          <input
+            type="checkbox"
+            checked={!!data.featuredInContents}
+            onChange={(e) => set({ featuredInContents: e.target.checked })}
+            className="accent-[color:var(--ruby)]"
+          />
+          Featured on contents
+        </label>
       </Section>
       <Section title="Body">
         <Field label="Body copy (blank line = new paragraph)">
