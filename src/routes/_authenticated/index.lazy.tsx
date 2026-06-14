@@ -135,6 +135,8 @@ import {
   type ArticleLayout,
   type BackCoverData,
   type BlankData,
+  type ContentsSlot,
+  type CustomContentsData,
   type ContentsData,
   type CoverData,
   type FontOption,
