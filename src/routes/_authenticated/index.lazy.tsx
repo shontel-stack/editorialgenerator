@@ -2697,6 +2697,8 @@ function Index() {
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
             tokenContext={buildTokenContext(issue, p.id)}
+            contentsSlots={slotsForPage(p).slots}
+            contentsSlotResolved={slotsForPage(p).resolved}
           >
             <PagePreview ref={setRef(p.id)} pageType={p.pageType} data={p.data} dim={dimPx} hideFolio={p.hideFolio} background={p.backgroundArtwork ? { url: p.backgroundArtwork.url, mode: p.backgroundArtwork.mode, crop: p.backgroundArtwork.crop } : undefined} />
           </LayoutEditProvider>
