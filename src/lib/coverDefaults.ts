@@ -881,8 +881,30 @@ export function deriveContentsEntries(issue: IssueDoc): ContentsEntry[] {
           return { section: "CONTENTS", title: "Inside this issue", byline: "—", page: pageNum, link: p.id };
         case "blank":
           return { section: "", title: "", byline: "", page: pageNum, link: p.id };
+        case "custom-contents":
+          return { section: "", title: "", byline: "", page: pageNum, link: p.id };
       }
     });
+}
+
+/** Resolve a slot's effective values for rendering. Overrides win over the
+ *  linked article's fields. Returns empty strings when nothing is set. */
+export function resolveContentsSlot(
+  issue: IssueDoc,
+  slot: ContentsSlot,
+): { headline: string; byline: string; pageNumber: string; imageUrl: string } {
+  const linked = slot.articlePageId
+    ? issue.pages.find((p) => p.id === slot.articlePageId)
+    : undefined;
+  const art =
+    linked && linked.pageType === "article" ? (linked.data as ArticleData) : null;
+  const o = slot.overrides ?? {};
+  return {
+    headline: o.headline ?? art?.headline ?? "",
+    byline: o.byline ?? art?.byline ?? "",
+    pageNumber: o.pageNumber ?? (linked ? pageNumberFor(issue, linked.id) : ""),
+    imageUrl: o.imageUrl ?? art?.imageUrl ?? "",
+  };
 }
 
 /** 1-indexed printable page number for a node, padded to 3 digits. */
