@@ -9,7 +9,7 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import { Link2, Move, Type } from "lucide-react";
-import type { CustomBlock, TokenContext } from "@/lib/coverDefaults";
+import type { CustomBlock, TokenContext, ContentsSlot } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
 
 export type Overrides = Record<string, { dx: number; dy: number }>;
