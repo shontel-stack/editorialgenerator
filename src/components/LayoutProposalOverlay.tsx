@@ -163,6 +163,112 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
     dragRef.current = null;
   };
 
+  // Selected entries restricted to ones currently visible on this page.
+  const selectedEntries = entries.filter((e) => selected.includes(e.idx));
+  const canAlign = interactive && selectedEntries.length >= 2;
+  const canDistribute = interactive && selectedEntries.length >= 3;
+
+  const snapsFromSelection = () =>
+    selectedEntries.map(({ op, idx }) => {
+      const d = defaultsFor(op);
+      return {
+        idx,
+        x: op.x ?? d.x,
+        y: op.y ?? d.y,
+        w: op.w ?? d.w,
+        h: op.h ?? d.h,
+      };
+    });
+
+  const applyAlign = (mode: "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom") => {
+    if (!onOpsChange || selectedEntries.length < 2) return;
+    const snaps = snapsFromSelection();
+    const minX = Math.min(...snaps.map((s) => s.x));
+    const maxR = Math.max(...snaps.map((s) => s.x + s.w));
+    const minY = Math.min(...snaps.map((s) => s.y));
+    const maxB = Math.max(...snaps.map((s) => s.y + s.h));
+    const cx = (minX + maxR) / 2;
+    const cy = (minY + maxB) / 2;
+    const next = ops.slice();
+    for (const s of snaps) {
+      let nx = s.x;
+      let ny = s.y;
+      if (mode === "left") nx = minX;
+      else if (mode === "right") nx = maxR - s.w;
+      else if (mode === "hcenter") nx = Math.round(cx - s.w / 2);
+      else if (mode === "top") ny = minY;
+      else if (mode === "bottom") ny = maxB - s.h;
+      else if (mode === "vcenter") ny = Math.round(cy - s.h / 2);
+      next[s.idx] = { ...next[s.idx], x: Math.round(nx), y: Math.round(ny), w: s.w, h: s.h };
+    }
+    onOpsChange(next);
+  };
+
+  const applyDistribute = (axis: "h" | "v") => {
+    if (!onOpsChange || selectedEntries.length < 3) return;
+    const snaps = snapsFromSelection();
+    const sorted = snaps.slice().sort((a, b) => (axis === "h" ? a.x - b.x : a.y - b.y));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const totalSize = sorted.reduce((acc, s) => acc + (axis === "h" ? s.w : s.h), 0);
+    const span =
+      axis === "h" ? last.x + last.w - first.x : last.y + last.h - first.y;
+    const gap = (span - totalSize) / (sorted.length - 1);
+    const next = ops.slice();
+    let cursor = axis === "h" ? first.x : first.y;
+    for (const s of sorted) {
+      if (axis === "h") {
+        next[s.idx] = { ...next[s.idx], x: Math.round(cursor), y: s.y, w: s.w, h: s.h };
+        cursor += s.w + gap;
+      } else {
+        next[s.idx] = { ...next[s.idx], x: s.x, y: Math.round(cursor), w: s.w, h: s.h };
+        cursor += s.h + gap;
+      }
+    }
+    onOpsChange(next);
+  };
+
+  const ToolbarBtn = ({
+    title,
+    onClick,
+    disabled,
+    children,
+  }: {
+    title: string;
+    onClick: () => void;
+    disabled?: boolean;
+    children: React.ReactNode;
+  }) => (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      disabled={disabled}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      style={{
+        width: 26,
+        height: 24,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: disabled ? "rgba(255,255,255,0.5)" : "white",
+        border: "1px solid rgba(15,23,42,0.15)",
+        borderRadius: 4,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.45 : 1,
+        fontSize: 12,
+        lineHeight: 1,
+        color: "rgb(15,23,42)",
+      }}
+    >
+      {children}
+    </button>
+  );
+
   return (
     <div
       aria-hidden
@@ -170,6 +276,52 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
       className="absolute inset-0 z-30"
       style={{ pointerEvents: "none" }}
     >
+      {canAlign && (
+        <div
+          style={{
+            position: "absolute",
+            top: 6,
+            left: 6,
+            display: "flex",
+            gap: 4,
+            padding: 6,
+            background: "rgba(255,255,255,0.96)",
+            border: "1px solid rgba(15,23,42,0.15)",
+            borderRadius: 6,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            pointerEvents: "auto",
+            alignItems: "center",
+            zIndex: 2,
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <span style={{ fontSize: 10, color: "rgb(71,85,105)", marginRight: 4 }}>
+            {selectedEntries.length} selected
+          </span>
+          <ToolbarBtn title="Align left" onClick={() => applyAlign("left")}>⇤</ToolbarBtn>
+          <ToolbarBtn title="Align horizontal center" onClick={() => applyAlign("hcenter")}>↔</ToolbarBtn>
+          <ToolbarBtn title="Align right" onClick={() => applyAlign("right")}>⇥</ToolbarBtn>
+          <span style={{ width: 1, height: 16, background: "rgba(15,23,42,0.15)" }} />
+          <ToolbarBtn title="Align top" onClick={() => applyAlign("top")}>⤒</ToolbarBtn>
+          <ToolbarBtn title="Align vertical middle" onClick={() => applyAlign("vcenter")}>↕</ToolbarBtn>
+          <ToolbarBtn title="Align bottom" onClick={() => applyAlign("bottom")}>⤓</ToolbarBtn>
+          <span style={{ width: 1, height: 16, background: "rgba(15,23,42,0.15)" }} />
+          <ToolbarBtn
+            title="Distribute horizontally (3+)"
+            onClick={() => applyDistribute("h")}
+            disabled={!canDistribute}
+          >
+            ⇿
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Distribute vertically (3+)"
+            onClick={() => applyDistribute("v")}
+            disabled={!canDistribute}
+          >
+            ⇳
+          </ToolbarBtn>
+        </div>
+      )}
       {entries.map(({ op, idx }) => {
         const d = defaultsFor(op);
         const px = (op.x ?? d.x) * sx;
