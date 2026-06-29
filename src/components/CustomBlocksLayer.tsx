@@ -706,27 +706,43 @@ function CustomBlockView({
       {wrapped}
       {editing && selected && (
         <>
-          {/* Resize handle (bottom-right) */}
-          <div
-            onPointerDown={(e) => startDrag("resize", e)}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            onPointerCancel={onUp}
-            style={{
-              position: "absolute",
-              right: -10,
-              bottom: -10,
-              width: 28,
-              height: 28,
-              transform: `scale(${inv})`,
-              transformOrigin: "bottom right",
-              background: "#2563eb",
-              border: "2px solid white",
-              borderRadius: 4,
-              cursor: "nwse-resize",
-              zIndex: 200,
-            }}
-          />
+          {/* 8 resize handles (corners + edge midpoints). Hold Shift to keep aspect ratio. */}
+          {([
+            { h: "nw", top: -6, left: -6, cursor: "nwse-resize", origin: "top left" },
+            { h: "ne", top: -6, right: -6, cursor: "nesw-resize", origin: "top right" },
+            { h: "sw", bottom: -6, left: -6, cursor: "nesw-resize", origin: "bottom left" },
+            { h: "se", bottom: -6, right: -6, cursor: "nwse-resize", origin: "bottom right" },
+            { h: "n", top: -6, left: "50%", cursor: "ns-resize", origin: "top center", center: "x" },
+            { h: "s", bottom: -6, left: "50%", cursor: "ns-resize", origin: "bottom center", center: "x" },
+            { h: "w", left: -6, top: "50%", cursor: "ew-resize", origin: "center left", center: "y" },
+            { h: "e", right: -6, top: "50%", cursor: "ew-resize", origin: "center right", center: "y" },
+          ] as const).map((hd) => (
+            <div
+              key={hd.h}
+              title={`Resize (Shift = keep aspect ratio)`}
+              onPointerDown={(e) => startDrag("resize", e, hd.h as ResizeHandle)}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              onPointerCancel={onUp}
+              style={{
+                position: "absolute",
+                top: hd.top as number | string | undefined,
+                bottom: (hd as { bottom?: number }).bottom,
+                left: hd.left as number | string | undefined,
+                right: (hd as { right?: number }).right,
+                width: 12,
+                height: 12,
+                background: "white",
+                border: "2px solid #2563eb",
+                borderRadius: 3,
+                cursor: hd.cursor,
+                zIndex: 200,
+                transform: `${("center" in hd && hd.center === "x") ? "translateX(-50%) " : ("center" in hd && hd.center === "y") ? "translateY(-50%) " : ""}scale(${inv})`,
+                transformOrigin: hd.origin,
+                touchAction: "none",
+              }}
+            />
+          ))}
           {/* Rotate handle (top-center, above the block) */}
           <div
             title="Drag to rotate"
