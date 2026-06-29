@@ -2878,6 +2878,7 @@ function Index() {
         issue={issue}
         publicationName={activePublication?.name ?? null}
         library={libraryAttachments.rows}
+        onPlanChange={setProposalOps}
         onApply={(ops: LayoutPlanOp[]) => {
           const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
           let applied = 0;
