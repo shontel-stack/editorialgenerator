@@ -138,6 +138,16 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
     }
   };
 
+  const onDuplicate = async (row: IssueTemplateRow) => {
+    try {
+      await duplicateIssueTemplate(row);
+      toast.success(`Duplicated "${row.name}"`);
+      await reload();
+    } catch (e) {
+      toast.error(`Could not duplicate: ${(e as Error).message}`);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="rounded-sm border border-border bg-secondary/40 p-3 space-y-2">
