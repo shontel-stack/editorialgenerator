@@ -363,28 +363,120 @@ export function CustomBlocksLayer() {
     setHistoryTick((t) => t + 1);
   }, [blocks, setBlocks]);
 
-  // Keyboard shortcuts: Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z (or Ctrl+Y) while editing.
+  // Keyboard shortcuts: undo/redo, duplicate, copy/paste, nudge, delete, z-order.
   useEffect(() => {
     if (!editing) return;
+    const CLIPBOARD_KEY = "pageluxe.blockClipboard.v1";
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const tag = (target?.tagName ?? "").toUpperCase();
       const editable = target?.isContentEditable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
       if (editable) return;
       const meta = e.metaKey || e.ctrlKey;
-      if (!meta) return;
-      if (e.key === "z" || e.key === "Z") {
+      const sel = selectedId ? blocks.find((b) => b.id === selectedId) ?? null : null;
+
+      // Undo / redo
+      if (meta && (e.key === "z" || e.key === "Z")) {
         e.preventDefault();
         if (e.shiftKey) redo();
         else undo();
-      } else if (e.key === "y" || e.key === "Y") {
+        return;
+      }
+      if (meta && (e.key === "y" || e.key === "Y")) {
         e.preventDefault();
         redo();
+        return;
+      }
+
+      // Duplicate
+      if (meta && (e.key === "d" || e.key === "D")) {
+        if (!sel || !setBlocks) return;
+        e.preventDefault();
+        const clone = { ...sel, id: newId(), x: sel.x + 20, y: sel.y + 20 } as CustomBlock;
+        setBlocks([...blocks, clone]);
+        setSelectedId(clone.id);
+        return;
+      }
+
+      // Copy
+      if (meta && (e.key === "c" || e.key === "C")) {
+        if (!sel) return;
+        e.preventDefault();
+        try {
+          localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(sel));
+        } catch {/* ignore */}
+        return;
+      }
+
+      // Paste
+      if (meta && (e.key === "v" || e.key === "V")) {
+        if (!setBlocks) return;
+        try {
+          const raw = localStorage.getItem(CLIPBOARD_KEY);
+          if (!raw) return;
+          const data = JSON.parse(raw) as CustomBlock;
+          e.preventDefault();
+          const clone = { ...data, id: newId(), x: (data.x ?? 0) + 20, y: (data.y ?? 0) + 20 } as CustomBlock;
+          setBlocks([...blocks, clone]);
+          setSelectedId(clone.id);
+        } catch {/* ignore */}
+        return;
+      }
+
+      // Z-order: Cmd+] / Cmd+[ — bring forward / send backward (Shift => front/back)
+      if (meta && (e.key === "]" || e.key === "[")) {
+        if (!sel || !setBlocks) return;
+        e.preventDefault();
+        const sorted = [...blocks].sort((a, b) => (a.z ?? 50) - (b.z ?? 50));
+        const i = sorted.findIndex((b) => b.id === sel.id);
+        if (i < 0) return;
+        let zMap = new Map<string, number>();
+        if (e.shiftKey) {
+          const targetZ = e.key === "]"
+            ? (sorted[sorted.length - 1].z ?? 50) + 1
+            : (sorted[0].z ?? 50) - 1;
+          zMap.set(sel.id, targetZ);
+        } else {
+          const swapWith = e.key === "]" ? sorted[i + 1] : sorted[i - 1];
+          if (!swapWith) return;
+          zMap.set(sel.id, swapWith.z ?? 50);
+          zMap.set(swapWith.id, sel.z ?? 50);
+        }
+        setBlocks(blocks.map((b) => (zMap.has(b.id) ? ({ ...b, z: zMap.get(b.id)! } as CustomBlock) : b)));
+        return;
+      }
+
+      // Delete
+      if ((e.key === "Backspace" || e.key === "Delete") && sel && setBlocks) {
+        e.preventDefault();
+        setBlocks(blocks.filter((b) => b.id !== sel.id));
+        setSelectedId(null);
+        return;
+      }
+
+      // Escape — deselect
+      if (e.key === "Escape" && sel) {
+        e.preventDefault();
+        setSelectedId(null);
+        return;
+      }
+
+      // Arrow nudges (1px, 10px with Shift)
+      if (sel && setBlocks && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        let dx = 0, dy = 0;
+        if (e.key === "ArrowUp") dy = -step;
+        else if (e.key === "ArrowDown") dy = step;
+        else if (e.key === "ArrowLeft") dx = -step;
+        else if (e.key === "ArrowRight") dx = step;
+        setBlocks(blocks.map((b) => (b.id === sel.id ? ({ ...b, x: b.x + dx, y: b.y + dy } as CustomBlock) : b)));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [editing, undo, redo]);
+  }, [editing, undo, redo, blocks, setBlocks, selectedId]);
+
   void historyTick;
 
   // ----- Layers panel state -----
