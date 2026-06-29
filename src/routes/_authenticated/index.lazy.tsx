@@ -25,6 +25,7 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
+import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
 import { BrandKitProvider } from "@/lib/brandKitContext";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
@@ -2251,6 +2252,18 @@ function Index() {
             </button>
           </PopoverTrigger>
           <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">
+
+          <Section title="Templates · Monthly versions" defaultOpen={false}>
+            <IssueTemplatesPanel
+              userId={userId}
+              publicationId={activePublication?.id ?? null}
+              issue={issue}
+              onLoad={(next) => {
+                setIssue(next);
+                if (next.pages[0]) setSelectedId(next.pages[0].id);
+              }}
+            />
+          </Section>
 
           <Section title="Issue · Save & Export" defaultOpen>
             {(() => {
