@@ -27,6 +27,7 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
+import { LayoutProposalOverlay } from "@/components/LayoutProposalOverlay";
 import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
 import { applyPatch } from "@/lib/issue-patch";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
@@ -200,6 +201,7 @@ function Index() {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [brandKitOpen, setBrandKitOpen] = useState(false);
   const [layoutAiOpen, setLayoutAiOpen] = useState(false);
+  const [proposalOps, setProposalOps] = useState<LayoutPlanOp[]>([]);
   const [pagesQuery, setPagesQuery] = useState("");
   const { userId, active: activePublication } = useActivePublication();
 
@@ -532,6 +534,11 @@ function Index() {
   };
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
   const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
+  const libraryLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of libraryAttachments.rows) map[r.id] = r.file_name;
+    return map;
+  }, [libraryAttachments.rows]);
   const brandFonts = useBrandFonts(activePublication?.id ?? null);
   const brandSwatches = useBrandSwatches(activePublication?.id ?? null);
   const brandKitContextValue = useMemo(
@@ -2653,6 +2660,14 @@ function Index() {
                 onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
                 editing={editLayout && spread.left.id === selected.id}
               />
+              {proposalOps.length > 0 && (
+                <LayoutProposalOverlay
+                  ops={proposalOps}
+                  pageId={spread.left.id}
+                  dim={dimPx}
+                  libraryLabels={libraryLabels}
+                />
+              )}
             </div>
             {spreadView && spread.right && (
               <div
@@ -2697,6 +2712,14 @@ function Index() {
                   onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
                   editing={editLayout && spread.right.id === selected.id}
                 />
+                {proposalOps.length > 0 && (
+                  <LayoutProposalOverlay
+                    ops={proposalOps}
+                    pageId={spread.right.id}
+                    dim={dimPx}
+                    libraryLabels={libraryLabels}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -2877,6 +2900,7 @@ function Index() {
         issue={issue}
         publicationName={activePublication?.name ?? null}
         library={libraryAttachments.rows}
+        onPlanChange={setProposalOps}
         onApply={(ops: LayoutPlanOp[]) => {
           const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
           let applied = 0;

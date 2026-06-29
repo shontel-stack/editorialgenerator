@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, Loader2, X, Wand2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -21,6 +21,8 @@ export type LayoutProposalPanelProps = {
   publicationName: string | null;
   library: AttachmentWithUrl[];
   onApply: (ops: LayoutPlanOp[]) => { applied: number; skipped: number };
+  /** Called whenever the visible (kept) plan operations change, so the editor can render a ghost overlay on pages. */
+  onPlanChange?: (ops: LayoutPlanOp[]) => void;
 };
 
 const opLabel: Record<LayoutPlanOp["kind"], string> = {
@@ -36,12 +38,27 @@ export function LayoutProposalPanel({
   publicationName,
   library,
   onApply,
+  onPlanChange,
 }: LayoutProposalPanelProps) {
   const propose = useServerFn(proposeLibraryLayout);
   const [instruction, setInstruction] = useState("");
   const [busy, setBusy] = useState(false);
   const [plan, setPlan] = useState<LayoutPlan | null>(null);
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
+
+  // Publish the currently-kept ops to the editor so it can render a ghost overlay.
+  useEffect(() => {
+    if (!onPlanChange) return;
+    if (!open || !plan) {
+      onPlanChange([]);
+      return;
+    }
+    onPlanChange(plan.operations.filter((_, i) => !excluded.has(i)));
+  }, [open, plan, excluded, onPlanChange]);
+
+  useEffect(() => {
+    if (!open && onPlanChange) onPlanChange([]);
+  }, [open, onPlanChange]);
 
   if (!open) return null;
 
