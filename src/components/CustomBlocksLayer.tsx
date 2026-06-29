@@ -772,6 +772,8 @@ function CustomBlockView({
         : "3px dashed rgba(37,99,235,0.5)"
       : "none",
     outlineOffset: 2,
+    opacity: block.hidden ? 0.3 : undefined,
+  
   };
 
   const inner = (
