@@ -1448,7 +1448,7 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
           <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} compact />
           <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} compact />
           <PaletteBtn label="Rectangle" icon={<Square size={14} />} onClick={() => onAdd("shape", { shape: "rect" })} compact />
-          <PaletteBtnIconSpacer />
+          <PaletteIconSpacer />
           <PaletteBtn label="Ellipse" icon={<Circle size={14} />} onClick={() => onAdd("shape", { shape: "ellipse" })} compact />
           <PaletteBtn label="Line" icon={<Minus size={14} />} onClick={() => onAdd("shape", { shape: "line" })} compact />
           <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} compact />
