@@ -139,10 +139,37 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
         return (
           <div
             key={idx}
+            tabIndex={interactive ? 0 : -1}
             onPointerDown={(e) => onPointerDown(e, idx, "move")}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
+            onKeyDown={(e) => {
+              if (!interactive || !onOpsChange) return;
+              const step = e.shiftKey ? 40 : 8;
+              let dx = 0;
+              let dy = 0;
+              if (e.key === "ArrowLeft") dx = -step;
+              else if (e.key === "ArrowRight") dx = step;
+              else if (e.key === "ArrowUp") dy = -step;
+              else if (e.key === "ArrowDown") dy = step;
+              else return;
+              e.preventDefault();
+              e.stopPropagation();
+              const cur = ops[idx];
+              const dd = defaultsFor(cur);
+              const w = cur.w ?? dd.w;
+              const h = cur.h ?? dd.h;
+              const next = ops.slice();
+              next[idx] = {
+                ...cur,
+                x: Math.round(clamp((cur.x ?? dd.x) + dx, 0, PAGE_W - w)),
+                y: Math.round(clamp((cur.y ?? dd.y) + dy, 0, PAGE_H - h)),
+                w,
+                h,
+              };
+              onOpsChange(next);
+            }}
             style={{
               position: "absolute",
               left: px,
@@ -156,8 +183,10 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
               pointerEvents: interactive ? "auto" : "none",
               cursor: interactive ? "move" : "default",
               touchAction: "none",
+              outline: "none",
             }}
           >
+
             <div
               style={{
                 position: "absolute",
