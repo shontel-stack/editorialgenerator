@@ -52,10 +52,10 @@ export async function updateIssueTemplate(
   id: string,
   patch: { name?: string; description?: string | null; data?: IssueDoc },
 ): Promise<void> {
-  const payload: Record<string, unknown> = {};
+  const payload: { name?: string; description?: string | null; data?: never } = {};
   if (patch.name !== undefined) payload.name = patch.name;
   if (patch.description !== undefined) payload.description = patch.description;
-  if (patch.data !== undefined) payload.data = patch.data;
+  if (patch.data !== undefined) payload.data = patch.data as never;
   const { error } = await supabase.from("issue_templates").update(payload).eq("id", id);
   if (error) throw error;
 }
