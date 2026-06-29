@@ -307,6 +307,89 @@ export function CustomBlocksLayer() {
     [blocks, setBlocks],
   );
 
+  // ----- Undo / Redo: debounced snapshots of the blocks array -----
+  const undoStack = useRef<CustomBlock[][]>([]);
+  const redoStack = useRef<CustomBlock[][]>([]);
+  const lastSnapshot = useRef<CustomBlock[] | null>(null);
+  const skipHistory = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [historyTick, setHistoryTick] = useState(0);
+  useEffect(() => {
+    if (skipHistory.current) {
+      skipHistory.current = false;
+      lastSnapshot.current = blocks;
+      return;
+    }
+    if (lastSnapshot.current === null) {
+      lastSnapshot.current = blocks;
+      return;
+    }
+    if (lastSnapshot.current === blocks) return;
+    const prev = lastSnapshot.current;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      undoStack.current.push(prev);
+      if (undoStack.current.length > 100) undoStack.current.shift();
+      redoStack.current = [];
+      lastSnapshot.current = blocks;
+      setHistoryTick((t) => t + 1);
+    }, 350);
+  }, [blocks]);
+  const undo = useCallback(() => {
+    if (!setBlocks) return;
+    // Flush any pending snapshot first so the latest edit is undoable.
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+      if (lastSnapshot.current && lastSnapshot.current !== blocks) {
+        undoStack.current.push(lastSnapshot.current);
+        lastSnapshot.current = blocks;
+      }
+    }
+    const prev = undoStack.current.pop();
+    if (!prev) return;
+    redoStack.current.push(blocks);
+    skipHistory.current = true;
+    setBlocks(prev);
+    setHistoryTick((t) => t + 1);
+  }, [blocks, setBlocks]);
+  const redo = useCallback(() => {
+    if (!setBlocks) return;
+    const next = redoStack.current.pop();
+    if (!next) return;
+    undoStack.current.push(blocks);
+    skipHistory.current = true;
+    setBlocks(next);
+    setHistoryTick((t) => t + 1);
+  }, [blocks, setBlocks]);
+
+  // Keyboard shortcuts: Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z (or Ctrl+Y) while editing.
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName ?? "").toUpperCase();
+      const editable = target?.isContentEditable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      if (editable) return;
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+      if (e.key === "z" || e.key === "Z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (e.key === "y" || e.key === "Y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing, undo, redo]);
+  void historyTick;
+
+  // ----- Layers panel state -----
+  const [layersOpen, setLayersOpen] = useState(false);
+
   const grid = editing && snapCfg.gridSizePx > 0 && pageSize ? snapCfg.gridSizePx : 0;
 
   return (
