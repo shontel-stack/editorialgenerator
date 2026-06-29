@@ -1788,7 +1788,31 @@ function TemplateThumb({ tpl }: { tpl: LayoutTemplate }) {
   );
 }
 
-function PaletteBtn({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick: () => void }) {
+function PaletteBtn({ label, icon, onClick, compact }: { label: string; icon: React.ReactNode; onClick: () => void; compact?: boolean }) {
+  if (compact) {
+    return (
+      <button
+        type="button"
+        title={label}
+        onClick={onClick}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 36,
+          height: 36,
+          border: "1px solid #ddd",
+          borderRadius: 4,
+          background: "white",
+          color: "#0a0a0a",
+          fontSize: 12,
+          cursor: "pointer",
+        }}
+      >
+        {icon}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
