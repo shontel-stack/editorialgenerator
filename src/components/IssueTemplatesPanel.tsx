@@ -4,12 +4,13 @@
  * into the editor.
  */
 import { useCallback, useEffect, useState } from "react";
-import { BookOpen, Save, Trash2, Upload } from "lucide-react";
+import { BookOpen, Check, Pencil, Save, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteIssueTemplate,
   listIssueTemplates,
   saveIssueTemplate,
+  updateIssueTemplate,
   type IssueTemplateRow,
 } from "@/lib/issueTemplates";
 import type { IssueDoc } from "@/lib/coverDefaults";
