@@ -27,6 +27,7 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
+import { LayoutProposalOverlay } from "@/components/LayoutProposalOverlay";
 import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
 import { applyPatch } from "@/lib/issue-patch";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
