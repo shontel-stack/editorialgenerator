@@ -217,6 +217,39 @@ export type Database = {
         }
         Relationships: []
       }
+      issue_templates: {
+        Row: {
+          created_at: string
+          data: Json
+          description: string | null
+          id: string
+          name: string
+          publication_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          description?: string | null
+          id?: string
+          name: string
+          publication_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          description?: string | null
+          id?: string
+          name?: string
+          publication_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       layout_presets: {
         Row: {
           column_widths: Json
