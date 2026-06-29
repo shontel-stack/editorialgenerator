@@ -16,6 +16,7 @@ import { Route as ApiStaffChatRouteImport } from './routes/api/staff-chat'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/board'
+import { Route as AuthenticatedAdminSignupsRouteImport } from './routes/_authenticated/admin.signups'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -53,6 +54,12 @@ const AuthenticatedBoardRoute = AuthenticatedBoardRouteImport.update({
   path: '/board',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminSignupsRoute =
+  AuthenticatedAdminSignupsRouteImport.update({
+    id: '/admin/signups',
+    path: '/admin/signups',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -61,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof AuthenticatedCalendarRoute
   '/api/chat': typeof ApiChatRoute
   '/api/staff-chat': typeof ApiStaffChatRoute
+  '/admin/signups': typeof AuthenticatedAdminSignupsRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -69,6 +77,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/staff-chat': typeof ApiStaffChatRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/signups': typeof AuthenticatedAdminSignupsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,6 +88,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/staff-chat': typeof ApiStaffChatRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/signups': typeof AuthenticatedAdminSignupsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,8 +99,16 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/api/chat'
     | '/api/staff-chat'
+    | '/admin/signups'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/board' | '/calendar' | '/api/chat' | '/api/staff-chat' | '/'
+  to:
+    | '/auth'
+    | '/board'
+    | '/calendar'
+    | '/api/chat'
+    | '/api/staff-chat'
+    | '/'
+    | '/admin/signups'
   id:
     | '__root__'
     | '/_authenticated'
@@ -100,6 +118,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/staff-chat'
     | '/_authenticated/'
+    | '/_authenticated/admin/signups'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -160,6 +179,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBoardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/signups': {
+      id: '/_authenticated/admin/signups'
+      path: '/admin/signups'
+      fullPath: '/admin/signups'
+      preLoaderRoute: typeof AuthenticatedAdminSignupsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -167,12 +193,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBoardRoute: typeof AuthenticatedBoardRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminSignupsRoute: typeof AuthenticatedAdminSignupsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBoardRoute: AuthenticatedBoardRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminSignupsRoute: AuthenticatedAdminSignupsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
