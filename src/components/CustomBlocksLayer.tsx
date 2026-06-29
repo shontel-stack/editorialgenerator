@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Layers, Eye, EyeOff, Undo2, Redo2 } from "lucide-react";
 import type { CustomBlock, ContentsSlot, ContentsSlotField } from "@/lib/coverDefaults";
 import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
@@ -307,6 +307,89 @@ export function CustomBlocksLayer() {
     [blocks, setBlocks],
   );
 
+  // ----- Undo / Redo: debounced snapshots of the blocks array -----
+  const undoStack = useRef<CustomBlock[][]>([]);
+  const redoStack = useRef<CustomBlock[][]>([]);
+  const lastSnapshot = useRef<CustomBlock[] | null>(null);
+  const skipHistory = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [historyTick, setHistoryTick] = useState(0);
+  useEffect(() => {
+    if (skipHistory.current) {
+      skipHistory.current = false;
+      lastSnapshot.current = blocks;
+      return;
+    }
+    if (lastSnapshot.current === null) {
+      lastSnapshot.current = blocks;
+      return;
+    }
+    if (lastSnapshot.current === blocks) return;
+    const prev = lastSnapshot.current;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      undoStack.current.push(prev);
+      if (undoStack.current.length > 100) undoStack.current.shift();
+      redoStack.current = [];
+      lastSnapshot.current = blocks;
+      setHistoryTick((t) => t + 1);
+    }, 350);
+  }, [blocks]);
+  const undo = useCallback(() => {
+    if (!setBlocks) return;
+    // Flush any pending snapshot first so the latest edit is undoable.
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+      if (lastSnapshot.current && lastSnapshot.current !== blocks) {
+        undoStack.current.push(lastSnapshot.current);
+        lastSnapshot.current = blocks;
+      }
+    }
+    const prev = undoStack.current.pop();
+    if (!prev) return;
+    redoStack.current.push(blocks);
+    skipHistory.current = true;
+    setBlocks(prev);
+    setHistoryTick((t) => t + 1);
+  }, [blocks, setBlocks]);
+  const redo = useCallback(() => {
+    if (!setBlocks) return;
+    const next = redoStack.current.pop();
+    if (!next) return;
+    undoStack.current.push(blocks);
+    skipHistory.current = true;
+    setBlocks(next);
+    setHistoryTick((t) => t + 1);
+  }, [blocks, setBlocks]);
+
+  // Keyboard shortcuts: Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z (or Ctrl+Y) while editing.
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName ?? "").toUpperCase();
+      const editable = target?.isContentEditable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      if (editable) return;
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+      if (e.key === "z" || e.key === "Z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (e.key === "y" || e.key === "Y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing, undo, redo]);
+  void historyTick;
+
+  // ----- Layers panel state -----
+  const [layersOpen, setLayersOpen] = useState(false);
+
   const grid = editing && snapCfg.gridSizePx > 0 && pageSize ? snapCfg.gridSizePx : 0;
 
   return (
@@ -332,21 +415,26 @@ export function CustomBlocksLayer() {
         />
       )}
 
-      {blocks.map((b) => (
-        <CustomBlockView
-          key={b.id}
-          block={b}
-          editing={editing}
-          selected={selectedId === b.id}
-          onSelect={() => setSelectedId(b.id)}
-          onChange={(p) => update(b.id, p)}
-          onRemove={() => remove(b.id)}
-          siblingAxesFor={siblingAxesFor}
-          gridSize={snapCfg.gridSizePx}
-          onActiveLines={setActiveLines}
-          onCaretParagraphChange={selectedId === b.id ? setCaretParagraph : undefined}
-        />
-      ))}
+      {blocks.map((b) => {
+        // Hidden blocks: skip entirely outside edit mode (so they don't print).
+        // While editing, keep them visible at reduced opacity so the user can find them via the Layers panel.
+        if (b.hidden && !editing) return null;
+        return (
+          <CustomBlockView
+            key={b.id}
+            block={b}
+            editing={editing}
+            selected={selectedId === b.id}
+            onSelect={() => setSelectedId(b.id)}
+            onChange={(p) => update(b.id, p)}
+            onRemove={() => remove(b.id)}
+            siblingAxesFor={siblingAxesFor}
+            gridSize={snapCfg.gridSizePx}
+            onActiveLines={setActiveLines}
+            onCaretParagraphChange={selectedId === b.id ? setCaretParagraph : undefined}
+          />
+        );
+      })}
 
       {/* Live alignment guide lines during drag. */}
       {editing && pageSize && (activeLines.xs.length > 0 || activeLines.ys.length > 0) && (
@@ -395,9 +483,33 @@ export function CustomBlocksLayer() {
       {editing && pickerOpen && setBlocks && (
         <TemplatePicker onPick={(t) => { insertTemplate(t); setPickerOpen(false); }} onClose={() => setPickerOpen(false)} />
       )}
+      {editing && setBlocks && (
+        <HistoryToolbar
+          canUndo={undoStack.current.length > 0}
+          canRedo={redoStack.current.length > 0}
+          onUndo={undo}
+          onRedo={redo}
+          layersOpen={layersOpen}
+          onToggleLayers={() => setLayersOpen((v) => !v)}
+        />
+      )}
+      {editing && setBlocks && layersOpen && (
+        <LayersPanel
+          blocks={blocks}
+          selectedId={selectedId}
+          onSelect={(id) => setSelectedId(id)}
+          onRename={(id, name) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, name } as CustomBlock) : b)))}
+          onToggleHidden={(id) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, hidden: !b.hidden } as CustomBlock) : b)))}
+          onReorder={reorder}
+          onRemove={remove}
+          onClose={() => setLayersOpen(false)}
+        />
+      )}
     </>
   );
 }
+
+
 
 
 
@@ -660,6 +772,8 @@ function CustomBlockView({
         : "3px dashed rgba(37,99,235,0.5)"
       : "none",
     outlineOffset: 2,
+    opacity: block.hidden ? 0.3 : undefined,
+  
   };
 
   const inner = (
@@ -2252,5 +2366,264 @@ function SlotBindingControl({
         )}
       </select>
     </label>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* History toolbar (undo / redo / layers toggle)                       */
+/* ------------------------------------------------------------------ */
+
+function HistoryToolbar({
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  layersOpen,
+  onToggleLayers,
+}: {
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  layersOpen: boolean;
+  onToggleLayers: () => void;
+}) {
+  const ctx = useLayoutEdit();
+  const inv = 1 / (ctx?.scale || 1);
+  const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:historyToolbar:offset");
+  const btn = (active: boolean, disabled?: boolean): CSSProperties => ({
+    width: 30,
+    height: 30,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #d1d5db",
+    background: active ? "#2563eb" : "white",
+    color: active ? "white" : disabled ? "#9ca3af" : "#111827",
+    borderRadius: 6,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.55 : 1,
+  });
+  return (
+    <div
+      data-export-ignore="true"
+      style={{
+        position: "absolute",
+        top: 12 + offset.y,
+        right: 12 - offset.x,
+        transform: `scale(${inv})`,
+        transformOrigin: "top right",
+        background: "white",
+        border: "1px solid #e5e7eb",
+        borderRadius: 8,
+        padding: 6,
+        display: "flex",
+        gap: 6,
+        alignItems: "center",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+        zIndex: 230,
+      }}
+    >
+      <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, ...dragHandleProps.style }}>⋮⋮</span>
+      <button type="button" title="Undo (⌘/Ctrl+Z)" disabled={!canUndo} onClick={onUndo} style={btn(false, !canUndo)}>
+        <Undo2 size={16} />
+      </button>
+      <button type="button" title="Redo (⇧⌘/Ctrl+Z)" disabled={!canRedo} onClick={onRedo} style={btn(false, !canRedo)}>
+        <Redo2 size={16} />
+      </button>
+      <button type="button" title="Layers" onClick={onToggleLayers} style={btn(layersOpen)}>
+        <Layers size={16} />
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Layers panel — list, select, rename, hide/show, reorder, delete     */
+/* ------------------------------------------------------------------ */
+
+function blockDefaultName(b: CustomBlock): string {
+  if (b.name && b.name.trim()) return b.name;
+  if (b.kind === "text") {
+    const t = (b.text || "").replace(/\s+/g, " ").trim();
+    return t ? (t.length > 24 ? t.slice(0, 24) + "…" : t) : "Text";
+  }
+  if (b.kind === "image") return "Image";
+  if (b.kind === "shape") return b.shape === "line" ? "Line" : b.shape === "ellipse" ? "Ellipse" : "Rectangle";
+  if (b.kind === "embed") return b.embed === "qr" ? "QR code" : "Button";
+  if (b.kind === "video") return "Video";
+  return "Layer";
+}
+
+function LayersPanel({
+  blocks,
+  selectedId,
+  onSelect,
+  onRename,
+  onToggleHidden,
+  onReorder,
+  onRemove,
+  onClose,
+}: {
+  blocks: CustomBlock[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onToggleHidden: (id: string) => void;
+  onReorder: (id: string, action: "front" | "back" | "forward" | "backward") => void;
+  onRemove: (id: string) => void;
+  onClose: () => void;
+}) {
+  const ctx = useLayoutEdit();
+  const inv = 1 / (ctx?.scale || 1);
+  const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:layersPanel:offset");
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Top of the list = front-most (highest z). Stable order tiebreaker by index.
+  const ordered = blocks
+    .map((b, i) => ({ b, i }))
+    .sort((a, b) => {
+      const za = a.b.z ?? 50;
+      const zb = b.b.z ?? 50;
+      if (za !== zb) return zb - za;
+      return b.i - a.i;
+    })
+    .map((x) => x.b);
+
+  const rowStyle = (active: boolean): CSSProperties => ({
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "6px 8px",
+    borderRadius: 6,
+    cursor: "pointer",
+    background: active ? "rgba(37,99,235,0.12)" : "transparent",
+    border: active ? "1px solid rgba(37,99,235,0.5)" : "1px solid transparent",
+  });
+  const iconBtn: CSSProperties = {
+    width: 24,
+    height: 24,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #e5e7eb",
+    background: "white",
+    color: "#374151",
+    borderRadius: 4,
+    cursor: "pointer",
+  };
+
+  return (
+    <div
+      data-export-ignore="true"
+      style={{
+        position: "absolute",
+        top: 56 + offset.y,
+        right: 12 - offset.x,
+        transform: `scale(${inv})`,
+        transformOrigin: "top right",
+        background: "white",
+        border: "1px solid #e5e7eb",
+        borderRadius: 10,
+        padding: 10,
+        width: 280,
+        maxHeight: 460,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        zIndex: 230,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, ...dragHandleProps.style }}>⋮⋮</span>
+        <Layers size={14} />
+        <strong style={{ fontSize: 13 }}>Layers</strong>
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "#6b7280" }}>{blocks.length}</span>
+        <button type="button" onClick={onClose} title="Close" style={{ ...iconBtn, width: 22, height: 22 }}>
+          <X size={12} />
+        </button>
+      </div>
+      <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 2, paddingRight: 2 }}>
+        {ordered.length === 0 && (
+          <div style={{ fontSize: 12, color: "#6b7280", padding: 6 }}>No layers yet. Add an element to get started.</div>
+        )}
+        {ordered.map((b) => {
+          const active = b.id === selectedId;
+          const editing = renameId === b.id;
+          return (
+            <div
+              key={b.id}
+              style={rowStyle(active)}
+              onPointerDown={(e) => { e.stopPropagation(); onSelect(b.id); }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setRenameId(b.id);
+                setRenameValue(b.name ?? "");
+              }}
+            >
+              <button
+                type="button"
+                title={b.hidden ? "Show" : "Hide"}
+                onClick={(e) => { e.stopPropagation(); onToggleHidden(b.id); }}
+                style={{ ...iconBtn, color: b.hidden ? "#9ca3af" : "#2563eb" }}
+              >
+                {b.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+              </button>
+              <span style={{ fontSize: 10, color: "#6b7280", width: 38, textTransform: "uppercase" }}>{b.kind}</span>
+              {editing ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={() => { onRename(b.id, renameValue.trim()); setRenameId(null); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { onRename(b.id, renameValue.trim()); setRenameId(null); }
+                    if (e.key === "Escape") { setRenameId(null); }
+                  }}
+                  style={{ flex: 1, fontSize: 12, padding: "2px 4px", border: "1px solid #d1d5db", borderRadius: 4 }}
+                />
+              ) : (
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    color: b.hidden ? "#9ca3af" : "#111827",
+                    textDecoration: b.hidden ? "line-through" : undefined,
+                  }}
+                  title="Double-click to rename"
+                >
+                  {blockDefaultName(b)}
+                </span>
+              )}
+              <button type="button" title="Bring forward" onClick={(e) => { e.stopPropagation(); onReorder(b.id, "forward"); }} style={iconBtn}>
+                <ChevronUp size={12} />
+              </button>
+              <button type="button" title="Send backward" onClick={(e) => { e.stopPropagation(); onReorder(b.id, "backward"); }} style={iconBtn}>
+                <ChevronDown size={12} />
+              </button>
+              <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); onRemove(b.id); }} style={{ ...iconBtn, color: "#dc2626" }}>
+                <Trash2 size={12} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      {selectedId && (
+        <div style={{ display: "flex", gap: 4, borderTop: "1px solid #f1f5f9", paddingTop: 6 }}>
+          <button type="button" title="Bring to front" onClick={() => onReorder(selectedId, "front")} style={iconBtn}>
+            <ChevronsUp size={12} />
+          </button>
+          <button type="button" title="Send to back" onClick={() => onReorder(selectedId, "back")} style={iconBtn}>
+            <ChevronsDown size={12} />
+          </button>
+          <span style={{ fontSize: 11, color: "#6b7280", marginLeft: "auto", alignSelf: "center" }}>Double-click name to rename</span>
+        </div>
+      )}
+    </div>
   );
 }

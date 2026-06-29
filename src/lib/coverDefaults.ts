@@ -300,7 +300,7 @@ export type CustomBlock =
   | {
       id: string;
       kind: "text";
-      x: number; y: number; w: number; h: number; z?: number;
+      x: number; y: number; w: number; h: number; z?: number; name?: string; hidden?: boolean;
       text: string;
       fontFamily?: "display" | "serif" | "sans" | string;
       fontSize?: number;
@@ -323,7 +323,7 @@ export type CustomBlock =
   | {
       id: string;
       kind: "image";
-      x: number; y: number; w: number; h: number; z?: number;
+      x: number; y: number; w: number; h: number; z?: number; name?: string; hidden?: boolean;
       imageUrl: string;
       imageFit?: "cover" | "contain";
       rotate?: number;
@@ -348,7 +348,7 @@ export type CustomBlock =
   | {
       id: string;
       kind: "shape";
-      x: number; y: number; w: number; h: number; z?: number;
+      x: number; y: number; w: number; h: number; z?: number; name?: string; hidden?: boolean;
       shape: "rect" | "line" | "ellipse";
       fill?: string;
       stroke?: string;
@@ -361,7 +361,7 @@ export type CustomBlock =
   | {
       id: string;
       kind: "embed";
-      x: number; y: number; w: number; h: number; z?: number;
+      x: number; y: number; w: number; h: number; z?: number; name?: string; hidden?: boolean;
       embed: "qr" | "button";
       url: string;
       label?: string;
@@ -374,7 +374,7 @@ export type CustomBlock =
   | {
       id: string;
       kind: "video";
-      x: number; y: number; w: number; h: number; z?: number;
+      x: number; y: number; w: number; h: number; z?: number; name?: string; hidden?: boolean;
       url: string;
       autoplay?: boolean;
       muted?: boolean;
