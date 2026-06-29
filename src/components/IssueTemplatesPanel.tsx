@@ -4,10 +4,11 @@
  * into the editor.
  */
 import { useCallback, useEffect, useState } from "react";
-import { BookOpen, Check, Pencil, Save, Trash2, Upload, X } from "lucide-react";
+import { BookOpen, Check, Copy, Pencil, Save, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteIssueTemplate,
+  duplicateIssueTemplate,
   listIssueTemplates,
   saveIssueTemplate,
   updateIssueTemplate,
@@ -137,6 +138,16 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
     }
   };
 
+  const onDuplicate = async (row: IssueTemplateRow) => {
+    try {
+      await duplicateIssueTemplate(row);
+      toast.success(`Duplicated "${row.name}"`);
+      await reload();
+    } catch (e) {
+      toast.error(`Could not duplicate: ${(e as Error).message}`);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="rounded-sm border border-border bg-secondary/40 p-3 space-y-2">
@@ -228,6 +239,13 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
                       </>
                     ) : (
                       <>
+                        <button
+                          onClick={() => void onDuplicate(r)}
+                          title="Duplicate template"
+                          className="p-1.5 border border-border rounded-sm hover:bg-secondary"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
                         <button
                           onClick={() => startRename(r)}
                           title="Rename template"
