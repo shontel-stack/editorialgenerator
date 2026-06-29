@@ -35,6 +35,36 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
   const [name, setName] = useState(suggestedName(issue));
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  const startRename = (row: IssueTemplateRow) => {
+    setRenamingId(row.id);
+    setRenameValue(row.name);
+  };
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue("");
+  };
+  const commitRename = async (row: IssueTemplateRow) => {
+    const next = renameValue.trim();
+    if (!next) {
+      toast.error("Name can't be empty");
+      return;
+    }
+    if (next === row.name) {
+      cancelRename();
+      return;
+    }
+    try {
+      await updateIssueTemplate(row.id, { name: next });
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, name: next } : r)));
+      toast.success("Template renamed");
+      cancelRename();
+    } catch (e) {
+      toast.error(`Could not rename: ${(e as Error).message}`);
+    }
+  };
 
   const reload = useCallback(async () => {
     if (!userId) return;
