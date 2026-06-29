@@ -432,7 +432,8 @@ function CustomBlockView({
   const pageScale = ctx?.scale ?? 1;
   const global = useSnapSettings();
   const snapCfg = ctx?.snapSettings ?? global;
-  const dragRef = useRef<{ mode: "move" | "resize"; x: number; y: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
+  type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+  const dragRef = useRef<{ mode: "move" | "resize"; handle?: ResizeHandle; aspect: number; shift: boolean; x: number; y: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
   const rotRef = useRef<{ cx: number; cy: number; startAngle: number; startRotate: number } | null>(null);
   const [editingText, setEditingText] = useState(false);
 
