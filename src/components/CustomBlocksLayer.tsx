@@ -501,10 +501,17 @@ export function CustomBlocksLayer() {
           onRename={(id, name) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, name } as CustomBlock) : b)))}
           onToggleHidden={(id) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, hidden: !b.hidden } as CustomBlock) : b)))}
           onReorder={reorder}
+          onReorderList={(orderedIds) => {
+            // orderedIds: front-most first. Assign descending z so the first id is on top.
+            const n = orderedIds.length;
+            const zMap = new Map(orderedIds.map((id, i) => [id, n - i]));
+            setBlocks(blocks.map((b) => (zMap.has(b.id) ? ({ ...b, z: zMap.get(b.id)! } as CustomBlock) : b)));
+          }}
           onRemove={remove}
           onClose={() => setLayersOpen(false)}
         />
       )}
+
     </>
   );
 }
