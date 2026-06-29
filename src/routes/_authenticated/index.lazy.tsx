@@ -1485,6 +1485,7 @@ function Index() {
         </button>
         <button title="AI Layout · propose from library" aria-label="AI Layout" aria-pressed={layoutAiOpen} onClick={() => setLayoutAiOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${layoutAiOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <Wand2 className="h-[18px] w-[18px]" />
+        </button>
         <button title="Production" aria-label="Production" aria-pressed={checklistOpen} onClick={() => setChecklistOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${checklistOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <ClipboardList className="h-[18px] w-[18px]" />
         </button>
