@@ -247,8 +247,10 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
                           title="Delete template"
                           className="p-1.5 border border-border rounded-sm hover:bg-secondary text-[color:var(--ruby)]"
                         >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </li>
               );
