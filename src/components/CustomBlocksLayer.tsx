@@ -501,10 +501,17 @@ export function CustomBlocksLayer() {
           onRename={(id, name) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, name } as CustomBlock) : b)))}
           onToggleHidden={(id) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, hidden: !b.hidden } as CustomBlock) : b)))}
           onReorder={reorder}
+          onReorderList={(orderedIds) => {
+            // orderedIds: front-most first. Assign descending z so the first id is on top.
+            const n = orderedIds.length;
+            const zMap = new Map(orderedIds.map((id, i) => [id, n - i]));
+            setBlocks(blocks.map((b) => (zMap.has(b.id) ? ({ ...b, z: zMap.get(b.id)! } as CustomBlock) : b)));
+          }}
           onRemove={remove}
           onClose={() => setLayersOpen(false)}
         />
       )}
+
     </>
   );
 }
@@ -2462,6 +2469,7 @@ function LayersPanel({
   onRename,
   onToggleHidden,
   onReorder,
+  onReorderList,
   onRemove,
   onClose,
 }: {
@@ -2471,6 +2479,7 @@ function LayersPanel({
   onRename: (id: string, name: string) => void;
   onToggleHidden: (id: string) => void;
   onReorder: (id: string, action: "front" | "back" | "forward" | "backward") => void;
+  onReorderList: (orderedIds: string[]) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
 }) {
@@ -2479,6 +2488,9 @@ function LayersPanel({
   const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:layersPanel:offset");
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; pos: "above" | "below" } | null>(null);
+
 
   // Top of the list = front-most (highest z). Stable order tiebreaker by index.
   const ordered = blocks
@@ -2552,17 +2564,74 @@ function LayersPanel({
         {ordered.map((b) => {
           const active = b.id === selectedId;
           const editing = renameId === b.id;
+          const isDragging = dragId === b.id;
+          const drop = dropTarget?.id === b.id ? dropTarget.pos : null;
           return (
             <div
               key={b.id}
-              style={rowStyle(active)}
+              style={{
+                ...rowStyle(active),
+                opacity: isDragging ? 0.4 : 1,
+                borderTop: drop === "above" ? "2px solid #2563eb" : rowStyle(active).borderTop,
+                borderBottom: drop === "below" ? "2px solid #2563eb" : rowStyle(active).borderBottom,
+              }}
               onPointerDown={(e) => { e.stopPropagation(); onSelect(b.id); }}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 setRenameId(b.id);
                 setRenameValue(b.name ?? "");
               }}
+              onDragOver={(e) => {
+                if (!dragId || dragId === b.id) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pos: "above" | "below" = e.clientY < rect.top + rect.height / 2 ? "above" : "below";
+                setDropTarget((prev) => (prev && prev.id === b.id && prev.pos === pos ? prev : { id: b.id, pos }));
+              }}
+              onDragLeave={() => {
+                setDropTarget((prev) => (prev && prev.id === b.id ? null : prev));
+              }}
+              onDrop={(e) => {
+                if (!dragId || dragId === b.id) return;
+                e.preventDefault();
+                const ids = ordered.map((x) => x.id);
+                const from = ids.indexOf(dragId);
+                const to = ids.indexOf(b.id);
+                if (from < 0 || to < 0) return;
+                const next = ids.slice();
+                next.splice(from, 1);
+                const rect = e.currentTarget.getBoundingClientRect();
+                const above = e.clientY < rect.top + rect.height / 2;
+                let insert = next.indexOf(b.id);
+                if (!above) insert += 1;
+                next.splice(insert, 0, dragId);
+                onReorderList(next);
+                setDragId(null);
+                setDropTarget(null);
+              }}
             >
+              <span
+                title="Drag to reorder"
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  setDragId(b.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", b.id);
+                }}
+                onDragEnd={() => { setDragId(null); setDropTarget(null); }}
+                style={{
+                  cursor: "grab",
+                  color: "#9ca3af",
+                  fontSize: 12,
+                  lineHeight: 1,
+                  userSelect: "none",
+                  padding: "0 2px",
+                }}
+              >
+                ⋮⋮
+              </span>
               <button
                 type="button"
                 title={b.hidden ? "Show" : "Hide"}
@@ -2611,6 +2680,7 @@ function LayersPanel({
               </button>
             </div>
           );
+
         })}
       </div>
       {selectedId && (
