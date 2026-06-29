@@ -2660,6 +2660,14 @@ function Index() {
                 onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
                 editing={editLayout && spread.left.id === selected.id}
               />
+              {proposalOps.length > 0 && (
+                <LayoutProposalOverlay
+                  ops={proposalOps}
+                  pageId={spread.left.id}
+                  dim={dimPx}
+                  libraryLabels={libraryLabels}
+                />
+              )}
             </div>
             {spreadView && spread.right && (
               <div
@@ -2704,6 +2712,14 @@ function Index() {
                   onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
                   editing={editLayout && spread.right.id === selected.id}
                 />
+                {proposalOps.length > 0 && (
+                  <LayoutProposalOverlay
+                    ops={proposalOps}
+                    pageId={spread.right.id}
+                    dim={dimPx}
+                    libraryLabels={libraryLabels}
+                  />
+                )}
               </div>
             )}
           </div>
