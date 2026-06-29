@@ -1383,11 +1383,42 @@ const DRAG_GRIP_STYLE: CSSProperties = {
   userSelect: "none",
 };
 
+type DockSide = "float" | "right" | "left";
+
+function useDockPosition(storageKey: string): {
+  dock: DockSide;
+  setDock: (v: DockSide) => void;
+} {
+  const [dock, setDockState] = useState<DockSide>(() => {
+    if (typeof window === "undefined") return "float";
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw === "right" || raw === "left" || raw === "float") return raw;
+    } catch { /* noop */ }
+    return "float";
+  });
+  const setDock = (v: DockSide) => {
+    setDockState(v);
+    if (typeof window !== "undefined") {
+      try { window.localStorage.setItem(storageKey, v); } catch { /* noop */ }
+    }
+  };
+  return { dock, setDock };
+}
+
 function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
-  const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:addPalette:offset");
+  const { dock, setDock } = useDockPosition("pageluxe:addPalette:dock");
+  const { offset, dragHandleProps } = useDragOffset(inv, dock === "float" ? "pageluxe:addPalette:offset" : undefined);
+
+  const isDocked = dock !== "float";
+  const dockedOffset = { x: 0, y: 0 };
+  const posStyle: CSSProperties =
+    dock === "left"
+      ? { top: 24, left: 24, transformOrigin: "top left" }
+      : { top: 24, right: 24, transformOrigin: "top right" };
 
   return (
     <>
@@ -1396,10 +1427,8 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
         onPointerDown={(e) => e.stopPropagation()}
         style={{
           position: "absolute",
-          top: 24,
-          right: 24,
-          transform: `translate(${offset.x}px, ${offset.y}px) scale(${inv})`,
-          transformOrigin: "top right",
+          ...posStyle,
+          transform: `translate(${isDocked ? dockedOffset.x : offset.x}px, ${isDocked ? dockedOffset.y : offset.y}px) scale(${inv})`,
           background: "white",
           border: "2px solid #0a0a0a",
           borderRadius: 6,
@@ -1411,7 +1440,11 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
           fontFamily: "system-ui, sans-serif",
         }}
       >
-        <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, ...dragHandleProps.style }}>
+        <span
+          {...(!isDocked ? dragHandleProps : {})}
+          title={isDocked ? "Docked" : "Drag to move"}
+          style={{ ...DRAG_GRIP_STYLE, ...(isDocked ? { cursor: "default" } : dragHandleProps.style) }}
+        >
           <Plus size={12} /> Add
         </span>
         <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
@@ -1425,9 +1458,43 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
         <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
         <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
         <PaletteBtn label="Defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
+        <div style={{ width: 1, background: "#ddd", margin: "0 2px" }} />
+        <DockToggle dock={dock} onChange={setDock} />
       </div>
-      {defaultsOpen && <BlockDefaultsPanel onClose={() => setDefaultsOpen(false)} />}
+      {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(false)} />}
     </>
+  );
+}
+
+function DockToggle({ dock, onChange }: { dock: DockSide; onChange: (v: DockSide) => void }) {
+  const btn = (side: DockSide, label: string, icon: React.ReactNode) => (
+    <button
+      type="button"
+      title={label}
+      onClick={() => onChange(side)}
+      style={{
+        width: 22,
+        height: 22,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "1px solid #ddd",
+        borderRadius: 4,
+        background: dock === side ? "#0a0a0a" : "white",
+        color: dock === side ? "white" : "#666",
+        cursor: "pointer",
+        fontSize: 10,
+      }}
+    >
+      {icon}
+    </button>
+  );
+  return (
+    <div style={{ display: "inline-flex", gap: 2, alignItems: "center" }}>
+      {btn("float", "Float", <Pin size={10} />)}
+      {btn("right", "Dock right", <PanelRight size={10} />)}
+      {btn("left", "Dock left", <PanelLeft size={10} />)}
+    </div>
   );
 }
 
