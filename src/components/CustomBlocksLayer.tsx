@@ -2469,6 +2469,7 @@ function LayersPanel({
   onRename,
   onToggleHidden,
   onReorder,
+  onReorderList,
   onRemove,
   onClose,
 }: {
@@ -2478,6 +2479,7 @@ function LayersPanel({
   onRename: (id: string, name: string) => void;
   onToggleHidden: (id: string) => void;
   onReorder: (id: string, action: "front" | "back" | "forward" | "backward") => void;
+  onReorderList: (orderedIds: string[]) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
 }) {
@@ -2486,6 +2488,9 @@ function LayersPanel({
   const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:layersPanel:offset");
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; pos: "above" | "below" } | null>(null);
+
 
   // Top of the list = front-most (highest z). Stable order tiebreaker by index.
   const ordered = blocks
