@@ -534,6 +534,11 @@ function Index() {
   };
   const attachments = useIssueAttachments(issue.meta.issueId, activePublication?.id ?? null);
   const libraryAttachments = useLibraryAttachments(activePublication?.id ?? null);
+  const libraryLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of libraryAttachments.rows) map[r.id] = r.file_name;
+    return map;
+  }, [libraryAttachments.rows]);
   const brandFonts = useBrandFonts(activePublication?.id ?? null);
   const brandSwatches = useBrandSwatches(activePublication?.id ?? null);
   const brandKitContextValue = useMemo(
