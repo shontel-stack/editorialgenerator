@@ -464,15 +464,19 @@ function CustomBlockView({
     return gr.delta !== 0 ? gr : ay;
   };
 
-  const startDrag = (mode: "move" | "resize", e: RPointerEvent<HTMLDivElement>) => {
+  const startDrag = (mode: "move" | "resize", e: RPointerEvent<HTMLDivElement>, handle?: ResizeHandle) => {
     if (!editing || editingText) return;
     e.preventDefault();
     e.stopPropagation();
+    const box = { x: block.x, y: block.y, w: block.w, h: block.h };
     dragRef.current = {
       mode,
+      handle,
+      aspect: box.w / Math.max(1, box.h),
+      shift: e.shiftKey,
       x: e.clientX,
       y: e.clientY,
-      box: { x: block.x, y: block.y, w: block.w, h: block.h },
+      box,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     onSelect();
