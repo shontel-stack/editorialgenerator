@@ -2876,14 +2876,15 @@ function Index() {
         onClose={() => setLayoutAiOpen(false)}
         issue={issue}
         publicationName={activePublication?.name ?? null}
-        library={libraryAttachments}
+        library={libraryAttachments.rows}
         onApply={(ops: LayoutPlanOp[]) => {
+          const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
           let applied = 0;
           let skipped = 0;
           const grouped: Record<string, import("@/lib/coverDefaults").CustomBlock[]> = {};
           for (const op of ops) {
             if (op.kind === "add_image_block") {
-              const row = libraryAttachments.find((r) => r.id === op.attachmentId);
+              const row = libraryAttachments.rows.find((r) => r.id === op.attachmentId);
               if (!row?.signedUrl) {
                 skipped += 1;
                 continue;
