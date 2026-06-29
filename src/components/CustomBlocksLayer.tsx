@@ -470,7 +470,7 @@ export function CustomBlocksLayer() {
         </div>
       )}
 
-      {setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => { if (!editing) requestEdit?.(); setPickerOpen(true); }} />}
+      {editing && setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => { if (!editing) requestEdit?.(); setPickerOpen(true); }} />}
       {editing && selected && setBlocks && (
         <BlockToolbar
           block={selected}
@@ -1414,11 +1414,54 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
   const { offset, dragHandleProps } = useDragOffset(inv, dock === "float" ? "pageluxe:addPalette:offset" : undefined);
 
   const isDocked = dock !== "float";
+  const isLeft = dock === "left";
   const dockedOffset = { x: 0, y: 0 };
   const posStyle: CSSProperties =
-    dock === "left"
-      ? { top: 24, left: 24, transformOrigin: "top left" }
-      : { top: 24, right: 24, transformOrigin: "top right" };
+    isLeft
+      ? { position: "fixed" as const, top: 80, left: 56, transformOrigin: "top left" }
+      : { position: "absolute" as const, top: 24, right: 24, transformOrigin: "top right" };
+
+  if (isLeft) {
+    return (
+      <>
+        <div
+          data-export-ignore="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            top: 80,
+            left: 56,
+            background: "white",
+            border: "1px solid #ddd",
+            borderLeft: "none",
+            borderRadius: "0 6px 6px 0",
+            padding: 6,
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            boxShadow: "2px 0 12px rgba(0,0,0,0.08)",
+            zIndex: 300,
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} compact />
+          <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} compact />
+          <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} compact />
+          <PaletteBtn label="Rectangle" icon={<Square size={14} />} onClick={() => onAdd("shape", { shape: "rect" })} compact />
+          <PaletteIconSpacer />
+          <PaletteBtn label="Ellipse" icon={<Circle size={14} />} onClick={() => onAdd("shape", { shape: "ellipse" })} compact />
+          <PaletteBtn label="Line" icon={<Minus size={14} />} onClick={() => onAdd("shape", { shape: "line" })} compact />
+          <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} compact />
+          <PaletteIconSpacer />
+          <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} compact />
+          <PaletteBtn label="Defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} compact />
+          <PaletteIconSpacer />
+          <DockToggle dock={dock} onChange={setDock} />
+        </div>
+        {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(false)} />}
+      </>
+    );
+  }
 
   return (
     <>
@@ -1466,6 +1509,10 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
   );
 }
 
+function PaletteIconSpacer() {
+  return <div style={{ height: 1, background: "#ddd", margin: "2px 0" }} />;
+}
+
 function DockToggle({ dock, onChange }: { dock: DockSide; onChange: (v: DockSide) => void }) {
   const btn = (side: DockSide, label: string, icon: React.ReactNode) => (
     <button
@@ -1507,10 +1554,10 @@ function BlockDefaultsPanel({ dock = "float", onClose }: { dock?: DockSide; onCl
     <div
       onPointerDown={(e) => e.stopPropagation()}
       style={{
-        position: "absolute",
-        top: 90,
-        ...(isLeft ? { left: 24, transformOrigin: "top left" } : { right: 24, transformOrigin: "top right" }),
-        transform: `scale(${inv})`,
+        position: isLeft ? ("fixed" as const) : "absolute",
+        top: isLeft ? 130 : 90,
+        ...(isLeft ? { left: 108, transformOrigin: "top left" } : { right: 24, transformOrigin: "top right" }),
+        transform: isLeft ? undefined : `scale(${inv})`,
         background: "white",
         border: "2px solid #0a0a0a",
         borderRadius: 8,
@@ -1788,7 +1835,31 @@ function TemplateThumb({ tpl }: { tpl: LayoutTemplate }) {
   );
 }
 
-function PaletteBtn({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick: () => void }) {
+function PaletteBtn({ label, icon, onClick, compact }: { label: string; icon: React.ReactNode; onClick: () => void; compact?: boolean }) {
+  if (compact) {
+    return (
+      <button
+        type="button"
+        title={label}
+        onClick={onClick}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 36,
+          height: 36,
+          border: "1px solid #ddd",
+          borderRadius: 4,
+          background: "white",
+          color: "#0a0a0a",
+          fontSize: 12,
+          cursor: "pointer",
+        }}
+      >
+        {icon}
+      </button>
+    );
+  }
   return (
     <button
       type="button"

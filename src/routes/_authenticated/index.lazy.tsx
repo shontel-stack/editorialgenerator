@@ -2560,7 +2560,7 @@ function Index() {
         <div className="pl-3 flex flex-col gap-3">
           {editLayout && (
             <p className="text-[10px] leading-relaxed text-muted-foreground px-1">
-              Drag any outlined block on the page. Use the <strong>+ Add</strong> palette in the top-right of the page to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
+              Drag any outlined block on the page. Use the <strong>+ Add</strong> palette to add text, images, shapes, QR codes, or link buttons anywhere. Click an added element to edit, resize, or delete it.
             </p>
           )}
 
