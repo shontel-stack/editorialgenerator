@@ -1146,9 +1146,25 @@ function QrPreview({ url, color, bg }: { url: string; color: string; bg: string 
 
 /* --------------------- floating toolbars --------------------- */
 
-function useDragOffset(inv: number) {
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+function useDragOffset(inv: number, storageKey?: string) {
+  const [offset, setOffset] = useState<{ x: number; y: number }>(() => {
+    if (typeof window === "undefined" || !storageKey) return { x: 0, y: 0 };
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return { x: 0, y: 0 };
+      const parsed = JSON.parse(raw) as { x?: number; y?: number };
+      return { x: Number(parsed.x) || 0, y: Number(parsed.y) || 0 };
+    } catch {
+      return { x: 0, y: 0 };
+    }
+  });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  const persist = (next: { x: number; y: number }) => {
+    setOffset(next);
+    if (storageKey && typeof window !== "undefined") {
+      try { window.localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* noop */ }
+    }
+  };
   const onPointerDown = (e: RPointerEvent<HTMLElement>) => {
     e.stopPropagation();
     e.preventDefault();
@@ -1162,11 +1178,13 @@ function useDragOffset(inv: number) {
     setOffset({ x: drag.current.ox + dx, y: drag.current.oy + dy });
   };
   const onPointerUp = (e: RPointerEvent<HTMLElement>) => {
+    if (drag.current) persist({ x: offset.x, y: offset.y });
     drag.current = null;
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
   };
   return { offset, dragHandleProps: { onPointerDown, onPointerMove, onPointerUp, style: { cursor: "grab", touchAction: "none" as const } } };
 }
+
 
 const DRAG_GRIP_STYLE: CSSProperties = {
   display: "inline-flex",
@@ -1185,7 +1203,8 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
-  const { offset, dragHandleProps } = useDragOffset(inv);
+  const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:addPalette:offset");
+
   return (
     <>
       <div
@@ -1560,7 +1579,7 @@ function BlockToolbar({
   const snapCfg = ctx?.snapSettings ?? global;
   const inv = 1 / (ctx?.scale ?? 1);
   const rotate = (block as { rotate?: number }).rotate ?? 0;
-  const { offset, dragHandleProps } = useDragOffset(inv);
+  const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:blockToolbar:offset");
   return (
     <div
       data-export-ignore="true"
@@ -1569,7 +1588,7 @@ function BlockToolbar({
         position: "absolute",
         bottom: 24,
         left: 24,
-        right: 24,
+        maxWidth: "calc(100% - 48px)",
         transform: `translate(${offset.x}px, ${offset.y}px) scale(${inv})`,
         transformOrigin: "bottom left",
         background: "white",
@@ -1587,7 +1606,8 @@ function BlockToolbar({
         color: "#0a0a0a",
       }}
     >
-      <span {...dragHandleProps} title="Drag to move" style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", ...dragHandleProps.style }}>⋮⋮ {block.kind}</span>
+      <span {...dragHandleProps} title="Drag to move toolbar" style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", ...dragHandleProps.style }}>⋮⋮ {block.kind}</span>
+
       {ctx?.contentsSlots && (block.kind === "text" || block.kind === "image") && (
         <SlotBindingControl block={block} onChange={onChange} slots={ctx.contentsSlots} />
       )}
