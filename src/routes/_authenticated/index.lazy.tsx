@@ -2252,6 +2252,18 @@ function Index() {
           </PopoverTrigger>
           <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">
 
+          <Section title="Templates · Monthly versions" defaultOpen={false}>
+            <IssueTemplatesPanel
+              userId={userId}
+              publicationId={activePublication?.id ?? null}
+              issue={issue}
+              onLoad={(next) => {
+                setIssue(next);
+                if (next.pages[0]) setSelectedId(next.pages[0].id);
+              }}
+            />
+          </Section>
+
           <Section title="Issue · Save & Export" defaultOpen>
             {(() => {
               const eligible = issue.pages.filter(
