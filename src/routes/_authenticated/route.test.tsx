@@ -30,7 +30,7 @@ import { Route } from "./route";
 
 describe("AuthGate hydration parity", () => {
   it("renders identical markup on the server and on first client render", () => {
-    const AuthGate = (Route as unknown as { component: () => JSX.Element }).component;
+    const AuthGate = (Route as unknown as { component: React.ComponentType }).component;
 
     const serverHtml = renderToString(<AuthGate />);
     const { container } = render(<AuthGate />);
