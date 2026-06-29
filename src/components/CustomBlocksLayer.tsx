@@ -432,7 +432,8 @@ function CustomBlockView({
   const pageScale = ctx?.scale ?? 1;
   const global = useSnapSettings();
   const snapCfg = ctx?.snapSettings ?? global;
-  const dragRef = useRef<{ mode: "move" | "resize"; x: number; y: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
+  type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+  const dragRef = useRef<{ mode: "move" | "resize"; handle?: ResizeHandle; aspect: number; shift: boolean; x: number; y: number; box: { x: number; y: number; w: number; h: number } } | null>(null);
   const rotRef = useRef<{ cx: number; cy: number; startAngle: number; startRotate: number } | null>(null);
   const [editingText, setEditingText] = useState(false);
 
@@ -463,15 +464,19 @@ function CustomBlockView({
     return gr.delta !== 0 ? gr : ay;
   };
 
-  const startDrag = (mode: "move" | "resize", e: RPointerEvent<HTMLDivElement>) => {
+  const startDrag = (mode: "move" | "resize", e: RPointerEvent<HTMLDivElement>, handle?: ResizeHandle) => {
     if (!editing || editingText) return;
     e.preventDefault();
     e.stopPropagation();
+    const box = { x: block.x, y: block.y, w: block.w, h: block.h };
     dragRef.current = {
       mode,
+      handle,
+      aspect: box.w / Math.max(1, box.h),
+      shift: e.shiftKey,
       x: e.clientX,
       y: e.clientY,
-      box: { x: block.x, y: block.y, w: block.w, h: block.h },
+      box,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     onSelect();
@@ -499,6 +504,7 @@ function CustomBlockView({
     let next = startRotate + (a - startAngle);
     while (next > 180) next -= 360;
     while (next < -180) next += 360;
+    if (e.shiftKey) next = Math.round(next / 15) * 15;
     onChange({ rotate: snapRotationWith(next, snapCfg) } as Partial<CustomBlock>);
   };
   const onRotateUp = (e: RPointerEvent<HTMLDivElement>) => {
@@ -525,8 +531,53 @@ function CustomBlockView({
     return { nx: nx + bestX.delta, ny: ny + bestY.delta, matchX: bestX.match, matchY: bestY.match };
   };
 
+  /** Compute a resized box given the active handle, pointer delta, and shift-lock state. */
+  const computeResize = (handle: ResizeHandle | undefined, dx: number, dy: number, shift: boolean) => {
+    const box = dragRef.current!.box;
+    const aspect = dragRef.current!.aspect;
+    const minW = 80;
+    const minH = 40;
+    const h = handle ?? "se";
+    const east = h.includes("e");
+    const west = h.includes("w");
+    const south = h.includes("s");
+    const north = h.includes("n");
+    let nx = box.x;
+    let ny = box.y;
+    let nw = box.w;
+    let nh = box.h;
+    if (east) nw = Math.max(minW, box.w + dx);
+    if (west) { nw = Math.max(minW, box.w - dx); nx = box.x + (box.w - nw); }
+    if (south) nh = Math.max(minH, box.h + dy);
+    if (north) { nh = Math.max(minH, box.h - dy); ny = box.y + (box.h - nh); }
+    // Shift = preserve aspect ratio (corner = both axes; edge = lock the other axis)
+    if (shift) {
+      const isCorner = (east || west) && (north || south);
+      if (isCorner) {
+        // Use the larger relative change as the dominant axis
+        const rw = nw / box.w;
+        const rh = nh / box.h;
+        if (Math.abs(rw - 1) >= Math.abs(rh - 1)) {
+          nh = Math.max(minH, nw / aspect);
+        } else {
+          nw = Math.max(minW, nh * aspect);
+        }
+        if (west) nx = box.x + (box.w - nw);
+        if (north) ny = box.y + (box.h - nh);
+      } else if (east || west) {
+        nh = Math.max(minH, nw / aspect);
+        if (north) ny = box.y + (box.h - nh);
+      } else if (north || south) {
+        nw = Math.max(minW, nh * aspect);
+        if (west) nx = box.x + (box.w - nw);
+      }
+    }
+    return { x: nx, y: ny, w: nw, h: nh, east, west, north, south };
+  };
+
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
+    dragRef.current.shift = e.shiftKey;
     const s = pageScale || 1;
     const dx = (e.clientX - dragRef.current.x) / s;
     const dy = (e.clientY - dragRef.current.y) / s;
@@ -540,19 +591,27 @@ function CustomBlockView({
         ys: r.matchY !== null ? [r.matchY] : [],
       });
     } else {
-      let nw = Math.max(80, dragRef.current.box.w + dx);
-      let nh = Math.max(40, dragRef.current.box.h + dy);
-      const right = dragRef.current.box.x + nw;
-      const bottom = dragRef.current.box.y + nh;
-      const rx = snapX(right);
-      const ry = snapY(bottom);
-      if (rx.delta !== 0) nw = Math.max(80, nw + rx.delta);
-      if (ry.delta !== 0) nh = Math.max(40, nh + ry.delta);
-      onChange({ w: nw, h: nh });
-      onActiveLines?.({
-        xs: rx.match !== null ? [rx.match] : [],
-        ys: ry.match !== null ? [ry.match] : [],
-      });
+      const r = computeResize(dragRef.current.handle, dx, dy, e.shiftKey);
+      // Snap the moving edges to guides
+      const rightEdge = r.x + r.w;
+      const bottomEdge = r.y + r.h;
+      const sxR = r.east ? snapX(rightEdge) : { delta: 0, match: null as number | null };
+      const sxL = r.west ? snapX(r.x) : { delta: 0, match: null as number | null };
+      const syB = r.south ? snapY(bottomEdge) : { delta: 0, match: null as number | null };
+      const syT = r.north ? snapY(r.y) : { delta: 0, match: null as number | null };
+      let nx = r.x, ny = r.y, nw = r.w, nh = r.h;
+      if (sxR.delta) nw = Math.max(80, nw + sxR.delta);
+      if (sxL.delta) { nw = Math.max(80, nw - sxL.delta); nx = nx + sxL.delta; }
+      if (syB.delta) nh = Math.max(40, nh + syB.delta);
+      if (syT.delta) { nh = Math.max(40, nh - syT.delta); ny = ny + syT.delta; }
+      onChange({ x: nx, y: ny, w: nw, h: nh });
+      const xs: number[] = [];
+      const ys: number[] = [];
+      if (sxR.match !== null) xs.push(sxR.match);
+      if (sxL.match !== null) xs.push(sxL.match);
+      if (syB.match !== null) ys.push(syB.match);
+      if (syT.match !== null) ys.push(syT.match);
+      onActiveLines?.({ xs, ys });
     }
   };
   const onUp = (e: RPointerEvent<HTMLDivElement>) => {
@@ -569,20 +628,8 @@ function CustomBlockView({
         y: r.matchY !== null ? Math.round(r.ny) : snap(r.ny),
       });
     } else {
-      let nw = Math.max(80, dragRef.current.box.w + dx);
-      let nh = Math.max(40, dragRef.current.box.h + dy);
-      const right = dragRef.current.box.x + nw;
-      const bottom = dragRef.current.box.y + nh;
-      const rx = snapX(right);
-      const ry = snapY(bottom);
-      let usedW = false;
-      let usedH = false;
-      if (rx.delta !== 0) { nw = Math.max(80, nw + rx.delta); usedW = true; }
-      if (ry.delta !== 0) { nh = Math.max(40, nh + ry.delta); usedH = true; }
-      onChange({
-        w: usedW ? Math.round(nw) : snap(nw),
-        h: usedH ? Math.round(nh) : snap(nh),
-      });
+      const r = computeResize(dragRef.current.handle, dx, dy, e.shiftKey || dragRef.current.shift);
+      onChange({ x: snap(r.x), y: snap(r.y), w: snap(r.w), h: snap(r.h) });
     }
     dragRef.current = null;
     onActiveLines?.({ xs: [], ys: [] });
@@ -659,27 +706,43 @@ function CustomBlockView({
       {wrapped}
       {editing && selected && (
         <>
-          {/* Resize handle (bottom-right) */}
-          <div
-            onPointerDown={(e) => startDrag("resize", e)}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            onPointerCancel={onUp}
-            style={{
-              position: "absolute",
-              right: -10,
-              bottom: -10,
-              width: 28,
-              height: 28,
-              transform: `scale(${inv})`,
-              transformOrigin: "bottom right",
-              background: "#2563eb",
-              border: "2px solid white",
-              borderRadius: 4,
-              cursor: "nwse-resize",
-              zIndex: 200,
-            }}
-          />
+          {/* 8 resize handles (corners + edge midpoints). Hold Shift to keep aspect ratio. */}
+          {([
+            { h: "nw" as const, top: -6 as number | string | undefined, left: -6 as number | string | undefined, right: undefined as number | undefined, bottom: undefined as number | undefined, cursor: "nwse-resize", origin: "top left", center: "" as "" | "x" | "y" },
+            { h: "ne" as const, top: -6, left: undefined, right: -6, bottom: undefined, cursor: "nesw-resize", origin: "top right", center: "" },
+            { h: "sw" as const, top: undefined, left: -6, right: undefined, bottom: -6, cursor: "nesw-resize", origin: "bottom left", center: "" },
+            { h: "se" as const, top: undefined, left: undefined, right: -6, bottom: -6, cursor: "nwse-resize", origin: "bottom right", center: "" },
+            { h: "n" as const, top: -6, left: "50%", right: undefined, bottom: undefined, cursor: "ns-resize", origin: "top center", center: "x" as const },
+            { h: "s" as const, top: undefined, left: "50%", right: undefined, bottom: -6, cursor: "ns-resize", origin: "bottom center", center: "x" as const },
+            { h: "w" as const, top: "50%", left: -6, right: undefined, bottom: undefined, cursor: "ew-resize", origin: "center left", center: "y" as const },
+            { h: "e" as const, top: "50%", left: undefined, right: -6, bottom: undefined, cursor: "ew-resize", origin: "center right", center: "y" as const },
+          ]).map((hd) => (
+            <div
+              key={hd.h}
+              title="Resize (Shift = keep aspect ratio)"
+              onPointerDown={(e) => startDrag("resize", e, hd.h)}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              onPointerCancel={onUp}
+              style={{
+                position: "absolute",
+                top: hd.top,
+                bottom: hd.bottom,
+                left: hd.left,
+                right: hd.right,
+                width: 12,
+                height: 12,
+                background: "white",
+                border: "2px solid #2563eb",
+                borderRadius: 3,
+                cursor: hd.cursor,
+                zIndex: 200,
+                transform: `${hd.center === "x" ? "translateX(-50%) " : hd.center === "y" ? "translateY(-50%) " : ""}scale(${inv})`,
+                transformOrigin: hd.origin,
+                touchAction: "none",
+              }}
+            />
+          ))}
           {/* Rotate handle (top-center, above the block) */}
           <div
             title="Drag to rotate"
