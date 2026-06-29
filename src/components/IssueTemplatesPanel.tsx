@@ -8,6 +8,7 @@ import { BookOpen, Check, Copy, Pencil, Save, Trash2, Upload, X } from "lucide-r
 import { toast } from "sonner";
 import {
   deleteIssueTemplate,
+  duplicateIssueTemplate,
   listIssueTemplates,
   saveIssueTemplate,
   updateIssueTemplate,
