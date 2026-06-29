@@ -531,8 +531,53 @@ function CustomBlockView({
     return { nx: nx + bestX.delta, ny: ny + bestY.delta, matchX: bestX.match, matchY: bestY.match };
   };
 
+  /** Compute a resized box given the active handle, pointer delta, and shift-lock state. */
+  const computeResize = (handle: ResizeHandle | undefined, dx: number, dy: number, shift: boolean) => {
+    const box = dragRef.current!.box;
+    const aspect = dragRef.current!.aspect;
+    const minW = 80;
+    const minH = 40;
+    const h = handle ?? "se";
+    const east = h.includes("e");
+    const west = h.includes("w");
+    const south = h.includes("s");
+    const north = h.includes("n");
+    let nx = box.x;
+    let ny = box.y;
+    let nw = box.w;
+    let nh = box.h;
+    if (east) nw = Math.max(minW, box.w + dx);
+    if (west) { nw = Math.max(minW, box.w - dx); nx = box.x + (box.w - nw); }
+    if (south) nh = Math.max(minH, box.h + dy);
+    if (north) { nh = Math.max(minH, box.h - dy); ny = box.y + (box.h - nh); }
+    // Shift = preserve aspect ratio (corner = both axes; edge = lock the other axis)
+    if (shift) {
+      const isCorner = (east || west) && (north || south);
+      if (isCorner) {
+        // Use the larger relative change as the dominant axis
+        const rw = nw / box.w;
+        const rh = nh / box.h;
+        if (Math.abs(rw - 1) >= Math.abs(rh - 1)) {
+          nh = Math.max(minH, nw / aspect);
+        } else {
+          nw = Math.max(minW, nh * aspect);
+        }
+        if (west) nx = box.x + (box.w - nw);
+        if (north) ny = box.y + (box.h - nh);
+      } else if (east || west) {
+        nh = Math.max(minH, nw / aspect);
+        if (north) ny = box.y + (box.h - nh);
+      } else if (north || south) {
+        nw = Math.max(minW, nh * aspect);
+        if (west) nx = box.x + (box.w - nw);
+      }
+    }
+    return { x: nx, y: ny, w: nw, h: nh, east, west, north, south };
+  };
+
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
+    dragRef.current.shift = e.shiftKey;
     const s = pageScale || 1;
     const dx = (e.clientX - dragRef.current.x) / s;
     const dy = (e.clientY - dragRef.current.y) / s;
@@ -546,19 +591,27 @@ function CustomBlockView({
         ys: r.matchY !== null ? [r.matchY] : [],
       });
     } else {
-      let nw = Math.max(80, dragRef.current.box.w + dx);
-      let nh = Math.max(40, dragRef.current.box.h + dy);
-      const right = dragRef.current.box.x + nw;
-      const bottom = dragRef.current.box.y + nh;
-      const rx = snapX(right);
-      const ry = snapY(bottom);
-      if (rx.delta !== 0) nw = Math.max(80, nw + rx.delta);
-      if (ry.delta !== 0) nh = Math.max(40, nh + ry.delta);
-      onChange({ w: nw, h: nh });
-      onActiveLines?.({
-        xs: rx.match !== null ? [rx.match] : [],
-        ys: ry.match !== null ? [ry.match] : [],
-      });
+      const r = computeResize(dragRef.current.handle, dx, dy, e.shiftKey);
+      // Snap the moving edges to guides
+      const rightEdge = r.x + r.w;
+      const bottomEdge = r.y + r.h;
+      const sxR = r.east ? snapX(rightEdge) : { delta: 0, match: null as number | null };
+      const sxL = r.west ? snapX(r.x) : { delta: 0, match: null as number | null };
+      const syB = r.south ? snapY(bottomEdge) : { delta: 0, match: null as number | null };
+      const syT = r.north ? snapY(r.y) : { delta: 0, match: null as number | null };
+      let nx = r.x, ny = r.y, nw = r.w, nh = r.h;
+      if (sxR.delta) nw = Math.max(80, nw + sxR.delta);
+      if (sxL.delta) { nw = Math.max(80, nw - sxL.delta); nx = nx + sxL.delta; }
+      if (syB.delta) nh = Math.max(40, nh + syB.delta);
+      if (syT.delta) { nh = Math.max(40, nh - syT.delta); ny = ny + syT.delta; }
+      onChange({ x: nx, y: ny, w: nw, h: nh });
+      const xs: number[] = [];
+      const ys: number[] = [];
+      if (sxR.match !== null) xs.push(sxR.match);
+      if (sxL.match !== null) xs.push(sxL.match);
+      if (syB.match !== null) ys.push(syB.match);
+      if (syT.match !== null) ys.push(syT.match);
+      onActiveLines?.({ xs, ys });
     }
   };
   const onUp = (e: RPointerEvent<HTMLDivElement>) => {
@@ -575,20 +628,8 @@ function CustomBlockView({
         y: r.matchY !== null ? Math.round(r.ny) : snap(r.ny),
       });
     } else {
-      let nw = Math.max(80, dragRef.current.box.w + dx);
-      let nh = Math.max(40, dragRef.current.box.h + dy);
-      const right = dragRef.current.box.x + nw;
-      const bottom = dragRef.current.box.y + nh;
-      const rx = snapX(right);
-      const ry = snapY(bottom);
-      let usedW = false;
-      let usedH = false;
-      if (rx.delta !== 0) { nw = Math.max(80, nw + rx.delta); usedW = true; }
-      if (ry.delta !== 0) { nh = Math.max(40, nh + ry.delta); usedH = true; }
-      onChange({
-        w: usedW ? Math.round(nw) : snap(nw),
-        h: usedH ? Math.round(nh) : snap(nh),
-      });
+      const r = computeResize(dragRef.current.handle, dx, dy, e.shiftKey || dragRef.current.shift);
+      onChange({ x: snap(r.x), y: snap(r.y), w: snap(r.w), h: snap(r.h) });
     }
     dragRef.current = null;
     onActiveLines?.({ xs: [], ys: [] });
