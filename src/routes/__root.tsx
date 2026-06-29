@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DevErrorOverlay } from "../components/DevErrorOverlay";
 import { UnsavedPromptHost } from "../components/UnsavedPromptHost";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
+import { ShortcutsHelp } from "../components/ShortcutsHelp";
 
 function NotFoundComponent() {
   return (
@@ -130,6 +131,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <DevErrorOverlay />
       <UnsavedPromptHost />
+      <ShortcutsHelp />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
