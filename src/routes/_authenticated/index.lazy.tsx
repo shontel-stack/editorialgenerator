@@ -25,6 +25,7 @@ import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
+import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
 import { BrandKitProvider } from "@/lib/brandKitContext";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
