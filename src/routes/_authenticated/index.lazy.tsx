@@ -2870,6 +2870,78 @@ function Index() {
         onPlaceAttachment={(id, patch) => applyPlacement(id, patch)}
       />
 
+      <LayoutProposalPanel
+        open={layoutAiOpen}
+        onClose={() => setLayoutAiOpen(false)}
+        issue={issue}
+        publicationName={activePublication?.name ?? null}
+        library={libraryAttachments}
+        onApply={(ops: LayoutPlanOp[]) => {
+          let applied = 0;
+          let skipped = 0;
+          const grouped: Record<string, import("@/lib/coverDefaults").CustomBlock[]> = {};
+          for (const op of ops) {
+            if (op.kind === "add_image_block") {
+              const row = libraryAttachments.find((r) => r.id === op.attachmentId);
+              if (!row?.signedUrl) {
+                skipped += 1;
+                continue;
+              }
+              const x = clamp(op.x ?? 160, 0, 3200);
+              const y = clamp(op.y ?? 160, 0, 4267);
+              const w = clamp(op.w ?? 1600, 100, 3200);
+              const h = clamp(op.h ?? 1000, 100, 4267);
+              (grouped[op.pageId] ??= []).push({
+                id: newId(),
+                kind: "image",
+                x, y, w, h, z: 50,
+                imageUrl: row.signedUrl,
+                imageFit: "cover",
+                name: row.file_name,
+              });
+              applied += 1;
+            } else if (op.kind === "add_text_block") {
+              if (!op.text) { skipped += 1; continue; }
+              const x = clamp(op.x ?? 160, 0, 3200);
+              const y = clamp(op.y ?? 160, 0, 4267);
+              const w = clamp(op.w ?? 1600, 100, 3200);
+              const h = clamp(op.h ?? 600, 60, 4267);
+              (grouped[op.pageId] ??= []).push({
+                id: newId(),
+                kind: "text",
+                x, y, w, h, z: 50,
+                text: op.text,
+                fontFamily: op.fontFamily ?? "serif",
+                fontSize: op.fontSize,
+                align: op.align,
+              });
+              applied += 1;
+            } else if (op.kind === "set_field") {
+              if (!op.field || op.value === undefined) { skipped += 1; continue; }
+              setIssue((prev) =>
+                applyPatch(prev, { kind: "update_page_field", pageId: op.pageId, field: op.field!, value: op.value! }),
+              );
+              applied += 1;
+            } else {
+              skipped += 1;
+            }
+          }
+          if (Object.keys(grouped).length > 0) {
+            setIssue((d) => ({
+              ...d,
+              pages: d.pages.map((p) =>
+                grouped[p.id]
+                  ? ({ ...p, customBlocks: [...(p.customBlocks ?? []), ...grouped[p.id]] } as IssuePageNode)
+                  : p,
+              ),
+            }));
+          }
+          return { applied, skipped };
+        }}
+      />
+
+
+
       <ProductionChecklist
         open={checklistOpen}
         onClose={() => setChecklistOpen(false)}
