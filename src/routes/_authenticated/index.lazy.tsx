@@ -2666,6 +2666,7 @@ function Index() {
                   pageId={spread.left.id}
                   dim={dimPx}
                   libraryLabels={libraryLabels}
+                  onOpsChange={setProposalOps}
                 />
               )}
             </div>
@@ -2718,6 +2719,7 @@ function Index() {
                     pageId={spread.right.id}
                     dim={dimPx}
                     libraryLabels={libraryLabels}
+                    onOpsChange={setProposalOps}
                   />
                 )}
               </div>
