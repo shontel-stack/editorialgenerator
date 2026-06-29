@@ -2666,6 +2666,7 @@ function Index() {
                   pageId={spread.left.id}
                   dim={dimPx}
                   libraryLabels={libraryLabels}
+                  onOpsChange={setProposalOps}
                 />
               )}
             </div>
