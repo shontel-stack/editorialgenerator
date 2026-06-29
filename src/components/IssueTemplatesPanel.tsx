@@ -240,6 +240,13 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
                     ) : (
                       <>
                         <button
+                          onClick={() => void onDuplicate(r)}
+                          title="Duplicate template"
+                          className="p-1.5 border border-border rounded-sm hover:bg-secondary"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                        <button
                           onClick={() => startRename(r)}
                           title="Rename template"
                           className="p-1.5 border border-border rounded-sm hover:bg-secondary"
