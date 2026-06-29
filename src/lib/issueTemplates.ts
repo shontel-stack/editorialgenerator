@@ -64,3 +64,16 @@ export async function deleteIssueTemplate(id: string): Promise<void> {
   const { error } = await supabase.from("issue_templates").delete().eq("id", id);
   if (error) throw error;
 }
+
+export async function duplicateIssueTemplate(
+  row: IssueTemplateRow,
+): Promise<IssueTemplateRow> {
+  const nextName = `${row.name} (copy)`;
+  return saveIssueTemplate({
+    userId: row.user_id,
+    publicationId: row.publication_id,
+    name: nextName,
+    description: row.description,
+    data: row.data,
+  });
+}
