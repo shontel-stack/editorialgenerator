@@ -483,9 +483,33 @@ export function CustomBlocksLayer() {
       {editing && pickerOpen && setBlocks && (
         <TemplatePicker onPick={(t) => { insertTemplate(t); setPickerOpen(false); }} onClose={() => setPickerOpen(false)} />
       )}
+      {editing && setBlocks && (
+        <HistoryToolbar
+          canUndo={undoStack.current.length > 0}
+          canRedo={redoStack.current.length > 0}
+          onUndo={undo}
+          onRedo={redo}
+          layersOpen={layersOpen}
+          onToggleLayers={() => setLayersOpen((v) => !v)}
+        />
+      )}
+      {editing && setBlocks && layersOpen && (
+        <LayersPanel
+          blocks={blocks}
+          selectedId={selectedId}
+          onSelect={(id) => setSelectedId(id)}
+          onRename={(id, name) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, name } as CustomBlock) : b)))}
+          onToggleHidden={(id) => setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, hidden: !b.hidden } as CustomBlock) : b)))}
+          onReorder={reorder}
+          onRemove={remove}
+          onClose={() => setLayersOpen(false)}
+        />
+      )}
     </>
   );
 }
+
+
 
 
 
