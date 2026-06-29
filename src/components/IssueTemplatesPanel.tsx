@@ -4,12 +4,13 @@
  * into the editor.
  */
 import { useCallback, useEffect, useState } from "react";
-import { BookOpen, Save, Trash2, Upload } from "lucide-react";
+import { BookOpen, Check, Pencil, Save, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteIssueTemplate,
   listIssueTemplates,
   saveIssueTemplate,
+  updateIssueTemplate,
   type IssueTemplateRow,
 } from "@/lib/issueTemplates";
 import type { IssueDoc } from "@/lib/coverDefaults";
@@ -34,6 +35,36 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
   const [name, setName] = useState(suggestedName(issue));
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  const startRename = (row: IssueTemplateRow) => {
+    setRenamingId(row.id);
+    setRenameValue(row.name);
+  };
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue("");
+  };
+  const commitRename = async (row: IssueTemplateRow) => {
+    const next = renameValue.trim();
+    if (!next) {
+      toast.error("Name can't be empty");
+      return;
+    }
+    if (next === row.name) {
+      cancelRename();
+      return;
+    }
+    try {
+      await updateIssueTemplate(row.id, { name: next });
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, name: next } : r)));
+      toast.success("Template renamed");
+      cancelRename();
+    } catch (e) {
+      toast.error(`Could not rename: ${(e as Error).message}`);
+    }
+  };
 
   const reload = useCallback(async () => {
     if (!userId) return;
@@ -154,7 +185,20 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
                   className="border border-border rounded-sm p-2 flex items-start gap-2 bg-background"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{r.name}</div>
+                    {renamingId === r.id ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void commitRename(r);
+                          else if (e.key === "Escape") cancelRename();
+                        }}
+                        className="w-full px-1.5 py-1 text-xs border border-border rounded-sm bg-background"
+                      />
+                    ) : (
+                      <div className="text-xs font-medium truncate">{r.name}</div>
+                    )}
                     <div className="text-[10px] text-muted-foreground">
                       {pages} page{pages === 1 ? "" : "s"} · {when}
                     </div>
@@ -165,20 +209,48 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
                     ) : null}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => onPickLoad(r)}
-                      title="Load this template into the editor"
-                      className="p-1.5 border border-border rounded-sm hover:bg-secondary"
-                    >
-                      <Upload className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(r)}
-                      title="Delete template"
-                      className="p-1.5 border border-border rounded-sm hover:bg-secondary text-[color:var(--ruby)]"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                    {renamingId === r.id ? (
+                      <>
+                        <button
+                          onClick={() => void commitRename(r)}
+                          title="Save name"
+                          className="p-1.5 border border-border rounded-sm hover:bg-secondary"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={cancelRename}
+                          title="Cancel"
+                          className="p-1.5 border border-border rounded-sm hover:bg-secondary"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startRename(r)}
+                          title="Rename template"
+                          className="p-1.5 border border-border rounded-sm hover:bg-secondary"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => onPickLoad(r)}
+                          title="Load this template into the editor"
+                          className="p-1.5 border border-border rounded-sm hover:bg-secondary"
+                        >
+                          <Upload className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => onDelete(r)}
+                          title="Delete template"
+                          className="p-1.5 border border-border rounded-sm hover:bg-secondary text-[color:var(--ruby)]"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </li>
               );
