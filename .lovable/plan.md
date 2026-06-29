@@ -1,40 +1,75 @@
 ## Goal
-A new page type **Custom contents** that you can lay out freely on page 5 (or anywhere). Each featured article gets a labeled "slot" — its headline, byline, and page number flow into your text boxes, and its lead image flows into a shape frame you can skew or carve into a custom path.
 
-## What you'll get
+Bring the page editor closer to Figma/Canva/Replit feel without changing the current canvas layout or page model. All work stays scoped to the active page's custom blocks layer plus a thin collaboration overlay.
 
-**Add Page → Custom contents** creates a blank canvas (footer only, like the recent Blank page) plus a *Featured slots* panel in the right sidebar.
+## Scope (in order)
 
-For each slot (Feature 1, Feature 2, …) you can:
-- **Auto-link** it to an article page from a dropdown → its headline, byline, and live page number auto-fill any text box / image frame tagged with that slot.
-- **Override manually** — type a custom headline/byline, or pin a specific page number / image, even when linked.
+### 1. Smart guides & snapping (CustomBlocksLayer)
+- During drag/resize of a block, compute snap candidates against:
+  - Page edges and centerlines
+  - Other block edges (L/R/T/B) and centers (X/Y)
+  - Equal-spacing hints between 3+ blocks
+- Snap threshold ~4px in canvas units. Show pink 1px guide lines on the overlay while a snap is active; clear on pointer-up.
+- Hold Alt to temporarily disable snapping.
 
-**Slot tagging on blocks** — every text box and image frame on a custom-contents page gets a new "Slot" dropdown in its block toolbar:
-- `Unassigned` (free text/image)
-- `Feature 1 · headline` / `Feature 1 · byline` / `Feature 1 · page #` / `Feature 1 · image`
-- …same for Feature 2, 3, etc.
+### 2. Multi-select, group/ungroup, lock
+- Marquee select on empty-canvas drag (left mouse on page background).
+- Shift+click toggles a block in/out of selection.
+- Move/resize/rotate/nudge/delete operate on the whole selection; resize uses the union bounding box and scales proportionally.
+- Cmd/Ctrl+G groups selection (stored as `groupId` on each block); Shift+Cmd/Ctrl+G ungroups. Clicking any group member selects the whole group; Alt+click drills into a single member.
+- Lock toggle in Layers panel + toolbar (locked blocks ignore pointer + selection but remain visible).
 
-A block tagged to a slot field renders the slot's value automatically (with manual overrides winning over auto-pulled values). Untagged blocks stay free-form.
+### 3. Keyboard shortcuts + overlay
+- Global shortcuts (scoped to focused editor): Cmd/Ctrl+D duplicate, Cmd/Ctrl+G group, Shift+Cmd/Ctrl+G ungroup, Cmd/Ctrl+] / [ z-order, Cmd/Ctrl+L lock, Arrow nudge (Shift = 10px), Cmd/Ctrl+A select all on page, Esc deselect, Delete/Backspace remove, `?` open overlay.
+- New `ShortcutsHelp` dialog listing groups: Selection, Transform, Order, Clipboard, View. Trigger from rail + `?` key.
 
-**Image frames** gain shape controls on this page type (and reused elsewhere for image blocks):
-- Skew X / Skew Y sliders + rotation (already exists)
-- Frame shape: Rectangle (with corner radius), Ellipse, Polygon (3–12 sides), or Custom path
-- Custom path: drag points on a small editor to draw a clip mask — stored as SVG path, rendered as `clip-path`
+### 4. Clipboard & duplicate styles
+- Cmd/Ctrl+C / X / V serialize selection to an internal clipboard (localStorage scoped per user). Paste places blocks at cursor with +12px offset; paste-in-place via Shift+Cmd/Ctrl+V.
+- Alt-drag clones the selection on drop (already partially there for single block — extend to multi).
+- Copy Style (Cmd/Ctrl+Alt+C) / Paste Style (Cmd/Ctrl+Alt+V): copies visual props only (fill, stroke, radius, opacity, font, color, align, shadow) without geometry/content.
 
-## Article side
-Each article page gets a "Featured on contents" toggle in its editor. When on, the article appears in the slot dropdown on every custom-contents page. (Hybrid mode: you can also leave it off and still link manually.)
+### 5. Comments & pins (Lovable Cloud)
+- New `page_comments` table: id, issue_id, page_id, x, y (page-relative %), author_id, body, resolved, created_at + thread table `page_comment_replies`.
+- RLS: owner of issue + invited collaborators (start with owner-only; future-proof).
+- Pin overlay on the page: small numbered bubbles; click opens a popover with thread + resolve button. New comment via "C" tool from rail.
 
-## Technical sketch
-- `src/lib/coverDefaults.ts` — add `"custom-contents"` to `PageType`, `CustomContentsData` (slots: `{ id, label, articlePageId?, overrides: { headline?, byline?, pageNumber?, imageUrl? } }[]`, palette, folio), `DEFAULT_CUSTOM_CONTENTS`. Add optional `featuredInContents?: boolean` to `ArticleData`.
-- `src/lib/coverDefaults.ts` — extend block types in `CustomBlock` (already used by CustomBlocksLayer) with `slotBinding?: { slotId: string; field: "headline" | "byline" | "pageNumber" | "image" }`, and add `skewX`, `skewY`, `frameShape: "rect" | "ellipse" | "polygon" | "path"`, `polygonSides`, `clipPath` to image blocks.
-- `src/components/CustomBlocksLayer.tsx` — when rendering on a `custom-contents` page, resolve `slotBinding` against the page's slots + linked article (overrides > article data). Add skew via CSS transform; apply `clip-path` to image blocks based on `frameShape`. Add Slot dropdown + Shape controls to the block toolbar.
-- `src/components/PagePreview.tsx` — new `CustomContentsPreview` (footer-only base, like `BlankPreview`); CustomBlocksLayer does the rest.
-- `src/routes/_authenticated/index.lazy.tsx` — add to Add Page menu; new `CustomContentsEditor` sidebar (slots CRUD, article picker dropdown, per-slot manual override fields); add "Featured on contents" toggle in `ArticleEditor`.
-- `src/lib/issue-snapshot.ts` + `src/lib/chat-tools.ts` — register `"custom-contents"` in `addPageSchema` and snapshot title.
-- `src/lib/idmlExport.ts` — handle `custom-contents` (same path as blank + custom blocks; resolve slot bindings to literal strings during export).
-- `src/lib/issue-patch.ts` — add `"custom-contents"` to `add_page` union.
+### 6. Live presence cursors (Realtime)
+- Supabase Realtime presence channel keyed by `issue:{id}:page:{id}`.
+- Broadcast `{x,y,name,color}` throttled to ~30Hz. Render labeled cursors above the canvas.
+- Show participant avatars in the top status bar.
 
-## Out of scope (ask if you want them)
-- Pulling lead image automatically from article hero image (vs. you placing it). Default plan: image auto-pulls if the article has a hero, else slot stays empty until you drop one in.
-- A custom-path drawing tool more elaborate than draggable points (e.g. bezier curves).
-- Reordering slots by drag (will use up/down buttons first).
+### 7. Version history
+- New `issue_versions` table: id, issue_id, snapshot_jsonb, label, created_by, created_at.
+- Auto-snapshot on debounce (every ~60s of edits) + manual "Save version" button. History panel shows list with timestamp/label, "Preview" (read-only render) and "Restore" (writes back to current issue with confirmation; restoring also creates a snapshot of the pre-restore state).
+
+## Technical notes
+
+- Snap engine: pure function `computeSnaps(activeRect, otherRects, pageRect, threshold)` returning `{dx, dy, guides[]}`. Unit-tested.
+- Selection model: lift `selectedIds: string[]` into editor state alongside existing `selectedId`, with adapter so single-id call sites keep working.
+- Groups: store `groupId?: string` on each block; selection helpers expand to full group on hit-test.
+- Clipboard scope: per-user localStorage key `pl.clip.v1`, JSON-serialized blocks (drop ids; regenerate on paste).
+- Comments overlay uses `data-export-ignore="true"` so it never prints in the PDF.
+- Presence: a `usePresence(channelKey)` hook; cleanup on unmount; debounce broadcasts.
+- Version snapshots: store only blocks + page metadata, not heavy uploaded media (reference by attachment id). Cap to last 50 per issue; older ones pruned.
+
+## Files
+
+- New: `src/lib/snapping.ts`, `src/lib/snapping.test.ts`, `src/components/ShortcutsHelp.tsx`, `src/components/CommentsLayer.tsx`, `src/components/PresenceCursors.tsx`, `src/components/VersionHistoryPanel.tsx`, `src/hooks/usePresence.ts`, `src/hooks/usePageClipboard.ts`.
+- Edited: `src/components/CustomBlocksLayer.tsx` (selection model, marquee, groups, snap integration, shortcuts, clipboard, lock), `src/components/editor/EditorRail.tsx` (Comments, History, Shortcuts entries), `src/routes/_authenticated/index.lazy.tsx` (mount overlays + presence).
+- Migration: `page_comments`, `page_comment_replies`, `issue_versions` with RLS + GRANTs; add tables to `supabase_realtime` publication.
+
+## Out of scope (this pass)
+
+- Infinite canvas / zoom-pan / minimap (you chose to keep current layout).
+- Inviting external collaborators with separate roles (presence will use the existing authenticated user only).
+- Real Figma-style auto-layout / constraints.
+
+## Rollout order
+
+1. Snap engine + guides
+2. Multi-select + marquee + groups + lock
+3. Shortcuts + overlay
+4. Clipboard + copy/paste styles
+5. Comments
+6. Presence
+7. Version history
