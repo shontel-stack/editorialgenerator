@@ -2,7 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2 } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -26,6 +26,8 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
+import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
+import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
 import { BrandKitProvider } from "@/lib/brandKitContext";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
@@ -196,6 +198,7 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [brandKitOpen, setBrandKitOpen] = useState(false);
+  const [layoutAiOpen, setLayoutAiOpen] = useState(false);
   const [pagesQuery, setPagesQuery] = useState("");
   const { userId, active: activePublication } = useActivePublication();
 
@@ -1480,6 +1483,8 @@ function Index() {
         <button title="Staff" aria-label="Staff" aria-pressed={staffOpen} onClick={() => setStaffOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${staffOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <Users className="h-[18px] w-[18px]" />
         </button>
+        <button title="AI Layout · propose from library" aria-label="AI Layout" aria-pressed={layoutAiOpen} onClick={() => setLayoutAiOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${layoutAiOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <Wand2 className="h-[18px] w-[18px]" />
         <button title="Production" aria-label="Production" aria-pressed={checklistOpen} onClick={() => setChecklistOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${checklistOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <ClipboardList className="h-[18px] w-[18px]" />
         </button>
