@@ -2,7 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2 } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -26,6 +26,9 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
+import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
+import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
+import { applyPatch } from "@/lib/issue-patch";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
 import { BrandKitProvider } from "@/lib/brandKitContext";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
@@ -196,6 +199,7 @@ function Index() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [brandKitOpen, setBrandKitOpen] = useState(false);
+  const [layoutAiOpen, setLayoutAiOpen] = useState(false);
   const [pagesQuery, setPagesQuery] = useState("");
   const { userId, active: activePublication } = useActivePublication();
 
@@ -1479,6 +1483,9 @@ function Index() {
         </button>
         <button title="Staff" aria-label="Staff" aria-pressed={staffOpen} onClick={() => setStaffOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${staffOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <Users className="h-[18px] w-[18px]" />
+        </button>
+        <button title="AI Layout · propose from library" aria-label="AI Layout" aria-pressed={layoutAiOpen} onClick={() => setLayoutAiOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${layoutAiOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <Wand2 className="h-[18px] w-[18px]" />
         </button>
         <button title="Production" aria-label="Production" aria-pressed={checklistOpen} onClick={() => setChecklistOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${checklistOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <ClipboardList className="h-[18px] w-[18px]" />
@@ -2863,6 +2870,79 @@ function Index() {
           }))}
         onPlaceAttachment={(id, patch) => applyPlacement(id, patch)}
       />
+
+      <LayoutProposalPanel
+        open={layoutAiOpen}
+        onClose={() => setLayoutAiOpen(false)}
+        issue={issue}
+        publicationName={activePublication?.name ?? null}
+        library={libraryAttachments.rows}
+        onApply={(ops: LayoutPlanOp[]) => {
+          const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+          let applied = 0;
+          let skipped = 0;
+          const grouped: Record<string, import("@/lib/coverDefaults").CustomBlock[]> = {};
+          for (const op of ops) {
+            if (op.kind === "add_image_block") {
+              const row = libraryAttachments.rows.find((r) => r.id === op.attachmentId);
+              if (!row?.signedUrl) {
+                skipped += 1;
+                continue;
+              }
+              const x = clamp(op.x ?? 160, 0, 3200);
+              const y = clamp(op.y ?? 160, 0, 4267);
+              const w = clamp(op.w ?? 1600, 100, 3200);
+              const h = clamp(op.h ?? 1000, 100, 4267);
+              (grouped[op.pageId] ??= []).push({
+                id: newId(),
+                kind: "image",
+                x, y, w, h, z: 50,
+                imageUrl: row.signedUrl,
+                imageFit: "cover",
+                name: row.file_name,
+              });
+              applied += 1;
+            } else if (op.kind === "add_text_block") {
+              if (!op.text) { skipped += 1; continue; }
+              const x = clamp(op.x ?? 160, 0, 3200);
+              const y = clamp(op.y ?? 160, 0, 4267);
+              const w = clamp(op.w ?? 1600, 100, 3200);
+              const h = clamp(op.h ?? 600, 60, 4267);
+              (grouped[op.pageId] ??= []).push({
+                id: newId(),
+                kind: "text",
+                x, y, w, h, z: 50,
+                text: op.text,
+                fontFamily: op.fontFamily ?? "serif",
+                fontSize: op.fontSize,
+                align: op.align,
+              });
+              applied += 1;
+            } else if (op.kind === "set_field") {
+              if (!op.field || op.value === undefined) { skipped += 1; continue; }
+              setIssue((prev) =>
+                applyPatch(prev, { kind: "update_page_field", pageId: op.pageId, field: op.field!, value: op.value! }),
+              );
+              applied += 1;
+            } else {
+              skipped += 1;
+            }
+          }
+          if (Object.keys(grouped).length > 0) {
+            setIssue((d) => ({
+              ...d,
+              pages: d.pages.map((p) =>
+                grouped[p.id]
+                  ? ({ ...p, customBlocks: [...(p.customBlocks ?? []), ...grouped[p.id]] } as IssuePageNode)
+                  : p,
+              ),
+            }));
+          }
+          return { applied, skipped };
+        }}
+      />
+
+
 
       <ProductionChecklist
         open={checklistOpen}
