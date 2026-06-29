@@ -415,21 +415,26 @@ export function CustomBlocksLayer() {
         />
       )}
 
-      {blocks.map((b) => (
-        <CustomBlockView
-          key={b.id}
-          block={b}
-          editing={editing}
-          selected={selectedId === b.id}
-          onSelect={() => setSelectedId(b.id)}
-          onChange={(p) => update(b.id, p)}
-          onRemove={() => remove(b.id)}
-          siblingAxesFor={siblingAxesFor}
-          gridSize={snapCfg.gridSizePx}
-          onActiveLines={setActiveLines}
-          onCaretParagraphChange={selectedId === b.id ? setCaretParagraph : undefined}
-        />
-      ))}
+      {blocks.map((b) => {
+        // Hidden blocks: skip entirely outside edit mode (so they don't print).
+        // While editing, keep them visible at reduced opacity so the user can find them via the Layers panel.
+        if (b.hidden && !editing) return null;
+        return (
+          <CustomBlockView
+            key={b.id}
+            block={b}
+            editing={editing}
+            selected={selectedId === b.id}
+            onSelect={() => setSelectedId(b.id)}
+            onChange={(p) => update(b.id, p)}
+            onRemove={() => remove(b.id)}
+            siblingAxesFor={siblingAxesFor}
+            gridSize={snapCfg.gridSizePx}
+            onActiveLines={setActiveLines}
+            onCaretParagraphChange={selectedId === b.id ? setCaretParagraph : undefined}
+          />
+        );
+      })}
 
       {/* Live alignment guide lines during drag. */}
       {editing && pageSize && (activeLines.xs.length > 0 || activeLines.ys.length > 0) && (
