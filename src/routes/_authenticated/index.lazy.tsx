@@ -27,6 +27,8 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
+import { VersionHistoryPanel } from "@/components/VersionHistoryPanel";
+import { CommentsPanel } from "@/components/CommentsPanel";
 import { LayoutProposalOverlay } from "@/components/LayoutProposalOverlay";
 import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
 import { applyPatch } from "@/lib/issue-patch";
@@ -2276,6 +2278,26 @@ function Index() {
                 setIssue(next);
                 if (next.pages[0]) setSelectedId(next.pages[0].id);
               }}
+            />
+          </Section>
+
+          <Section title="Version history · Save points" defaultOpen={false}>
+            <VersionHistoryPanel
+              userId={userId}
+              issue={issue}
+              onRestore={(next) => {
+                setIssue(next);
+                if (next.pages[0]) setSelectedId(next.pages[0].id);
+              }}
+            />
+          </Section>
+
+          <Section title="Comments · This page" defaultOpen={false}>
+            <CommentsPanel
+              userId={userId}
+              issueId={issue.meta.issueId}
+              pageId={selected.id}
+              pageLabel={labelForNode(selected)}
             />
           </Section>
 

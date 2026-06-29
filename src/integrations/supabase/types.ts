@@ -250,6 +250,33 @@ export type Database = {
         }
         Relationships: []
       }
+      issue_versions: {
+        Row: {
+          created_at: string
+          id: string
+          issue_id: string
+          label: string | null
+          snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_id: string
+          label?: string | null
+          snapshot: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_id?: string
+          label?: string | null
+          snapshot?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       layout_presets: {
         Row: {
           column_widths: Json
@@ -280,6 +307,77 @@ export type Database = {
           name?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      page_comment_replies: {
+        Row: {
+          body: string
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_comment_replies_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "page_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          issue_id: string
+          page_id: string
+          resolved: boolean
+          updated_at: string
+          user_id: string
+          x: number
+          y: number
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          issue_id: string
+          page_id: string
+          resolved?: boolean
+          updated_at?: string
+          user_id: string
+          x: number
+          y: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          issue_id?: string
+          page_id?: string
+          resolved?: boolean
+          updated_at?: string
+          user_id?: string
+          x?: number
+          y?: number
         }
         Relationships: []
       }
