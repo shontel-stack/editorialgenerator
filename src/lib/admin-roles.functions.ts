@@ -10,10 +10,15 @@ export type AdminRow = {
 type AuthedCtx = { supabase: ReturnType<typeof import("@supabase/supabase-js").createClient<import("@/integrations/supabase/types").Database>>; userId: string };
 
 async function assertAdmin(ctx: AuthedCtx) {
-  const { data, error } = await ctx.supabase.rpc("has_role", {
-    _user_id: ctx.userId,
-    _role: "admin",
-  });
+  // Query user_roles directly with the user's RLS-scoped client. The
+  // SECURITY DEFINER `has_role` RPC is not exposed to the Data API;
+  // RLS on user_roles restricts the result to the caller's own roles.
+  const { data, error } = await ctx.supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", ctx.userId)
+    .eq("role", "admin")
+    .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Forbidden");
 }
