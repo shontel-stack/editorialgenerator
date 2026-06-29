@@ -1498,19 +1498,19 @@ function DockToggle({ dock, onChange }: { dock: DockSide; onChange: (v: DockSide
   );
 }
 
-function BlockDefaultsPanel({ onClose }: { onClose: () => void }) {
+function BlockDefaultsPanel({ dock = "float", onClose }: { dock?: DockSide; onClose: () => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   const [tab, setTab] = useState<"text" | "image" | "video">("text");
+  const isLeft = dock === "left";
   return (
     <div
       onPointerDown={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
         top: 90,
-        right: 24,
+        ...(isLeft ? { left: 24, transformOrigin: "top left" } : { right: 24, transformOrigin: "top right" }),
         transform: `scale(${inv})`,
-        transformOrigin: "top right",
         background: "white",
         border: "2px solid #0a0a0a",
         borderRadius: 8,
