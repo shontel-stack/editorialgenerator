@@ -504,6 +504,7 @@ function CustomBlockView({
     let next = startRotate + (a - startAngle);
     while (next > 180) next -= 360;
     while (next < -180) next += 360;
+    if (e.shiftKey) next = Math.round(next / 15) * 15;
     onChange({ rotate: snapRotationWith(next, snapCfg) } as Partial<CustomBlock>);
   };
   const onRotateUp = (e: RPointerEvent<HTMLDivElement>) => {
