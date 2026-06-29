@@ -200,6 +200,7 @@ function Index() {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [brandKitOpen, setBrandKitOpen] = useState(false);
   const [layoutAiOpen, setLayoutAiOpen] = useState(false);
+  const [proposalOps, setProposalOps] = useState<LayoutPlanOp[]>([]);
   const [pagesQuery, setPagesQuery] = useState("");
   const { userId, active: activePublication } = useActivePublication();
 
