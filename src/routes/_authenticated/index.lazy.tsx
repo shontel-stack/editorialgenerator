@@ -28,6 +28,7 @@ import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
 import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
+import { applyPatch } from "@/lib/issue-patch";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
 import { BrandKitProvider } from "@/lib/brandKitContext";
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
