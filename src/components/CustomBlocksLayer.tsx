@@ -1554,10 +1554,10 @@ function BlockDefaultsPanel({ dock = "float", onClose }: { dock?: DockSide; onCl
     <div
       onPointerDown={(e) => e.stopPropagation()}
       style={{
-        position: "absolute",
-        top: 90,
-        ...(isLeft ? { left: 24, transformOrigin: "top left" } : { right: 24, transformOrigin: "top right" }),
-        transform: `scale(${inv})`,
+        position: isLeft ? ("fixed" as const) : "absolute",
+        top: isLeft ? 130 : 90,
+        ...(isLeft ? { left: 108, transformOrigin: "top left" } : { right: 24, transformOrigin: "top right" }),
+        transform: isLeft ? undefined : `scale(${inv})`,
         background: "white",
         border: "2px solid #0a0a0a",
         borderRadius: 8,
