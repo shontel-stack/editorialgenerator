@@ -7,7 +7,9 @@ export type AdminRow = {
   created_at: string;
 };
 
-async function assertAdmin(ctx: { supabase: { rpc: (n: string, p: unknown) => Promise<{ data: unknown; error: { message: string } | null }> }; userId: string }) {
+type AuthedCtx = { supabase: ReturnType<typeof import("@supabase/supabase-js").createClient<import("@/integrations/supabase/types").Database>>; userId: string };
+
+async function assertAdmin(ctx: AuthedCtx) {
   const { data, error } = await ctx.supabase.rpc("has_role", {
     _user_id: ctx.userId,
     _role: "admin",
