@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
 
 const PAGE_W = 3200;
@@ -14,15 +14,13 @@ type Props = {
   onOpsChange?: (next: LayoutPlanOp[]) => void;
 };
 
+type DragSnap = { idx: number; x: number; y: number; w: number; h: number };
 type Drag = {
   mode: "move" | "resize";
-  opIndex: number;
+  anchorIdx: number;
   startClientX: number;
   startClientY: number;
-  startX: number;
-  startY: number;
-  startW: number;
-  startH: number;
+  snaps: DragSnap[];
 };
 
 const DEFAULTS = {
@@ -38,10 +36,12 @@ function defaultsFor(op: LayoutPlanOp) {
  * Visual ghost overlay showing where proposed text/image blocks will land
  * on a given page. When `onOpsChange` is set, ghosts can be dragged (body)
  * and resized (bottom-right handle) to fine-tune placement before applying.
+ * Supports multi-select (shift/cmd-click) to move/resize/nudge as a group.
  */
 export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsChange }: Props) {
   const interactive = typeof onOpsChange === "function";
   const dragRef = useRef<Drag | null>(null);
+  const [selected, setSelected] = useState<number[]>([]);
   const sx = dim.w / PAGE_W;
   const sy = dim.h / PAGE_H;
 
@@ -54,9 +54,43 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
         (op.kind === "add_image_block" || op.kind === "add_text_block"),
     );
 
+  // Prune selection if ops change and indices disappear.
+  useEffect(() => {
+    setSelected((sel) => sel.filter((i) => entries.some((e) => e.idx === i)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ops.length, pageId]);
+
   if (entries.length === 0) return null;
 
   const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+
+  const selectionFor = (idx: number, e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
+    const additive = e.shiftKey || e.metaKey || e.ctrlKey;
+    setSelected((prev) => {
+      if (additive) {
+        return prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx];
+      }
+      return prev.includes(idx) && prev.length > 1 ? prev : [idx];
+    });
+  };
+
+  const activeGroup = (idx: number): number[] => {
+    if (selected.includes(idx) && selected.length > 0) return selected;
+    return [idx];
+  };
+
+  const snapshot = (group: number[]): DragSnap[] =>
+    group.map((i) => {
+      const op = ops[i];
+      const d = defaultsFor(op);
+      return {
+        idx: i,
+        x: op.x ?? d.x,
+        y: op.y ?? d.y,
+        w: op.w ?? d.w,
+        h: op.h ?? d.h,
+      };
+    });
 
   const onPointerDown = (
     e: React.PointerEvent<HTMLDivElement>,
@@ -66,17 +100,21 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
     if (!interactive) return;
     e.stopPropagation();
     e.preventDefault();
-    const op = ops[opIndex];
-    const d = defaultsFor(op);
+    // Update selection on body-click; resize handle preserves current selection.
+    if (mode === "move") selectionFor(opIndex, e);
+    const group = mode === "move"
+      ? (selected.includes(opIndex) && selected.length > 1
+          ? selected
+          : (e.shiftKey || e.metaKey || e.ctrlKey
+              ? Array.from(new Set([...selected, opIndex]))
+              : [opIndex]))
+      : activeGroup(opIndex);
     dragRef.current = {
       mode,
-      opIndex,
+      anchorIdx: opIndex,
       startClientX: e.clientX,
       startClientY: e.clientY,
-      startX: op.x ?? d.x,
-      startY: op.y ?? d.y,
-      startW: op.w ?? d.w,
-      startH: op.h ?? d.h,
+      snaps: snapshot(group),
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -87,21 +125,29 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
     const dxPage = (e.clientX - drag.startClientX) / sx;
     const dyPage = (e.clientY - drag.startClientY) / sy;
     const next = ops.slice();
-    const cur = next[drag.opIndex];
     if (drag.mode === "move") {
-      const w = drag.startW;
-      const h = drag.startH;
-      next[drag.opIndex] = {
-        ...cur,
-        x: Math.round(clamp(drag.startX + dxPage, 0, PAGE_W - w)),
-        y: Math.round(clamp(drag.startY + dyPage, 0, PAGE_H - h)),
-        w,
-        h,
-      };
+      // Constrain so no block in group leaves the page.
+      let cdx = dxPage;
+      let cdy = dyPage;
+      for (const s of drag.snaps) {
+        cdx = clamp(cdx, -s.x, PAGE_W - s.w - s.x);
+        cdy = clamp(cdy, -s.y, PAGE_H - s.h - s.y);
+      }
+      for (const s of drag.snaps) {
+        next[s.idx] = {
+          ...next[s.idx],
+          x: Math.round(s.x + cdx),
+          y: Math.round(s.y + cdy),
+          w: s.w,
+          h: s.h,
+        };
+      }
     } else {
-      const w = Math.round(clamp(drag.startW + dxPage, 80, PAGE_W - drag.startX));
-      const h = Math.round(clamp(drag.startH + dyPage, 60, PAGE_H - drag.startY));
-      next[drag.opIndex] = { ...cur, x: drag.startX, y: drag.startY, w, h };
+      for (const s of drag.snaps) {
+        const w = Math.round(clamp(s.w + dxPage, 80, PAGE_W - s.x));
+        const h = Math.round(clamp(s.h + dyPage, 60, PAGE_H - s.y));
+        next[s.idx] = { ...next[s.idx], x: s.x, y: s.y, w, h };
+      }
     }
     onOpsChange(next);
   };
@@ -131,6 +177,7 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
         const pw = (op.w ?? d.w) * sx;
         const ph = (op.h ?? d.h) * sy;
         const isImage = op.kind === "add_image_block";
+        const isSelected = selected.includes(idx);
         const tint = isImage ? "rgba(225, 29, 72, 0.14)" : "rgba(37, 99, 235, 0.12)";
         const border = isImage ? "rgb(225, 29, 72)" : "rgb(37, 99, 235)";
         const label = isImage
@@ -156,18 +203,24 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
               else return;
               e.preventDefault();
               e.stopPropagation();
-              const cur = ops[idx];
-              const dd = defaultsFor(cur);
-              const w = cur.w ?? dd.w;
-              const h = cur.h ?? dd.h;
+              const group = activeGroup(idx);
+              const snaps = snapshot(group);
+              let cdx = dx;
+              let cdy = dy;
+              for (const s of snaps) {
+                cdx = clamp(cdx, -s.x, PAGE_W - s.w - s.x);
+                cdy = clamp(cdy, -s.y, PAGE_H - s.h - s.y);
+              }
               const next = ops.slice();
-              next[idx] = {
-                ...cur,
-                x: Math.round(clamp((cur.x ?? dd.x) + dx, 0, PAGE_W - w)),
-                y: Math.round(clamp((cur.y ?? dd.y) + dy, 0, PAGE_H - h)),
-                w,
-                h,
-              };
+              for (const s of snaps) {
+                next[s.idx] = {
+                  ...next[s.idx],
+                  x: Math.round(s.x + cdx),
+                  y: Math.round(s.y + cdy),
+                  w: s.w,
+                  h: s.h,
+                };
+              }
               onOpsChange(next);
             }}
             style={{
@@ -177,16 +230,17 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
               width: pw,
               height: ph,
               background: tint,
-              border: `1.5px dashed ${border}`,
+              border: `${isSelected ? 2.5 : 1.5}px ${isSelected ? "solid" : "dashed"} ${border}`,
               borderRadius: 4,
-              boxShadow: `0 0 0 1px rgba(255,255,255,0.6) inset`,
+              boxShadow: isSelected
+                ? `0 0 0 2px rgba(255,255,255,0.9) inset, 0 0 0 1px ${border}`
+                : `0 0 0 1px rgba(255,255,255,0.6) inset`,
               pointerEvents: interactive ? "auto" : "none",
               cursor: interactive ? "move" : "default",
               touchAction: "none",
               outline: "none",
             }}
           >
-
             <div
               style={{
                 position: "absolute",
@@ -205,7 +259,7 @@ export function LayoutProposalOverlay({ ops, pageId, dim, libraryLabels, onOpsCh
                 pointerEvents: "none",
               }}
             >
-              {label}
+              {isSelected && selected.length > 1 ? `◉ ${label}` : label}
             </div>
             {!isImage && op.text && (
               <div
