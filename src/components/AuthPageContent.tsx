@@ -8,7 +8,15 @@ import { Label } from "@/components/ui/label";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 
-export function AuthPageContent({ onAuthenticated }: { onAuthenticated?: () => void } = {}) {
+export function AuthPageContent({
+  onAuthenticated,
+  timedOut = false,
+  onRetry,
+}: {
+  onAuthenticated?: () => void;
+  timedOut?: boolean;
+  onRetry?: () => void;
+} = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
