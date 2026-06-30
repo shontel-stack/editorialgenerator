@@ -21,23 +21,37 @@ function AuthGate() {
     }, 5000);
 
     // Fast local-storage path so a hung network call can't block render.
-    void supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      if (data.session?.user) {
-        window.clearTimeout(timeout);
-        setStatus("allowed");
-      }
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data.session?.user) {
+          window.clearTimeout(timeout);
+          setStatus("allowed");
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn("[AuthGate] supabase.auth.getSession() failed; continuing to sign-in.", error);
+      });
 
-    void supabase.auth.getUser().then(({ data, error }) => {
-      if (cancelled) return;
-      window.clearTimeout(timeout);
-      if (error || !data.user) {
+    void supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        window.clearTimeout(timeout);
+        if (error || !data.user) {
+          setStatus("denied");
+          return;
+        }
+        setStatus("allowed");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        window.clearTimeout(timeout);
+        console.warn("[AuthGate] supabase.auth.getUser() failed; continuing to sign-in.", error);
         setStatus("denied");
-        return;
-      }
-      setStatus("allowed");
-    });
+      });
 
     return () => {
       cancelled = true;
@@ -50,18 +64,7 @@ function AuthGate() {
     setAttempt((n) => n + 1);
   }, []);
 
-  if (status === "checking") {
-    return (
-      <main
-        className="min-h-screen flex items-center justify-center bg-background px-4 text-sm text-muted-foreground"
-        aria-busy="true"
-      >
-        Loading…
-      </main>
-    );
-  }
-
-  if (status === "denied" || status === "timeout") {
+  if (status === "checking" || status === "denied" || status === "timeout") {
     return (
       <AuthPageContent
         onAuthenticated={() => setStatus("allowed")}
