@@ -2158,6 +2158,26 @@ function BlockToolbar({
       <button type="button" title="Send backward" onClick={() => onReorder("backward")} style={btnStyle("normal")}><ChevronDown size={12} /></button>
       <button type="button" title="Send to back" onClick={() => onReorder("back")} style={btnStyle("normal")}><ChevronsDown size={12} /></button>
       <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Group</span>
+      <button
+        type="button"
+        title="Group selection (⌘/Ctrl+G). Shift-click blocks to multi-select."
+        onClick={onGroup}
+        disabled={selectionCount < 2}
+        style={{ ...btnStyle("normal"), opacity: selectionCount < 2 ? 0.5 : 1, cursor: selectionCount < 2 ? "not-allowed" : "pointer" }}
+      >
+        Group{selectionCount > 1 ? ` (${selectionCount})` : ""}
+      </button>
+      <button
+        type="button"
+        title="Ungroup (⇧⌘/Ctrl+G)"
+        onClick={onUngroup}
+        disabled={!inGroup}
+        style={{ ...btnStyle("normal"), opacity: inGroup ? 1 : 0.5, cursor: inGroup ? "pointer" : "not-allowed" }}
+      >
+        Ungroup
+      </button>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
       <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Align page</span>
       <button type="button" title="Align left" onClick={() => onChange({ x: 0 } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignStartVertical size={12} /></button>
       <button type="button" title="Center horizontally" onClick={() => onChange({ x: Math.round((3200 - block.w) / 2) } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignCenterVertical size={12} /></button>
