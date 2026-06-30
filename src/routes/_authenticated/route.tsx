@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { AuthPageContent } from "@/components/AuthPageContent";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthGate() {
   const navigate = useNavigate();
-  const [allowed, setAllowed] = useState(false);
+  const [status, setStatus] = useState<"checking" | "allowed" | "denied">("checking");
 
   useEffect(() => {
     let cancelled = false;
@@ -16,10 +17,10 @@ function AuthGate() {
     void supabase.auth.getUser().then(({ data, error }) => {
       if (cancelled) return;
       if (error || !data.user) {
-        void navigate({ to: "/auth", replace: true });
+        setStatus("denied");
         return;
       }
-      setAllowed(true);
+      setStatus("allowed");
     });
 
     return () => {
@@ -27,7 +28,7 @@ function AuthGate() {
     };
   }, [navigate]);
 
-  if (!allowed) {
+  if (status === "checking") {
     return (
       <main
         className="min-h-screen flex items-center justify-center bg-background px-4 text-sm text-muted-foreground"
@@ -37,6 +38,8 @@ function AuthGate() {
       </main>
     );
   }
+
+  if (status === "denied") return <AuthPageContent />;
 
   return <Outlet />;
 }
