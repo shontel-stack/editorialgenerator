@@ -1581,7 +1581,7 @@ function useDockPosition(storageKey: string): {
     if (typeof window === "undefined") return "float";
     try {
       const raw = window.localStorage.getItem(storageKey);
-      if (raw === "right" || raw === "left" || raw === "float") return raw;
+      if (raw === "right" || raw === "left" || raw === "float" || raw === "top") return raw;
     } catch { /* noop */ }
     return "float";
   });
