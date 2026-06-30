@@ -8,9 +8,10 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
     title: "Selection",
     rows: [
       { keys: ["Click"], desc: "Select element" },
-      { keys: ["Shift", "Click"], desc: "Multi-select (planned)" },
+      { keys: ["Shift", "Click"], desc: "Add/remove from selection" },
+      { keys: ["⌘/Ctrl", "G"], desc: "Group selected blocks" },
+      { keys: ["⌘/Ctrl", "Shift", "G"], desc: "Ungroup" },
       { keys: ["Esc"], desc: "Deselect" },
-      { keys: ["Tab"], desc: "Cycle through elements" },
     ],
   },
   {

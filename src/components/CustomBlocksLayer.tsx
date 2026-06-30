@@ -193,7 +193,38 @@ export function CustomBlocksLayer() {
   const snapCfg = ctx?.snapSettings ?? globalSnap;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [extraSelectedIds, setExtraSelectedIds] = useState<string[]>([]);
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+
+  /** Resolve every block id that should be treated as selected: the primary
+   *  selection, any explicit shift-click additions, and ALL group members of
+   *  any block in that set. */
+  const effectiveSelectedIds = (() => {
+    const base = new Set<string>();
+    if (selectedId) base.add(selectedId);
+    for (const id of extraSelectedIds) base.add(id);
+    const groups = new Set<string>();
+    for (const b of blocks) if (base.has(b.id) && b.groupId) groups.add(b.groupId);
+    if (groups.size) {
+      for (const b of blocks) if (b.groupId && groups.has(b.groupId)) base.add(b.id);
+    }
+    return base;
+  })();
+
+  /** Click handler used by every block. Shift toggles in/out of the
+   *  multi-selection; a plain click resets to a single selection. */
+  const selectBlock = useCallback((id: string, shiftKey: boolean) => {
+    if (!shiftKey) {
+      setSelectedId(id);
+      setExtraSelectedIds([]);
+      return;
+    }
+    setExtraSelectedIds((prev) => {
+      if (id === selectedId) return prev;
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      return [...prev, id];
+    });
+  }, [selectedId]);
   // Index of the paragraph the caret is in while editing a text block, else null.
   const [caretParagraph, setCaretParagraph] = useState<number | null>(null);
 
@@ -214,10 +245,10 @@ export function CustomBlocksLayer() {
     return () => ro.disconnect();
   }, [editing]);
 
-  // Clear selection when leaving edit mode
   useEffect(() => {
     if (!editing) {
       setSelectedId(null);
+      setExtraSelectedIds([]);
       setCaretParagraph(null);
     }
   }, [editing]);
@@ -249,6 +280,24 @@ export function CustomBlocksLayer() {
   const update = useCallback(
     (id: string, patch: Partial<CustomBlock>) => {
       if (!setBlocks) return;
+      const cur = blocks.find((b) => b.id === id);
+      if (!cur) return;
+      // Group-aware move: if only x/y change and the block is in a group,
+      // shift every group member by the same delta to preserve relative
+      // positions. Resize / rotation / other patches act on the block alone.
+      const hasMove = patch.x !== undefined || patch.y !== undefined;
+      const hasResize = (patch as { w?: number; h?: number }).w !== undefined || (patch as { w?: number; h?: number }).h !== undefined;
+      if (hasMove && !hasResize && cur.groupId) {
+        const dx = patch.x !== undefined ? (patch.x as number) - cur.x : 0;
+        const dy = patch.y !== undefined ? (patch.y as number) - cur.y : 0;
+        const gid = cur.groupId;
+        setBlocks(blocks.map((b) => {
+          if (b.id === id) return { ...b, ...patch } as CustomBlock;
+          if (b.groupId === gid) return { ...b, x: b.x + dx, y: b.y + dy } as CustomBlock;
+          return b;
+        }));
+        return;
+      }
       setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as CustomBlock) : b)));
     },
     [blocks, setBlocks],
@@ -256,11 +305,35 @@ export function CustomBlocksLayer() {
   const remove = useCallback(
     (id: string) => {
       if (!setBlocks) return;
-      setBlocks(blocks.filter((b) => b.id !== id));
+      // Removing a grouped block removes the whole group so survivors aren't orphaned mid-layout.
+      const cur = blocks.find((b) => b.id === id);
+      const gid = cur?.groupId;
+      setBlocks(blocks.filter((b) => (gid ? b.groupId !== gid : b.id !== id)));
       setSelectedId(null);
+      setExtraSelectedIds([]);
     },
     [blocks, setBlocks],
   );
+  /** Assign a fresh groupId to every effectively-selected block (requires 2+). */
+  const group = useCallback(() => {
+    if (!setBlocks) return;
+    const ids = Array.from(effectiveSelectedIds);
+    if (ids.length < 2) return;
+    const gid = `g_${Math.random().toString(36).slice(2, 10)}`;
+    setBlocks(blocks.map((b) => (ids.includes(b.id) ? ({ ...b, groupId: gid } as CustomBlock) : b)));
+  }, [blocks, setBlocks, effectiveSelectedIds]);
+  /** Clear groupId from every effectively-selected block. */
+  const ungroup = useCallback(() => {
+    if (!setBlocks) return;
+    const ids = Array.from(effectiveSelectedIds);
+    if (ids.length === 0) return;
+    setBlocks(blocks.map((b) => {
+      if (!ids.includes(b.id) || !b.groupId) return b;
+      const next = { ...b } as CustomBlock & { groupId?: string };
+      delete next.groupId;
+      return next;
+    }));
+  }, [blocks, setBlocks, effectiveSelectedIds]);
   const requestEdit = ctx?.onRequestEdit;
   const add = useCallback(
     (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => {
@@ -446,23 +519,37 @@ export function CustomBlocksLayer() {
         return;
       }
 
-      // Delete
-      if ((e.key === "Backspace" || e.key === "Delete") && sel && setBlocks) {
+      // Group / Ungroup — Cmd/Ctrl+G (Shift = ungroup), Figma/Canva-style.
+      if (meta && (e.key === "g" || e.key === "G")) {
+        if (!setBlocks) return;
         e.preventDefault();
-        setBlocks(blocks.filter((b) => b.id !== sel.id));
+        if (e.shiftKey) ungroup();
+        else group();
+        return;
+      }
+
+      const idsForBulk = Array.from(effectiveSelectedIds);
+
+      // Delete (whole effective selection, including group mates)
+      if ((e.key === "Backspace" || e.key === "Delete") && idsForBulk.length > 0 && setBlocks) {
+        e.preventDefault();
+        setBlocks(blocks.filter((b) => !idsForBulk.includes(b.id)));
         setSelectedId(null);
+        setExtraSelectedIds([]);
         return;
       }
 
       // Escape — deselect
-      if (e.key === "Escape" && sel) {
+      if (e.key === "Escape" && (sel || extraSelectedIds.length > 0)) {
         e.preventDefault();
         setSelectedId(null);
+        setExtraSelectedIds([]);
         return;
       }
 
-      // Arrow nudges (1px, 10px with Shift)
-      if (sel && setBlocks && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      // Arrow nudges (1px, 10px with Shift). Moves every effectively-selected
+      // block by the same delta so groups stay locked together.
+      if (idsForBulk.length > 0 && setBlocks && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
         let dx = 0, dy = 0;
@@ -470,12 +557,12 @@ export function CustomBlocksLayer() {
         else if (e.key === "ArrowDown") dy = step;
         else if (e.key === "ArrowLeft") dx = -step;
         else if (e.key === "ArrowRight") dx = step;
-        setBlocks(blocks.map((b) => (b.id === sel.id ? ({ ...b, x: b.x + dx, y: b.y + dy } as CustomBlock) : b)));
+        setBlocks(blocks.map((b) => (idsForBulk.includes(b.id) ? ({ ...b, x: b.x + dx, y: b.y + dy } as CustomBlock) : b)));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [editing, undo, redo, blocks, setBlocks, selectedId]);
+  }, [editing, undo, redo, blocks, setBlocks, selectedId, extraSelectedIds, effectiveSelectedIds, group, ungroup]);
 
   void historyTick;
 
@@ -516,8 +603,9 @@ export function CustomBlocksLayer() {
             key={b.id}
             block={b}
             editing={editing}
-            selected={selectedId === b.id}
-            onSelect={() => setSelectedId(b.id)}
+            selected={effectiveSelectedIds.has(b.id)}
+            isPrimary={selectedId === b.id}
+            onSelect={(shiftKey) => selectBlock(b.id, shiftKey)}
             onChange={(p) => update(b.id, p)}
             onRemove={() => remove(b.id)}
             siblingAxesFor={siblingAxesFor}
@@ -570,6 +658,10 @@ export function CustomBlocksLayer() {
           onRemove={() => remove(selected.id)}
           onReorder={(a) => reorder(selected.id, a)}
           caretParagraph={caretParagraph}
+          selectionCount={effectiveSelectedIds.size}
+          inGroup={Boolean(selected.groupId)}
+          onGroup={group}
+          onUngroup={ungroup}
         />
       )}
       {editing && pickerOpen && setBlocks && (
@@ -620,6 +712,7 @@ function CustomBlockView({
   block,
   editing,
   selected,
+  isPrimary,
   onSelect,
   onChange,
   onRemove,
@@ -630,8 +723,11 @@ function CustomBlockView({
 }: {
   block: CustomBlock;
   editing: boolean;
+  /** True if this block is anywhere in the active selection (incl. group mates). */
   selected: boolean;
-  onSelect: () => void;
+  /** True only for the focused block — shows resize / rotate / delete affordances. */
+  isPrimary: boolean;
+  onSelect: (shiftKey: boolean) => void;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
   siblingAxesFor?: (dragId: string) => { xs: number[]; ys: number[] };
@@ -690,7 +786,7 @@ function CustomBlockView({
       box,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    onSelect();
+    onSelect(e.shiftKey);
   };
 
   const startRotate = (e: RPointerEvent<HTMLDivElement>) => {
@@ -706,7 +802,7 @@ function CustomBlockView({
     const curRotate = (block as { rotate?: number }).rotate ?? 0;
     rotRef.current = { cx, cy, startAngle, startRotate: curRotate };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    onSelect();
+    onSelect(e.shiftKey);
   };
   const onRotateMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!rotRef.current) return;
@@ -912,12 +1008,12 @@ function CustomBlockView({
         if (block.kind === "text") {
           e.stopPropagation();
           setEditingText(true);
-          onSelect();
+          onSelect(e.shiftKey);
         }
       }}
     >
       {wrapped}
-      {editing && selected && (
+      {editing && isPrimary && (
         <>
           {/* 8 resize handles (corners + edge midpoints). Hold Shift to keep aspect ratio. */}
           {([
@@ -1981,12 +2077,20 @@ function BlockToolbar({
   onRemove,
   onReorder,
   caretParagraph,
+  selectionCount,
+  inGroup,
+  onGroup,
+  onUngroup,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
   onReorder: (action: "front" | "back" | "forward" | "backward") => void;
   caretParagraph?: number | null;
+  selectionCount: number;
+  inGroup: boolean;
+  onGroup: () => void;
+  onUngroup: () => void;
 }) {
   const ctx = useLayoutEdit();
   const global = useSnapSettings();
@@ -2053,6 +2157,26 @@ function BlockToolbar({
       <button type="button" title="Bring forward" onClick={() => onReorder("forward")} style={btnStyle("normal")}><ChevronUp size={12} /></button>
       <button type="button" title="Send backward" onClick={() => onReorder("backward")} style={btnStyle("normal")}><ChevronDown size={12} /></button>
       <button type="button" title="Send to back" onClick={() => onReorder("back")} style={btnStyle("normal")}><ChevronsDown size={12} /></button>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Group</span>
+      <button
+        type="button"
+        title="Group selection (⌘/Ctrl+G). Shift-click blocks to multi-select."
+        onClick={onGroup}
+        disabled={selectionCount < 2}
+        style={{ ...btnStyle("normal"), opacity: selectionCount < 2 ? 0.5 : 1, cursor: selectionCount < 2 ? "not-allowed" : "pointer" }}
+      >
+        Group{selectionCount > 1 ? ` (${selectionCount})` : ""}
+      </button>
+      <button
+        type="button"
+        title="Ungroup (⇧⌘/Ctrl+G)"
+        onClick={onUngroup}
+        disabled={!inGroup}
+        style={{ ...btnStyle("normal"), opacity: inGroup ? 1 : 0.5, cursor: inGroup ? "pointer" : "not-allowed" }}
+      >
+        Ungroup
+      </button>
       <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
       <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Align page</span>
       <button type="button" title="Align left" onClick={() => onChange({ x: 0 } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignStartVertical size={12} /></button>
