@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AuthPageContent } from "@/components/AuthPageContent";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,15 +8,16 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthGate() {
-  const [status, setStatus] = useState<"checking" | "allowed" | "denied">("checking");
+  const [status, setStatus] = useState<"checking" | "allowed" | "denied" | "timeout">("checking");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
     const timeout = window.setTimeout(() => {
       if (cancelled) return;
-      console.warn("[AuthGate] supabase.auth.getUser() timed out after 5s; falling back to sign-in.");
-      setStatus((prev) => (prev === "checking" ? "denied" : prev));
+      console.warn("[AuthGate] supabase.auth.getUser() timed out after 5s; offering retry.");
+      setStatus((prev) => (prev === "checking" ? "timeout" : prev));
     }, 5000);
 
     // Fast local-storage path so a hung network call can't block render.
@@ -42,6 +43,11 @@ function AuthGate() {
       cancelled = true;
       window.clearTimeout(timeout);
     };
+  }, [attempt]);
+
+  const retry = useCallback(() => {
+    setStatus("checking");
+    setAttempt((n) => n + 1);
   }, []);
 
   if (status === "checking") {
@@ -55,8 +61,14 @@ function AuthGate() {
     );
   }
 
-  if (status === "denied") {
-    return <AuthPageContent onAuthenticated={() => setStatus("allowed")} />;
+  if (status === "denied" || status === "timeout") {
+    return (
+      <AuthPageContent
+        onAuthenticated={() => setStatus("allowed")}
+        timedOut={status === "timeout"}
+        onRetry={retry}
+      />
+    );
   }
 
   return <Outlet />;
