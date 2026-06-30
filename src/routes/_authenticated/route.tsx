@@ -13,8 +13,24 @@ function AuthGate() {
   useEffect(() => {
     let cancelled = false;
 
+    const timeout = window.setTimeout(() => {
+      if (cancelled) return;
+      console.warn("[AuthGate] supabase.auth.getUser() timed out after 5s; falling back to sign-in.");
+      setStatus((prev) => (prev === "checking" ? "denied" : prev));
+    }, 5000);
+
+    // Fast local-storage path so a hung network call can't block render.
+    void supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session?.user) {
+        window.clearTimeout(timeout);
+        setStatus("allowed");
+      }
+    });
+
     void supabase.auth.getUser().then(({ data, error }) => {
       if (cancelled) return;
+      window.clearTimeout(timeout);
       if (error || !data.user) {
         setStatus("denied");
         return;
@@ -24,6 +40,7 @@ function AuthGate() {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
   }, []);
 
