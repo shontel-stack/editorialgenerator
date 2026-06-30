@@ -2073,12 +2073,20 @@ function BlockToolbar({
   onRemove,
   onReorder,
   caretParagraph,
+  selectionCount,
+  inGroup,
+  onGroup,
+  onUngroup,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
   onReorder: (action: "front" | "back" | "forward" | "backward") => void;
   caretParagraph?: number | null;
+  selectionCount: number;
+  inGroup: boolean;
+  onGroup: () => void;
+  onUngroup: () => void;
 }) {
   const ctx = useLayoutEdit();
   const global = useSnapSettings();
