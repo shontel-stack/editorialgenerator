@@ -280,6 +280,24 @@ export function CustomBlocksLayer() {
   const update = useCallback(
     (id: string, patch: Partial<CustomBlock>) => {
       if (!setBlocks) return;
+      const cur = blocks.find((b) => b.id === id);
+      if (!cur) return;
+      // Group-aware move: if only x/y change and the block is in a group,
+      // shift every group member by the same delta to preserve relative
+      // positions. Resize / rotation / other patches act on the block alone.
+      const hasMove = patch.x !== undefined || patch.y !== undefined;
+      const hasResize = (patch as { w?: number; h?: number }).w !== undefined || (patch as { w?: number; h?: number }).h !== undefined;
+      if (hasMove && !hasResize && cur.groupId) {
+        const dx = patch.x !== undefined ? (patch.x as number) - cur.x : 0;
+        const dy = patch.y !== undefined ? (patch.y as number) - cur.y : 0;
+        const gid = cur.groupId;
+        setBlocks(blocks.map((b) => {
+          if (b.id === id) return { ...b, ...patch } as CustomBlock;
+          if (b.groupId === gid) return { ...b, x: b.x + dx, y: b.y + dy } as CustomBlock;
+          return b;
+        }));
+        return;
+      }
       setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as CustomBlock) : b)));
     },
     [blocks, setBlocks],
@@ -287,11 +305,35 @@ export function CustomBlocksLayer() {
   const remove = useCallback(
     (id: string) => {
       if (!setBlocks) return;
-      setBlocks(blocks.filter((b) => b.id !== id));
+      // Removing a grouped block removes the whole group so survivors aren't orphaned mid-layout.
+      const cur = blocks.find((b) => b.id === id);
+      const gid = cur?.groupId;
+      setBlocks(blocks.filter((b) => (gid ? b.groupId !== gid : b.id !== id)));
       setSelectedId(null);
+      setExtraSelectedIds([]);
     },
     [blocks, setBlocks],
   );
+  /** Assign a fresh groupId to every effectively-selected block (requires 2+). */
+  const group = useCallback(() => {
+    if (!setBlocks) return;
+    const ids = Array.from(effectiveSelectedIds);
+    if (ids.length < 2) return;
+    const gid = `g_${Math.random().toString(36).slice(2, 10)}`;
+    setBlocks(blocks.map((b) => (ids.includes(b.id) ? ({ ...b, groupId: gid } as CustomBlock) : b)));
+  }, [blocks, setBlocks, effectiveSelectedIds]);
+  /** Clear groupId from every effectively-selected block. */
+  const ungroup = useCallback(() => {
+    if (!setBlocks) return;
+    const ids = Array.from(effectiveSelectedIds);
+    if (ids.length === 0) return;
+    setBlocks(blocks.map((b) => {
+      if (!ids.includes(b.id) || !b.groupId) return b;
+      const next = { ...b } as CustomBlock & { groupId?: string };
+      delete next.groupId;
+      return next;
+    }));
+  }, [blocks, setBlocks, effectiveSelectedIds]);
   const requestEdit = ctx?.onRequestEdit;
   const add = useCallback(
     (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => {
