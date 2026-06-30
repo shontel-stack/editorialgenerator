@@ -708,6 +708,7 @@ function CustomBlockView({
   block,
   editing,
   selected,
+  isPrimary,
   onSelect,
   onChange,
   onRemove,
@@ -718,8 +719,11 @@ function CustomBlockView({
 }: {
   block: CustomBlock;
   editing: boolean;
+  /** True if this block is anywhere in the active selection (incl. group mates). */
   selected: boolean;
-  onSelect: () => void;
+  /** True only for the focused block — shows resize / rotate / delete affordances. */
+  isPrimary: boolean;
+  onSelect: (shiftKey: boolean) => void;
   onChange: (p: Partial<CustomBlock>) => void;
   onRemove: () => void;
   siblingAxesFor?: (dragId: string) => { xs: number[]; ys: number[] };
