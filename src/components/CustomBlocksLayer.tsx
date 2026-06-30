@@ -1673,7 +1673,7 @@ function TopDockBar({
           <DockToggle dock={dock} onChange={setDock} />
         </div>
       </div>
-      {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(false)} />}
+      {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(() => false)} />}
     </>
   );
 }
