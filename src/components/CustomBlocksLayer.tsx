@@ -658,6 +658,10 @@ export function CustomBlocksLayer() {
           onRemove={() => remove(selected.id)}
           onReorder={(a) => reorder(selected.id, a)}
           caretParagraph={caretParagraph}
+          selectionCount={effectiveSelectedIds.size}
+          inGroup={Boolean(selected.groupId)}
+          onGroup={group}
+          onUngroup={ungroup}
         />
       )}
       {editing && pickerOpen && setBlocks && (
