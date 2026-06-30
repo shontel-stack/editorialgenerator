@@ -1482,7 +1482,8 @@ function Index() {
 
       <aside
         aria-label="Editor tools"
-        className="fixed left-0 top-[var(--rail-top,4rem)] z-40 hidden md:flex h-[calc(100vh-var(--rail-top,4rem)-var(--statusbar-h,2rem))] w-14 flex-col items-center border-r border-border bg-card/90 backdrop-blur py-3 gap-1.5 overflow-y-auto"
+        className="fixed left-0 z-40 hidden md:flex w-14 flex-col items-center border-r border-border bg-card/90 backdrop-blur py-3 gap-1.5 overflow-y-auto"
+        style={{ top: "calc(var(--rail-top, 4rem) + var(--top-dock-h, 0px))", height: "calc(100vh - var(--rail-top, 4rem) - var(--top-dock-h, 0px) - var(--statusbar-h, 2rem))" }}
       >
         <button title="Files" aria-label="Files" aria-pressed={attachmentsOpen} onClick={() => setAttachmentsOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${attachmentsOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <Paperclip className="h-[18px] w-[18px]" />
