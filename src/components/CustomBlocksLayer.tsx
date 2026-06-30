@@ -603,8 +603,9 @@ export function CustomBlocksLayer() {
             key={b.id}
             block={b}
             editing={editing}
-            selected={selectedId === b.id}
-            onSelect={() => setSelectedId(b.id)}
+            selected={effectiveSelectedIds.has(b.id)}
+            isPrimary={selectedId === b.id}
+            onSelect={(shiftKey) => selectBlock(b.id, shiftKey)}
             onChange={(p) => update(b.id, p)}
             onRemove={() => remove(b.id)}
             siblingAxesFor={siblingAxesFor}
