@@ -8,7 +8,15 @@ import { Label } from "@/components/ui/label";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 
-export function AuthPageContent({ onAuthenticated }: { onAuthenticated?: () => void } = {}) {
+export function AuthPageContent({
+  onAuthenticated,
+  timedOut = false,
+  onRetry,
+}: {
+  onAuthenticated?: () => void;
+  timedOut?: boolean;
+  onRetry?: () => void;
+} = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -77,6 +85,21 @@ export function AuthPageContent({ onAuthenticated }: { onAuthenticated?: () => v
         <p className="text-sm text-muted-foreground mt-1">
           Access the editorial generator.
         </p>
+
+        {timedOut && (
+          <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+            <p>Couldn't reach the auth service. You can sign in below, or retry the check.</p>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-2 inline-flex items-center justify-center rounded border border-amber-500/50 px-2 py-1 font-medium hover:bg-amber-500/20"
+              >
+                Retry auth check
+              </button>
+            )}
+          </div>
+        )}
 
         <form onSubmit={submit} className="mt-6 space-y-3">
           <div>
