@@ -1571,7 +1571,7 @@ const DRAG_GRIP_STYLE: CSSProperties = {
   userSelect: "none",
 };
 
-type DockSide = "float" | "right" | "left";
+type DockSide = "float" | "right" | "left" | "top";
 
 function useDockPosition(storageKey: string): {
   dock: DockSide;
