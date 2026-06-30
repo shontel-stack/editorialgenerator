@@ -38,7 +38,9 @@ function AuthGate() {
     );
   }
 
-  if (status === "denied") return <AuthPageContent />;
+  if (status === "denied") {
+    return <AuthPageContent onAuthenticated={() => setStatus("allowed")} />;
+  }
 
   return <Outlet />;
 }

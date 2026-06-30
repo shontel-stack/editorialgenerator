@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 
-export function AuthPageContent() {
+export function AuthPageContent({ onAuthenticated }: { onAuthenticated?: () => void } = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -17,9 +17,12 @@ export function AuthPageContent() {
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/" });
+      if (data.user) {
+        onAuthenticated?.();
+        navigate({ to: "/" });
+      }
     });
-  }, [navigate]);
+  }, [navigate, onAuthenticated]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,10 +37,12 @@ export function AuthPageContent() {
         });
         if (error) throw error;
         toast.success("Account created. You're signed in.");
+        onAuthenticated?.();
         navigate({ to: "/" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        onAuthenticated?.();
         navigate({ to: "/" });
       }
     } catch (err) {
@@ -55,6 +60,8 @@ export function AuthPageContent() {
       });
       if (result.error) {
         toast.error(result.error.message ?? "Google sign-in failed");
+      } else if (!result.redirected) {
+        onAuthenticated?.();
       }
     } finally {
       setBusy(false);
