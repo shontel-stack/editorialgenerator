@@ -1611,47 +1611,14 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
 
   if (dock === "top") {
     return (
-      <>
-        <div
-          data-export-ignore="true"
-          onPointerDown={(e) => e.stopPropagation()}
-          style={{
-            position: "fixed",
-            top: "var(--rail-top, 64px)",
-            left: 56,
-            right: 0,
-            background: "white",
-            borderBottom: "1px solid #ddd",
-            borderTop: "1px solid #ddd",
-            padding: "6px 10px",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 6,
-            alignItems: "center",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-            zIndex: 300,
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#444", marginRight: 6 }}>
-            <Plus size={12} /> Add
-          </span>
-          <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
-          <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
-          <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
-          <PaletteBtn label="Rectangle" icon={<Square size={14} />} onClick={() => onAdd("shape", { shape: "rect" })} />
-          <PaletteBtn label="Ellipse" icon={<Circle size={14} />} onClick={() => onAdd("shape", { shape: "ellipse" })} />
-          <PaletteBtn label="Line" icon={<Minus size={14} />} onClick={() => onAdd("shape", { shape: "line" })} />
-          <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
-          <div style={{ width: 1, height: 20, background: "#ddd", margin: "0 4px" }} />
-          <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
-          <PaletteBtn label="Defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
-          <div style={{ marginLeft: "auto" }}>
-            <DockToggle dock={dock} onChange={setDock} />
-          </div>
-        </div>
-        {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(false)} />}
-      </>
+      <TopDockBar
+        defaultsOpen={defaultsOpen}
+        setDefaultsOpen={setDefaultsOpen}
+        onAdd={onAdd}
+        onOpenTemplates={onOpenTemplates}
+        dock={dock}
+        setDock={setDock}
+      />
     );
   }
 
