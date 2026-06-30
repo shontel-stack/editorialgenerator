@@ -1407,7 +1407,7 @@ function Index() {
     <BrandKitProvider value={brandKitContextValue}>
     <main
       className="min-h-screen bg-background text-foreground md:pl-14 pb-10"
-      style={{ scrollPaddingTop: stickyH, ["--rail-top" as never]: `${stickyH}px`, ["--statusbar-h" as never]: "2rem" }}
+      style={{ scrollPaddingTop: `calc(${stickyH}px + var(--top-dock-h, 0px))`, paddingTop: "var(--top-dock-h, 0px)", ["--rail-top" as never]: `${stickyH}px`, ["--rail-width" as never]: "56px", ["--statusbar-h" as never]: "2rem" }}
     >
       <div ref={stickyRef} className="sticky top-0 z-30 bg-background">
 
