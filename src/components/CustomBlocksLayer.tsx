@@ -519,23 +519,37 @@ export function CustomBlocksLayer() {
         return;
       }
 
-      // Delete
-      if ((e.key === "Backspace" || e.key === "Delete") && sel && setBlocks) {
+      // Group / Ungroup — Cmd/Ctrl+G (Shift = ungroup), Figma/Canva-style.
+      if (meta && (e.key === "g" || e.key === "G")) {
+        if (!setBlocks) return;
         e.preventDefault();
-        setBlocks(blocks.filter((b) => b.id !== sel.id));
+        if (e.shiftKey) ungroup();
+        else group();
+        return;
+      }
+
+      const idsForBulk = Array.from(effectiveSelectedIds);
+
+      // Delete (whole effective selection, including group mates)
+      if ((e.key === "Backspace" || e.key === "Delete") && idsForBulk.length > 0 && setBlocks) {
+        e.preventDefault();
+        setBlocks(blocks.filter((b) => !idsForBulk.includes(b.id)));
         setSelectedId(null);
+        setExtraSelectedIds([]);
         return;
       }
 
       // Escape — deselect
-      if (e.key === "Escape" && sel) {
+      if (e.key === "Escape" && (sel || extraSelectedIds.length > 0)) {
         e.preventDefault();
         setSelectedId(null);
+        setExtraSelectedIds([]);
         return;
       }
 
-      // Arrow nudges (1px, 10px with Shift)
-      if (sel && setBlocks && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      // Arrow nudges (1px, 10px with Shift). Moves every effectively-selected
+      // block by the same delta so groups stay locked together.
+      if (idsForBulk.length > 0 && setBlocks && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
         let dx = 0, dy = 0;
@@ -543,12 +557,12 @@ export function CustomBlocksLayer() {
         else if (e.key === "ArrowDown") dy = step;
         else if (e.key === "ArrowLeft") dx = -step;
         else if (e.key === "ArrowRight") dx = step;
-        setBlocks(blocks.map((b) => (b.id === sel.id ? ({ ...b, x: b.x + dx, y: b.y + dy } as CustomBlock) : b)));
+        setBlocks(blocks.map((b) => (idsForBulk.includes(b.id) ? ({ ...b, x: b.x + dx, y: b.y + dy } as CustomBlock) : b)));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [editing, undo, redo, blocks, setBlocks, selectedId]);
+  }, [editing, undo, redo, blocks, setBlocks, selectedId, extraSelectedIds, effectiveSelectedIds, group, ungroup]);
 
   void historyTick;
 
