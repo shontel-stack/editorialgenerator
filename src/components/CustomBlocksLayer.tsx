@@ -193,7 +193,38 @@ export function CustomBlocksLayer() {
   const snapCfg = ctx?.snapSettings ?? globalSnap;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [extraSelectedIds, setExtraSelectedIds] = useState<string[]>([]);
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+
+  /** Resolve every block id that should be treated as selected: the primary
+   *  selection, any explicit shift-click additions, and ALL group members of
+   *  any block in that set. */
+  const effectiveSelectedIds = (() => {
+    const base = new Set<string>();
+    if (selectedId) base.add(selectedId);
+    for (const id of extraSelectedIds) base.add(id);
+    const groups = new Set<string>();
+    for (const b of blocks) if (base.has(b.id) && b.groupId) groups.add(b.groupId);
+    if (groups.size) {
+      for (const b of blocks) if (b.groupId && groups.has(b.groupId)) base.add(b.id);
+    }
+    return base;
+  })();
+
+  /** Click handler used by every block. Shift toggles in/out of the
+   *  multi-selection; a plain click resets to a single selection. */
+  const selectBlock = useCallback((id: string, shiftKey: boolean) => {
+    if (!shiftKey) {
+      setSelectedId(id);
+      setExtraSelectedIds([]);
+      return;
+    }
+    setExtraSelectedIds((prev) => {
+      if (id === selectedId) return prev;
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      return [...prev, id];
+    });
+  }, [selectedId]);
   // Index of the paragraph the caret is in while editing a text block, else null.
   const [caretParagraph, setCaretParagraph] = useState<number | null>(null);
 
