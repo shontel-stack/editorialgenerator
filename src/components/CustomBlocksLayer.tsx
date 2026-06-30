@@ -245,10 +245,10 @@ export function CustomBlocksLayer() {
     return () => ro.disconnect();
   }, [editing]);
 
-  // Clear selection when leaving edit mode
   useEffect(() => {
     if (!editing) {
       setSelectedId(null);
+      setExtraSelectedIds([]);
       setCaretParagraph(null);
     }
   }, [editing]);
