@@ -1009,7 +1009,7 @@ function CustomBlockView({
       }}
     >
       {wrapped}
-      {editing && selected && (
+      {editing && isPrimary && (
         <>
           {/* 8 resize handles (corners + edge midpoints). Hold Shift to keep aspect ratio. */}
           {([
