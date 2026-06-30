@@ -782,7 +782,7 @@ function CustomBlockView({
       box,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    onSelect();
+    onSelect(e.shiftKey);
   };
 
   const startRotate = (e: RPointerEvent<HTMLDivElement>) => {
@@ -798,7 +798,7 @@ function CustomBlockView({
     const curRotate = (block as { rotate?: number }).rotate ?? 0;
     rotRef.current = { cx, cy, startAngle, startRotate: curRotate };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    onSelect();
+    onSelect(e.shiftKey);
   };
   const onRotateMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!rotRef.current) return;
@@ -1004,7 +1004,7 @@ function CustomBlockView({
         if (block.kind === "text") {
           e.stopPropagation();
           setEditingText(true);
-          onSelect();
+          onSelect(e.shiftKey);
         }
       }}
     >
