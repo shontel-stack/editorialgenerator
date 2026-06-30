@@ -1773,6 +1773,7 @@ function DockToggle({ dock, onChange }: { dock: DockSide; onChange: (v: DockSide
   return (
     <div style={{ display: "inline-flex", gap: 2, alignItems: "center" }}>
       {btn("float", "Float", <Pin size={10} />)}
+      {btn("top", "Dock top", <PanelTop size={10} />)}
       {btn("right", "Dock right", <PanelRight size={10} />)}
       {btn("left", "Dock left", <PanelLeft size={10} />)}
     </div>
