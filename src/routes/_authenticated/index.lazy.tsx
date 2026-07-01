@@ -3110,8 +3110,10 @@ function Index() {
         pageNodes={refs.current}
         pageDim={{ inches: dimInches, px: dimPx }}
       />
+      <ToolbarDiagnostics />
     </main>
     </BrandKitProvider>
+
   );
 }
 
