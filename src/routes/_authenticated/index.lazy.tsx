@@ -191,6 +191,18 @@ function Index() {
     setStickyH(el.getBoundingClientRect().height);
     return () => ro.disconnect();
   }, []);
+  // Mirror rail metrics to :root so portaled overlays (e.g. the docked +Add
+  // toolbar rendered via createPortal on document.body) can read them.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--rail-top", `${stickyH}px`);
+    root.style.setProperty("--rail-width", "56px");
+    return () => {
+      root.style.removeProperty("--rail-top");
+      root.style.removeProperty("--rail-width");
+    };
+  }, [stickyH]);
+
 
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
   const [busy, setBusy] = useState<string | null>(null);
