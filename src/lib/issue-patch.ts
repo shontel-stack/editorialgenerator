@@ -96,6 +96,7 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
           case "ad":      return makeNode("ad",      { ...DEFAULT_AD },      false);
           case "contents":return makeNode("contents",{ ...DEFAULT_CONTENTS, entries: [] }, false);
           case "custom-contents": return makeNode("custom-contents", { ...DEFAULT_CUSTOM_CONTENTS, slots: DEFAULT_CUSTOM_CONTENTS.slots.map((s) => ({ ...s })) }, false);
+          case "blank":   return makeNode("blank",   { ...DEFAULT_BLANK },   false);
         }
       })();
       const backIdx = issue.pages.findIndex((p) => p.pageType === "back");
