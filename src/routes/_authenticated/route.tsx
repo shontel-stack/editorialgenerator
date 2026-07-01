@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthGate,
 });
 
-function hasLocalSupabaseSession(): boolean {
+export function hasLocalSupabaseSession(): boolean {
   if (typeof window === "undefined") return false;
   try {
     for (let i = 0; i < window.localStorage.length; i++) {
