@@ -24,6 +24,26 @@ export function AuthPageContent({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    const id = window.setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= cooldownUntil) {
+        setCooldownUntil(null);
+        window.clearInterval(id);
+      }
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [cooldownUntil]);
+
+  const cooldownSeconds =
+    cooldownUntil && cooldownUntil > now ? Math.ceil((cooldownUntil - now) / 1000) : 0;
+  const rateLimited = cooldownSeconds > 0;
+
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
@@ -36,7 +56,8 @@ export function AuthPageContent({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || rateLimited) return;
+
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -58,27 +79,42 @@ export function AuthPageContent({
     } catch (err) {
       const raw = err instanceof Error ? err.message : "";
       const lower = raw.toLowerCase();
-      let message = "Something went wrong. Please try again.";
-      if (mode === "signin") {
-        // Avoid leaking whether the account exists or which field was wrong.
-        message = "The email or password you entered is incorrect. Please try again.";
-        if (lower.includes("email not confirmed") || lower.includes("confirm")) {
-          message = "Please confirm your email address before signing in.";
-        } else if (lower.includes("rate") || lower.includes("too many")) {
-          message = "Too many attempts. Please wait a moment and try again.";
-        }
-      } else if (lower.includes("registered") || lower.includes("already")) {
-        message = "That email can't be used to create a new account. Try signing in instead.";
-      } else if (lower.includes("password")) {
-        message = "Please choose a stronger password (at least 8 characters).";
-      } else if (lower.includes("valid email") || lower.includes("invalid email")) {
-        message = "Please enter a valid email address.";
-      } else if (lower.includes("rate") || lower.includes("too many")) {
-        message = "Too many attempts. Please wait a moment and try again.";
+      const status =
+        err && typeof err === "object" && "status" in err
+          ? Number((err as { status?: unknown }).status) || 0
+          : 0;
+      const isRateLimited =
+        status === 429 ||
+        lower.includes("rate") ||
+        lower.includes("too many") ||
+        lower.includes("after") && /\d+\s*seconds?/.test(lower);
+      if (isRateLimited) {
+        // Try to extract "after N seconds" from the message; otherwise default.
+        const match = raw.match(/(\d+)\s*seconds?/i);
+        const seconds = match ? Math.max(1, parseInt(match[1], 10)) : 30;
+        setCooldownUntil(Date.now() + seconds * 1000);
+        setNow(Date.now());
+        toast.error(
+          `Too many attempts. Please wait ${seconds} second${seconds === 1 ? "" : "s"} before trying again.`,
+        );
       } else {
-        message = "We couldn't create your account. Please try again.";
+        let message = "Something went wrong. Please try again.";
+        if (mode === "signin") {
+          message = "The email or password you entered is incorrect. Please try again.";
+          if (lower.includes("email not confirmed") || lower.includes("confirm")) {
+            message = "Please confirm your email address before signing in.";
+          }
+        } else if (lower.includes("registered") || lower.includes("already")) {
+          message = "That email can't be used to create a new account. Try signing in instead.";
+        } else if (lower.includes("password")) {
+          message = "Please choose a stronger password (at least 8 characters).";
+        } else if (lower.includes("valid email") || lower.includes("invalid email")) {
+          message = "Please enter a valid email address.";
+        } else {
+          message = "We couldn't create your account. Please try again.";
+        }
+        toast.error(message);
       }
-      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -125,6 +161,23 @@ export function AuthPageContent({
           </div>
         )}
 
+        {rateLimited && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300"
+          >
+            <p className="font-medium">Sign-in temporarily paused</p>
+            <p className="mt-1">
+              For your security, please wait{" "}
+              <span className="tabular-nums font-semibold">
+                {cooldownSeconds} second{cooldownSeconds === 1 ? "" : "s"}
+              </span>{" "}
+              before trying again.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={submit} className="mt-6 space-y-3">
           <div>
             <Label htmlFor="email">Email</Label>
@@ -149,8 +202,12 @@ export function AuthPageContent({
               minLength={8}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={busy}>
-            {mode === "signin" ? "Sign in" : "Sign up"}
+          <Button type="submit" className="w-full" disabled={busy || rateLimited}>
+            {rateLimited
+              ? `Try again in ${cooldownSeconds}s`
+              : mode === "signin"
+                ? "Sign in"
+                : "Sign up"}
           </Button>
         </form>
 
@@ -160,7 +217,7 @@ export function AuthPageContent({
           <div className="h-px flex-1 bg-border" />
         </div>
 
-        <Button variant="outline" className="w-full" onClick={signInGoogle} disabled={busy}>
+        <Button variant="outline" className="w-full" onClick={signInGoogle} disabled={busy || rateLimited}>
           Continue with Google
         </Button>
 
