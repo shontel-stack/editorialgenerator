@@ -26,6 +26,7 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
+import { MagazineTemplatePicker } from "@/components/MagazineTemplatePicker";
 import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
 import { VersionHistoryPanel } from "@/components/VersionHistoryPanel";
 import { CommentsPanel } from "@/components/CommentsPanel";
