@@ -106,4 +106,61 @@ describe("e2e: inserting DEFAULT_BLANK never crashes the editor", () => {
     const backIdx = issue.pages.findIndex((p) => p.pageType === "back");
     if (backIdx >= 0) expect(backIdx).toBe(issue.pages.length - 1);
   });
+
+  it("rapid-fire burst of DEFAULT_BLANK insertions keeps the list crash-free", () => {
+    // Simulate a user (or the assistant) mashing "Add blank page" as fast as
+    // possible: no awaits, no intermediate renders — one synchronous burst.
+    let issue = makeDefaultIssue();
+    const BURST = 50;
+    const initialLen = issue.pages.length;
+
+    for (let i = 0; i < BURST; i++) {
+      issue =
+        i % 3 === 0
+          ? applyPatch(issue, { kind: "add_page", pageType: "blank" })
+          : editorAddBlank(issue);
+    }
+
+    // No undefined/null nodes and every node has data.
+    expect(issue.pages.length).toBe(initialLen + BURST);
+    expect(
+      issue.pages.every(
+        (p) => p !== undefined && p !== null && p.pageType != null && p.data != null,
+      ),
+    ).toBe(true);
+
+    // All blank ids are unique — no shared references across insertions.
+    const blanks = issue.pages.filter((p) => p.pageType === "blank");
+    expect(blanks.length).toBe(BURST);
+    expect(new Set(blanks.map((b) => b.id)).size).toBe(BURST);
+    // And no two blanks share the same data object identity.
+    expect(new Set(blanks.map((b) => b.data)).size).toBe(BURST);
+
+    // Structural invariants preserved.
+    expect(issue.pages[0].pageType).toBe("cover");
+    const backIdx = issue.pages.findIndex((p) => p.pageType === "back");
+    if (backIdx >= 0) expect(backIdx).toBe(issue.pages.length - 1);
+
+    // Final render pass: the editor never crashes on the resulting list.
+    expect(() => renderAllPages(issue.pages)).not.toThrow();
+  });
+
+  it("rapid bursts starting from a cover-only issue never produce undefined nodes", () => {
+    // Edge case: no back cover present. Rapid inserts must still append safely.
+    const base = makeDefaultIssue();
+    const coverPage = base.pages.find((p) => p.pageType === "cover")!;
+    let issue: IssueDoc = { ...base, pages: [coverPage] };
+    for (let i = 0; i < 30; i++) {
+      issue = applyPatch(issue, { kind: "add_page", pageType: "blank" });
+      // Check EVERY step — a single undefined entry would crash the editor.
+      for (const p of issue.pages) {
+        expect(p).toBeDefined();
+        expect(p).not.toBeNull();
+        expect(p.pageType).toBeDefined();
+        expect(p.data).toBeDefined();
+      }
+    }
+    expect(issue.pages.length).toBe(31);
+    expect(() => renderAllPages(issue.pages)).not.toThrow();
+  });
 });
