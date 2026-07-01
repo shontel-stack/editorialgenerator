@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToolbarDiagnostics } from "@/components/ToolbarDiagnostics";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export function AuthPageContent({
   onAuthenticated,
@@ -148,6 +150,7 @@ export function AuthPageContent({
           {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
         </button>
       </div>
+      <ToolbarDiagnostics />
     </main>
   );
 }
