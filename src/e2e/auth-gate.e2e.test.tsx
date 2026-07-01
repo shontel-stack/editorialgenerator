@@ -385,8 +385,103 @@ describe("AuthGate — refresh stability", () => {
   });
 });
 
+// --- Logout / login across refreshes --------------------------------------
+//
+// Simulates a realistic session lifecycle across page refreshes:
+//   refresh #1: signed in       → protected outlet, no sign-in flash
+//   refresh #2: logged out      → checking → sign-in form, no protected flash
+//   refresh #3: signed back in  → protected outlet, no sign-in flash
+//
+// Each "refresh" unmounts, resets the deferred auth calls, and remounts a
+// fresh <AuthGate />. We assert both the first paint (no wrong screen) and
+// the resolved state after auth calls settle (correct screen stays stable).
+
+describe("AuthGate — logout / login across refreshes", () => {
+  it("transitions signed-in → logged-out → signed-in without flashing the wrong screen", async () => {
+    // --- refresh #1: signed in ---------------------------------------------
+    seedValidSession();
+    let AuthGate = await loadAuthGate();
+    let view = render(<AuthGate />);
+
+    // First paint: protected outlet from the synchronous local-session seed.
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+    expect(screen.queryByTestId("sign-in-form")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+
+    await act(async () => {
+      sessionDeferred.resolve({ data: { session: { user: { id: "user-1" } } } });
+      userDeferred.resolve({ data: { user: { id: "user-1" } } });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+    expect(screen.queryByTestId("sign-in-form")).toBeNull();
+    expect(signInMountCount.value).toBe(0);
+
+    // --- log out + refresh #2 ----------------------------------------------
+    view.unmount();
+    window.localStorage.clear(); // supabase.auth.signOut() clears the stored session
+    sessionDeferred = defer();
+    userDeferred = defer();
+    signInMountCount.value = 0;
+    AuthGate = await loadAuthGate();
+    view = render(<AuthGate />);
+
+    // First paint after refresh with no session: neutral checking, never
+    // the protected outlet, never the sign-in form (that would be a flash).
+    expect(screen.queryByTestId("protected-outlet")).toBeNull();
+    expect(screen.queryByTestId("sign-in-form")).toBeNull();
+    expect(screen.queryByRole("status")).not.toBeNull();
+
+    await act(async () => {
+      sessionDeferred.resolve({ data: { session: null } });
+      userDeferred.resolve({ data: { user: null } });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(screen.getByTestId("sign-in-form")).not.toBeNull());
+    expect(screen.queryByTestId("protected-outlet")).toBeNull();
+    expect(signInMountCount.value).toBe(1);
+
+    // Give the effect a chance to re-run — must not oscillate back.
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(signInMountCount.value).toBe(1);
+    expect(screen.queryByTestId("protected-outlet")).toBeNull();
+
+    // --- log back in + refresh #3 ------------------------------------------
+    view.unmount();
+    seedValidSession(); // fresh sign-in populates the stored session
+    sessionDeferred = defer();
+    userDeferred = defer();
+    signInMountCount.value = 0;
+    AuthGate = await loadAuthGate();
+    view = render(<AuthGate />);
+
+    // First paint after refresh with a valid session: protected outlet
+    // immediately; the sign-in form must never appear.
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+    expect(screen.queryByTestId("sign-in-form")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+
+    await act(async () => {
+      sessionDeferred.resolve({ data: { session: { user: { id: "user-1" } } } });
+      userDeferred.resolve({ data: { user: { id: "user-1" } } });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+    expect(signInMountCount.value).toBe(0);
+  });
+});
+
 // Small placeholder so the logged-out refresh test can uniformly call
 // `view.unmount()` in a loop without a special-case for the first render.
 function AuthGate_placeholder() {
   return <div data-testid="placeholder" />;
 }
+
