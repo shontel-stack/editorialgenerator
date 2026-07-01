@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthGate,
 });
 
-function hasLocalSupabaseSession(): boolean {
+export function hasLocalSupabaseSession(): boolean {
   if (typeof window === "undefined") return false;
   try {
     for (let i = 0; i < window.localStorage.length; i++) {
@@ -29,7 +29,7 @@ function hasLocalSupabaseSession(): boolean {
   return false;
 }
 
-function AuthGate() {
+export function AuthGate() {
   // Seed synchronously from localStorage so a signed-in user doesn't flash
   // the sign-in form while getSession()/getUser() are still resolving.
   const [status, setStatus] = useState<"checking" | "allowed" | "denied" | "timeout">(
