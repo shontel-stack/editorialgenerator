@@ -32,6 +32,10 @@ export function AuthPageContent({
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    installAuthRateLimitCapture();
+  }, []);
+
+  useEffect(() => {
     if (!cooldownUntil) return;
     const id = window.setInterval(() => {
       const t = Date.now();
