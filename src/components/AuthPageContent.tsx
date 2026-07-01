@@ -229,6 +229,32 @@ export function AuthPageContent({
           </Button>
         </form>
 
+        {mode === "signin" && (
+          <button
+            type="button"
+            className="mt-3 text-xs text-muted-foreground hover:text-foreground w-full text-center underline-offset-2 hover:underline"
+            onClick={async () => {
+              if (!email) {
+                toast.error("Enter your email above, then click Forgot password.");
+                return;
+              }
+              setBusy(true);
+              const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+              });
+              setBusy(false);
+              if (error) {
+                toast.error("Couldn't send reset email. Please try again.");
+              } else {
+                toast.success("Password reset email sent. Check your inbox.");
+              }
+            }}
+            disabled={busy}
+          >
+            Forgot password?
+          </button>
+        )}
+
         <div className="my-4 flex items-center gap-2 text-xs text-muted-foreground">
           <div className="h-px flex-1 bg-border" />
           <span>or</span>
