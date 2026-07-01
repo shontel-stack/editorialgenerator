@@ -96,7 +96,19 @@ function AuthGate() {
     setAttempt((n) => n + 1);
   }, []);
 
-  if (status === "checking" || status === "denied" || status === "timeout") {
+  if (status === "checking") {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex min-h-screen items-center justify-center text-sm text-muted-foreground"
+      >
+        Checking your session…
+      </div>
+    );
+  }
+
+  if (status === "denied" || status === "timeout") {
     return (
       <AuthPageContent
         onAuthenticated={() => setStatus("allowed")}
