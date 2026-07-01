@@ -32,8 +32,11 @@ export function hasLocalSupabaseSession(): boolean {
 export function AuthGate() {
   // Seed synchronously from localStorage so a signed-in user doesn't flash
   // the sign-in form while getSession()/getUser() are still resolving.
+  // No local session → render sign-in immediately (getUser can still upgrade
+  // to "allowed" if it turns out a session exists). Prevents a stuck
+  // "Checking your session…" screen when getSession/getUser hang.
   const [status, setStatus] = useState<"checking" | "allowed" | "denied" | "timeout">(
-    () => (hasLocalSupabaseSession() ? "allowed" : "checking"),
+    () => (hasLocalSupabaseSession() ? "allowed" : "denied"),
   );
   const [attempt, setAttempt] = useState(0);
 
