@@ -15,6 +15,7 @@ import { DevErrorOverlay } from "../components/DevErrorOverlay";
 import { UnsavedPromptHost } from "../components/UnsavedPromptHost";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { ShortcutsHelp } from "../components/ShortcutsHelp";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
