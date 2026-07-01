@@ -31,7 +31,7 @@ export type IssuePatch =
   | { kind: "set_article_layout"; pageId: string; layout: ArticleLayout }
   | { kind: "update_master"; patch: MasterPatch }
   | { kind: "set_fonts"; display?: string; serif?: string; sans?: string }
-  | { kind: "add_page"; pageType: "article" | "photo" | "ad" | "contents" | "custom-contents" }
+  | { kind: "add_page"; pageType: "article" | "photo" | "ad" | "contents" | "blank" | "custom-contents" }
   | { kind: "add_spread"; left: "article" | "photo" | "ad"; right: "article" | "photo" | "ad" }
   | { kind: "remove_page"; pageId: string; removeSpread?: boolean }
   | { kind: "reorder_pages"; orderedPageIds: string[] }
