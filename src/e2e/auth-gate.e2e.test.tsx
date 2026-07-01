@@ -135,7 +135,7 @@ describe("AuthGate — logged out", () => {
     // Synchronous first paint: must be the neutral checking state, never
     // the sign-in form.
     expect(screen.queryByTestId("sign-in-form")).toBeNull();
-    expect(screen.getByRole("status")).toHaveTextContent(/checking your session/i);
+    expect((screen.getByRole("status"))?.textContent ?? "").toMatch(/checking your session/i);
     expect(signInMountCount.value).toBe(0);
 
     // Resolve both auth checks with "no user".
