@@ -40,17 +40,23 @@ function AuthGate() {
       .then(({ data, error }) => {
         if (cancelled) return;
         window.clearTimeout(timeout);
-        if (error || !data.user) {
-          setStatus("denied");
+        if (data.user) {
+          setStatus("allowed");
           return;
         }
-        setStatus("allowed");
+        // Don't downgrade an already-allowed session on a transient getUser
+        // failure — getSession() succeeded from localStorage, so a network
+        // hiccup or pending token refresh shouldn't kick the user out.
+        setStatus((prev) => (prev === "allowed" ? prev : "denied"));
+        if (error) {
+          console.warn("[AuthGate] supabase.auth.getUser() returned no user.", error);
+        }
       })
       .catch((error) => {
         if (cancelled) return;
         window.clearTimeout(timeout);
-        console.warn("[AuthGate] supabase.auth.getUser() failed; continuing to sign-in.", error);
-        setStatus("denied");
+        console.warn("[AuthGate] supabase.auth.getUser() failed; keeping prior status.", error);
+        setStatus((prev) => (prev === "allowed" ? prev : "denied"));
       });
 
     return () => {
