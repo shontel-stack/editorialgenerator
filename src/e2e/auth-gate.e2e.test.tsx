@@ -60,6 +60,9 @@ vi.mock("@/integrations/supabase/client", () => ({
     auth: {
       getSession: () => sessionDeferred.promise,
       getUser: () => userDeferred.promise,
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: () => {} } },
+      }),
     },
   },
 }));
