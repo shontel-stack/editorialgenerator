@@ -161,6 +161,23 @@ export function AuthPageContent({
           </div>
         )}
 
+        {rateLimited && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300"
+          >
+            <p className="font-medium">Sign-in temporarily paused</p>
+            <p className="mt-1">
+              For your security, please wait{" "}
+              <span className="tabular-nums font-semibold">
+                {cooldownSeconds} second{cooldownSeconds === 1 ? "" : "s"}
+              </span>{" "}
+              before trying again.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={submit} className="mt-6 space-y-3">
           <div>
             <Label htmlFor="email">Email</Label>
