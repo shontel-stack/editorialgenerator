@@ -7,6 +7,8 @@ import {
   type PointerEvent as RPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
+
 import QRCode from "qrcode";
 import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Layers, Eye, EyeOff, Undo2, Redo2, Pin, PanelLeft, PanelRight, PanelTop } from "lucide-react";
 import type { CustomBlock, ContentsSlot, ContentsSlotField } from "@/lib/coverDefaults";
@@ -1632,11 +1634,12 @@ function TopDockBar({
     };
   }, []);
 
-  return (
+  const content = (
     <>
       <div
         ref={ref}
         data-export-ignore="true"
+        data-add-palette-dock="top"
         onPointerDown={(e) => e.stopPropagation()}
         style={{
           position: "fixed",
@@ -1676,7 +1679,12 @@ function TopDockBar({
       {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(() => false)} />}
     </>
   );
+  // Portal to body so position:fixed isn't containerized by an ancestor
+  // with a `transform` (the scaled page wrapper).
+  if (typeof document === "undefined") return null;
+  return createPortal(content, document.body);
 }
+
 
 function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
