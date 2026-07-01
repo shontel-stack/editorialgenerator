@@ -1634,11 +1634,12 @@ function TopDockBar({
     };
   }, []);
 
-  return (
+  const content = (
     <>
       <div
         ref={ref}
         data-export-ignore="true"
+        data-add-palette-dock="top"
         onPointerDown={(e) => e.stopPropagation()}
         style={{
           position: "fixed",
@@ -1678,7 +1679,12 @@ function TopDockBar({
       {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(() => false)} />}
     </>
   );
+  // Portal to body so position:fixed isn't containerized by an ancestor
+  // with a `transform` (the scaled page wrapper).
+  if (typeof document === "undefined") return null;
+  return createPortal(content, document.body);
 }
+
 
 function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
   const ctx = useLayoutEdit();
