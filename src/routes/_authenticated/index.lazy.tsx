@@ -34,6 +34,8 @@ import type { LayoutPlanOp } from "@/lib/proposeLayout.functions";
 import { applyPatch } from "@/lib/issue-patch";
 import { BrandKitPanel } from "@/components/BrandKitPanel";
 import { BrandKitProvider } from "@/lib/brandKitContext";
+import { ToolbarDiagnostics } from "@/components/ToolbarDiagnostics";
+
 import { useIssueAttachments } from "@/hooks/useIssueAttachments";
 import { useLibraryAttachments } from "@/hooks/useLibraryAttachments";
 import { useBrandFonts } from "@/hooks/useBrandFonts";
