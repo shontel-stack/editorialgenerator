@@ -56,7 +56,8 @@ export function AuthPageContent({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || rateLimited) return;
+
     setBusy(true);
     try {
       if (mode === "signup") {
