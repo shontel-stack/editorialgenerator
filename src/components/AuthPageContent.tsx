@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label";
 import { ToolbarDiagnostics } from "@/components/ToolbarDiagnostics";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  consumeRetryAfterDeadline,
+  installAuthRateLimitCapture,
+} from "@/lib/authRateLimit";
 
 
 export function AuthPageContent({
