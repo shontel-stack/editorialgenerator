@@ -163,4 +163,83 @@ describe("e2e: inserting DEFAULT_BLANK never crashes the editor", () => {
     expect(issue.pages.length).toBe(31);
     expect(() => renderAllPages(issue.pages)).not.toThrow();
   });
+
+  it("undo/redo after DEFAULT_BLANK inserts never crashes and yields no undefined nodes", () => {
+    // Mirrors the editor's snapshot-based history: every mutation pushes the
+    // previous IssueDoc onto `past`; undo pops from `past` onto `future`;
+    // redo pops from `future` back onto `past`.
+    const past: IssueDoc[] = [];
+    const future: IssueDoc[] = [];
+    let issue = makeDefaultIssue();
+
+    const commit = (next: IssueDoc) => {
+      past.push(issue);
+      future.length = 0;
+      issue = next;
+    };
+    const undo = () => {
+      const prev = past.pop();
+      if (!prev) return;
+      future.push(issue);
+      issue = prev;
+    };
+    const redo = () => {
+      const next = future.pop();
+      if (!next) return;
+      past.push(issue);
+      issue = next;
+    };
+
+    const assertClean = () => {
+      for (const p of issue.pages) {
+        expect(p).toBeDefined();
+        expect(p).not.toBeNull();
+        expect(p.pageType).toBeDefined();
+        expect(p.data).toBeDefined();
+      }
+      expect(() => renderAllPages(issue.pages)).not.toThrow();
+    };
+
+    const initialLen = issue.pages.length;
+
+    // Insert 6 blanks, alternating between the two insertion paths.
+    for (let i = 0; i < 6; i++) {
+      const next =
+        i % 2 === 0
+          ? applyPatch(issue, { kind: "add_page", pageType: "blank" })
+          : editorAddBlank(issue);
+      commit(next);
+      assertClean();
+    }
+    expect(issue.pages.length).toBe(initialLen + 6);
+
+    // Undo everything, one step at a time — never crash, never undefined.
+    for (let i = 0; i < 6; i++) {
+      undo();
+      assertClean();
+    }
+    expect(issue.pages.length).toBe(initialLen);
+    expect(issue.pages.some((p) => p.pageType === "blank" && !makeDefaultIssue().pages.some((d) => d.id === p.id))).toBe(false);
+
+    // Redo everything back — must reach the same length and stay clean.
+    for (let i = 0; i < 6; i++) {
+      redo();
+      assertClean();
+    }
+    expect(issue.pages.length).toBe(initialLen + 6);
+    expect(issue.pages.filter((p) => p.pageType === "blank").length).toBe(6);
+
+    // Interleaved undo/redo/insert — the pattern most likely to expose stale
+    // references or shared mutable state.
+    undo(); undo(); assertClean();
+    commit(applyPatch(issue, { kind: "add_page", pageType: "blank" }));
+    assertClean();
+    // After a new commit, redo stack is cleared — redo must be a no-op.
+    const lenAfterBranch = issue.pages.length;
+    redo();
+    expect(issue.pages.length).toBe(lenAfterBranch);
+    assertClean();
+    undo(); assertClean();
+    redo(); assertClean();
+  });
 });
