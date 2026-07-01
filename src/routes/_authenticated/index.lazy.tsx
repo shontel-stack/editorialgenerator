@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { SignOutButton } from "@/components/SignOutButton";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { MagazineTemplatePicker } from "@/components/MagazineTemplatePicker";
@@ -1489,6 +1490,8 @@ function Index() {
               <Sparkles className="h-3.5 w-3.5" />
               Ask the editor
             </button>
+            <div className="h-6 w-px bg-border" />
+            <SignOutButton />
           </div>
         </div>
         <div className="h-[2px] ruby-rule" />
