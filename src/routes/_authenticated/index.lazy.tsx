@@ -1489,6 +1489,8 @@ function Index() {
               <Sparkles className="h-3.5 w-3.5" />
               Ask the editor
             </button>
+            <div className="h-6 w-px bg-border" />
+            <SignOutButton />
           </div>
         </div>
         <div className="h-[2px] ruby-rule" />
