@@ -49,6 +49,20 @@ export function AuthGate() {
       setStatus((prev) => (prev === "checking" ? "timeout" : prev));
     }, 5000);
 
+    // Listen for OAuth callbacks (Google full-page redirect) or delayed session
+    // hydration. If tokens land after our initial getSession/getUser resolved
+    // without a user, promote the gate to allowed instead of stranding the
+    // signed-in user on the sign-in form.
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+        window.clearTimeout(timeout);
+        setStatus("allowed");
+      } else if (event === "SIGNED_OUT") {
+        setStatus("denied");
+      }
+    });
+
     // Fast local-storage path so a hung network call can't block render.
     void supabase.auth
       .getSession()
@@ -76,6 +90,14 @@ export function AuthGate() {
         // Don't downgrade an already-allowed session on a transient getUser
         // failure — getSession() succeeded from localStorage, so a network
         // hiccup or pending token refresh shouldn't kick the user out.
+        // Also don't downgrade when an OAuth callback is still in the URL —
+        // cloud-auth-js is about to process it and fire SIGNED_IN.
+        const url = typeof window !== "undefined" ? window.location.href : "";
+        const oauthInFlight = /[?#&](code|access_token|refresh_token)=/.test(url);
+        if (oauthInFlight) {
+          console.info("[AuthGate] OAuth callback params detected; waiting for session.");
+          return;
+        }
         setStatus((prev) => (prev === "allowed" ? prev : "denied"));
         if (error) {
           console.warn("[AuthGate] supabase.auth.getUser() returned no user.", error);
@@ -91,6 +113,7 @@ export function AuthGate() {
     return () => {
       cancelled = true;
       window.clearTimeout(timeout);
+      authSub.subscription.unsubscribe();
     };
   }, [attempt]);
 
