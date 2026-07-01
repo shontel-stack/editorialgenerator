@@ -2285,6 +2285,15 @@ function Index() {
           </PopoverTrigger>
           <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">
 
+          <Section title="Layout style · Magazine templates" defaultOpen={false}>
+            <MagazineTemplatePicker
+              userId={userId}
+              publicationId={activePublication?.id ?? null}
+              issue={issue}
+              onApply={(next) => setIssue(next)}
+            />
+          </Section>
+
           <Section title="Templates · Monthly versions" defaultOpen={false}>
             <IssueTemplatesPanel
               userId={userId}
@@ -2296,6 +2305,7 @@ function Index() {
               }}
             />
           </Section>
+
 
           <Section title="Version history · Save points" defaultOpen={false}>
             <VersionHistoryPanel
