@@ -13,6 +13,17 @@
  * the list — the same guarantee the running editor needs.
  */
 import * as React from "react";
+
+// jsdom lacks ResizeObserver; some components in the render tree use it.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  class RO {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  (globalThis as unknown as { ResizeObserver: typeof RO }).ResizeObserver = RO;
+}
+
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { applyPatch } from "@/lib/issue-patch";
