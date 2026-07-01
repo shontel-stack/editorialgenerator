@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label";
 import { ToolbarDiagnostics } from "@/components/ToolbarDiagnostics";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  consumeRetryAfterDeadline,
+  installAuthRateLimitCapture,
+} from "@/lib/authRateLimit";
 
 
 export function AuthPageContent({
@@ -26,6 +30,10 @@ export function AuthPageContent({
   const [busy, setBusy] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    installAuthRateLimitCapture();
+  }, []);
 
   useEffect(() => {
     if (!cooldownUntil) return;
@@ -89,10 +97,20 @@ export function AuthPageContent({
         lower.includes("too many") ||
         lower.includes("after") && /\d+\s*seconds?/.test(lower);
       if (isRateLimited) {
-        // Try to extract "after N seconds" from the message; otherwise default.
-        const match = raw.match(/(\d+)\s*seconds?/i);
-        const seconds = match ? Math.max(1, parseInt(match[1], 10)) : 30;
-        setCooldownUntil(Date.now() + seconds * 1000);
+        // Prefer the exact deadline from the server's Retry-After / rate-limit
+        // headers captured during the failed request. Fall back to parsing the
+        // error message, then a conservative default.
+        const headerDeadline = consumeRetryAfterDeadline();
+        let deadline: number;
+        if (headerDeadline != null) {
+          deadline = headerDeadline;
+        } else {
+          const match = raw.match(/(\d+)\s*seconds?/i);
+          const seconds = match ? Math.max(1, parseInt(match[1], 10)) : 30;
+          deadline = Date.now() + seconds * 1000;
+        }
+        const seconds = Math.max(1, Math.ceil((deadline - Date.now()) / 1000));
+        setCooldownUntil(deadline);
         setNow(Date.now());
         toast.error(
           `Too many attempts. Please wait ${seconds} second${seconds === 1 ? "" : "s"} before trying again.`,
