@@ -147,7 +147,9 @@ describe("e2e: inserting DEFAULT_BLANK never crashes the editor", () => {
 
   it("rapid bursts starting from a cover-only issue never produce undefined nodes", () => {
     // Edge case: no back cover present. Rapid inserts must still append safely.
-    let issue: IssueDoc = { ...makeDefaultIssue(), pages: [makeNode("cover", makeDefaultIssue().pages[0].data, false)] };
+    const base = makeDefaultIssue();
+    const coverPage = base.pages.find((p) => p.pageType === "cover")!;
+    let issue: IssueDoc = { ...base, pages: [coverPage] };
     for (let i = 0; i < 30; i++) {
       issue = applyPatch(issue, { kind: "add_page", pageType: "blank" });
       // Check EVERY step — a single undefined entry would crash the editor.
