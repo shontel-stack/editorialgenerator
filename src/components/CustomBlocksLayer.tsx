@@ -7,6 +7,8 @@ import {
   type PointerEvent as RPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
+
 import QRCode from "qrcode";
 import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Layers, Eye, EyeOff, Undo2, Redo2, Pin, PanelLeft, PanelRight, PanelTop } from "lucide-react";
 import type { CustomBlock, ContentsSlot, ContentsSlotField } from "@/lib/coverDefaults";
