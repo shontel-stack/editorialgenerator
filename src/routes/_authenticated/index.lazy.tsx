@@ -26,6 +26,7 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
+import { MagazineTemplatePicker } from "@/components/MagazineTemplatePicker";
 import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
 import { VersionHistoryPanel } from "@/components/VersionHistoryPanel";
 import { CommentsPanel } from "@/components/CommentsPanel";
@@ -2284,6 +2285,15 @@ function Index() {
           </PopoverTrigger>
           <PopoverContent side="right" sideOffset={12} align="start" className="w-[380px] max-h-[85vh] overflow-y-auto p-3">
 
+          <Section title="Layout style · Magazine templates" defaultOpen={false}>
+            <MagazineTemplatePicker
+              userId={userId}
+              publicationId={activePublication?.id ?? null}
+              issue={issue}
+              onApply={(next) => setIssue(next)}
+            />
+          </Section>
+
           <Section title="Templates · Monthly versions" defaultOpen={false}>
             <IssueTemplatesPanel
               userId={userId}
@@ -2295,6 +2305,7 @@ function Index() {
               }}
             />
           </Section>
+
 
           <Section title="Version history · Save points" defaultOpen={false}>
             <VersionHistoryPanel

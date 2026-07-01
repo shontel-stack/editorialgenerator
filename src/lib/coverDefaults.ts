@@ -550,7 +550,13 @@ export const DEFAULT_MASTER: IssueMaster = {
 };
 
 export type IssueDoc = {
-  meta: { issue: string; date: string; issueId: string };
+  meta: {
+    issue: string;
+    date: string;
+    issueId: string;
+    /** Optional magazine layout style (preset + margins + columns). */
+    layoutStyle?: import("./magazineLayoutStyles").MagazineLayoutStyle;
+  };
   master: IssueMaster;
   pages: IssuePageNode[];
 };
