@@ -13,7 +13,7 @@
  * the list — the same guarantee the running editor needs.
  */
 import * as React from "react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { applyPatch } from "@/lib/issue-patch";
 import {
