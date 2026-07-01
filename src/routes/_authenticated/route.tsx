@@ -29,7 +29,7 @@ export function hasLocalSupabaseSession(): boolean {
   return false;
 }
 
-function AuthGate() {
+export function AuthGate() {
   // Seed synchronously from localStorage so a signed-in user doesn't flash
   // the sign-in form while getSession()/getUser() are still resolving.
   const [status, setStatus] = useState<"checking" | "allowed" | "denied" | "timeout">(
