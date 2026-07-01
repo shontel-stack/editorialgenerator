@@ -1578,12 +1578,12 @@ function useDockPosition(storageKey: string): {
   setDock: (v: DockSide) => void;
 } {
   const [dock, setDockState] = useState<DockSide>(() => {
-    if (typeof window === "undefined") return "float";
+    if (typeof window === "undefined") return "top";
     try {
       const raw = window.localStorage.getItem(storageKey);
       if (raw === "right" || raw === "left" || raw === "float" || raw === "top") return raw;
     } catch { /* noop */ }
-    return "float";
+    return "top";
   });
   const setDock = (v: DockSide) => {
     setDockState(v);
