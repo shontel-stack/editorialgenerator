@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { SignOutButton } from "@/components/SignOutButton";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { MagazineTemplatePicker } from "@/components/MagazineTemplatePicker";
