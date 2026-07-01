@@ -276,3 +276,117 @@ describe("AuthGate — rate-limited (HTTP 429) getUser()", () => {
     expect(signInMountCount.value).toBe(0);
   });
 });
+
+// --- Page-refresh simulation ----------------------------------------------
+//
+// A "page refresh" in this test env is: unmount the tree, reset the auth
+// deferreds (fresh Supabase calls), and mount <AuthGate /> again. We also
+// reset the sign-in mount counter each refresh so we can assert per-load
+// that the form never flashes and the correct screen stays stable.
+
+describe("AuthGate — refresh stability", () => {
+  async function refresh(unmount: () => void) {
+    unmount();
+    sessionDeferred = defer();
+    userDeferred = defer();
+    signInMountCount.value = 0;
+    const AuthGate = await loadAuthGate();
+    return render(<AuthGate />);
+  }
+
+  it("logged-out: refresh keeps checking → sign-in form, never flashes", async () => {
+    let view = render(<AuthGate_placeholder />);
+    // initial mount uses the imported AuthGate
+    view.unmount();
+    const AuthGate = await loadAuthGate();
+    view = render(<AuthGate />);
+
+    for (let i = 0; i < 3; i++) {
+      // First paint: neutral checking, no form.
+      expect(screen.queryByTestId("sign-in-form")).toBeNull();
+      expect(screen.queryByRole("status")).not.toBeNull();
+      expect(signInMountCount.value).toBe(0);
+
+      await act(async () => {
+        sessionDeferred.resolve({ data: { session: null } });
+        userDeferred.resolve({ data: { user: null } });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => expect(screen.getByTestId("sign-in-form")).not.toBeNull());
+      expect(signInMountCount.value).toBe(1);
+      expect(screen.queryByTestId("protected-outlet")).toBeNull();
+
+      view = await refresh(view.unmount);
+    }
+  });
+
+  it("signed-in: refresh keeps protected outlet, never flashes sign-in", async () => {
+    seedValidSession();
+    let AuthGate = await loadAuthGate();
+    let view = render(<AuthGate />);
+
+    for (let i = 0; i < 3; i++) {
+      // First paint after refresh: protected outlet, no form, no checking.
+      expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+      expect(screen.queryByTestId("sign-in-form")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+
+      await act(async () => {
+        sessionDeferred.resolve({
+          data: { session: { user: { id: "user-1" } } },
+        });
+        userDeferred.resolve({ data: { user: { id: "user-1" } } });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      // Give effects a chance to run — outlet must stay, form must not appear.
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 20));
+      });
+      expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+      expect(signInMountCount.value).toBe(0);
+
+      view = await refresh(view.unmount);
+    }
+  });
+
+  it("rate-limited: refresh keeps signed-in user stable, never flashes sign-in", async () => {
+    seedValidSession();
+    const AuthGate = await loadAuthGate();
+    let view = render(<AuthGate />);
+
+    for (let i = 0; i < 3; i++) {
+      expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+      expect(screen.queryByTestId("sign-in-form")).toBeNull();
+
+      await act(async () => {
+        sessionDeferred.resolve({
+          data: { session: { user: { id: "user-1" } } },
+        });
+        userDeferred.reject(
+          Object.assign(new Error("rate limit"), { status: 429 }),
+        );
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 20));
+      });
+
+      expect(screen.getByTestId("protected-outlet")).not.toBeNull();
+      expect(signInMountCount.value).toBe(0);
+
+      view = await refresh(view.unmount);
+    }
+  });
+});
+
+// Small placeholder so the logged-out refresh test can uniformly call
+// `view.unmount()` in a loop without a special-case for the first render.
+function AuthGate_placeholder() {
+  return <div data-testid="placeholder" />;
+}
