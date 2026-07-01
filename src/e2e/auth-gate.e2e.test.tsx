@@ -148,7 +148,7 @@ describe("AuthGate — logged out", () => {
 
     // Now — and only now — the sign-in form should mount, exactly once.
     await waitFor(() => {
-      expect(screen.getByTestId("sign-in-form")).toBeInTheDocument();
+      expect(screen.getByTestId("sign-in-form")).not.toBeNull();
     });
     expect(signInMountCount.value).toBe(1);
     expect(screen.queryByTestId("protected-outlet")).toBeNull();
@@ -165,7 +165,7 @@ describe("AuthGate — logged out", () => {
       await Promise.resolve();
     });
 
-    await waitFor(() => expect(screen.getByTestId("sign-in-form")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("sign-in-form")).not.toBeNull());
 
     // Give the effect a chance to re-run (it should not).
     await act(async () => {
@@ -193,7 +193,7 @@ describe("AuthGate — logged out", () => {
       await Promise.resolve();
     });
 
-    await waitFor(() => expect(screen.getByTestId("sign-in-form")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("sign-in-form")).not.toBeNull());
     expect(signInMountCount.value).toBe(1);
   });
 });
@@ -206,7 +206,7 @@ describe("AuthGate — signed in", () => {
     render(<AuthGate />);
 
     // Synchronous seed from localStorage — protected content on first paint.
-    expect(screen.getByTestId("protected-outlet")).toBeInTheDocument();
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
     expect(screen.queryByTestId("sign-in-form")).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
 
@@ -220,7 +220,7 @@ describe("AuthGate — signed in", () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByTestId("protected-outlet")).toBeInTheDocument();
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
     expect(signInMountCount.value).toBe(0);
   });
 
@@ -229,7 +229,7 @@ describe("AuthGate — signed in", () => {
     const AuthGate = await loadAuthGate();
     render(<AuthGate />);
 
-    expect(screen.getByTestId("protected-outlet")).toBeInTheDocument();
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
 
     await act(async () => {
       sessionDeferred.resolve({
@@ -245,7 +245,7 @@ describe("AuthGate — signed in", () => {
       await new Promise((r) => setTimeout(r, 30));
     });
 
-    expect(screen.getByTestId("protected-outlet")).toBeInTheDocument();
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
     expect(signInMountCount.value).toBe(0);
   });
 });
@@ -256,7 +256,7 @@ describe("AuthGate — rate-limited (HTTP 429) getUser()", () => {
     const AuthGate = await loadAuthGate();
     render(<AuthGate />);
 
-    expect(screen.getByTestId("protected-outlet")).toBeInTheDocument();
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
 
     // Simulate the shape Supabase returns for a rate-limited request.
     await act(async () => {
@@ -272,7 +272,7 @@ describe("AuthGate — rate-limited (HTTP 429) getUser()", () => {
       await new Promise((r) => setTimeout(r, 30));
     });
 
-    expect(screen.getByTestId("protected-outlet")).toBeInTheDocument();
+    expect(screen.getByTestId("protected-outlet")).not.toBeNull();
     expect(signInMountCount.value).toBe(0);
   });
 });
