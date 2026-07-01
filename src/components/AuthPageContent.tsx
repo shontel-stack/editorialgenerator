@@ -150,6 +150,7 @@ export function AuthPageContent({
           {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
         </button>
       </div>
+      <ToolbarDiagnostics />
     </main>
   );
 }
