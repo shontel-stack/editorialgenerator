@@ -56,7 +56,29 @@ export function AuthPageContent({
         navigate({ to: "/" });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      const raw = err instanceof Error ? err.message : "";
+      const lower = raw.toLowerCase();
+      let message = "Something went wrong. Please try again.";
+      if (mode === "signin") {
+        // Avoid leaking whether the account exists or which field was wrong.
+        message = "The email or password you entered is incorrect. Please try again.";
+        if (lower.includes("email not confirmed") || lower.includes("confirm")) {
+          message = "Please confirm your email address before signing in.";
+        } else if (lower.includes("rate") || lower.includes("too many")) {
+          message = "Too many attempts. Please wait a moment and try again.";
+        }
+      } else if (lower.includes("registered") || lower.includes("already")) {
+        message = "That email can't be used to create a new account. Try signing in instead.";
+      } else if (lower.includes("password")) {
+        message = "Please choose a stronger password (at least 8 characters).";
+      } else if (lower.includes("valid email") || lower.includes("invalid email")) {
+        message = "Please enter a valid email address.";
+      } else if (lower.includes("rate") || lower.includes("too many")) {
+        message = "Too many attempts. Please wait a moment and try again.";
+      } else {
+        message = "We couldn't create your account. Please try again.";
+      }
+      toast.error(message);
     } finally {
       setBusy(false);
     }
