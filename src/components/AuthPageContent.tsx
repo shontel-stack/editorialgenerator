@@ -202,8 +202,12 @@ export function AuthPageContent({
               minLength={8}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={busy}>
-            {mode === "signin" ? "Sign in" : "Sign up"}
+          <Button type="submit" className="w-full" disabled={busy || rateLimited}>
+            {rateLimited
+              ? `Try again in ${cooldownSeconds}s`
+              : mode === "signin"
+                ? "Sign in"
+                : "Sign up"}
           </Button>
         </form>
 
@@ -213,7 +217,7 @@ export function AuthPageContent({
           <div className="h-px flex-1 bg-border" />
         </div>
 
-        <Button variant="outline" className="w-full" onClick={signInGoogle} disabled={busy}>
+        <Button variant="outline" className="w-full" onClick={signInGoogle} disabled={busy || rateLimited}>
           Continue with Google
         </Button>
 
