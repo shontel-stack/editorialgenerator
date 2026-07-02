@@ -53,6 +53,7 @@ import { useCloudSync } from "@/hooks/useCloudSync";
 import { useSyncQueueDrainer } from "@/hooks/useSyncQueueDrainer";
 import { autosaveKey, loadAutosave, loadLastIssueId, saveLastIssueId } from "@/lib/issueAutosave";
 import { fetchIssueDraft, upsertIssueDraft } from "@/lib/issueDrafts";
+import { cleanupLegacyBase64Versions } from "@/lib/issueVersions";
 import { enqueueDraft } from "@/lib/syncQueue";
 import {
   baselineKey,
@@ -251,6 +252,24 @@ function Index() {
       issue.meta.issueId;
   }, [issue.meta.issueId]);
 
+  // One-time housekeeping per session: drop legacy bloated version snapshots
+  // (pre image-storage migration) that still carry inline base64.
+  const versionCleanupRanRef = useRef(false);
+  useEffect(() => {
+    if (!userId || versionCleanupRanRef.current) return;
+    versionCleanupRanRef.current = true;
+    void (async () => {
+      try {
+        const removed = await cleanupLegacyBase64Versions(userId);
+        if (removed > 0) {
+          console.info(`[issueVersions] pruned ${removed} legacy base64 snapshot(s)`);
+        }
+      } catch (err) {
+        console.warn("[issueVersions] legacy cleanup failed", err);
+      }
+    })();
+  }, [userId]);
+
   // ----- Autosave: persist the IssueDoc per (user, issueId) -----
   const autosaveKeyStr = useMemo(
     () => autosaveKey(userId ?? null, issue.meta.issueId),
@@ -355,6 +374,28 @@ function Index() {
               if (count > 0 && !cancelled) {
                 adoptSnapshot(migrated, null);
                 toast.success(`Moved ${count} embedded image${count === 1 ? "" : "s"} to cloud storage`);
+                // Push the cleaned doc back to issue_drafts right away so the
+                // cloud copy shrinks too — otherwise the next restore would
+                // re-download the bloated base64 version.
+                if (userId) {
+                  try {
+                    const nowTs = Date.now();
+                    await upsertIssueDraft<IssueDoc>({
+                      userId,
+                      issueId: migrated.meta.issueId,
+                      publicationId: activePublication?.id ?? null,
+                      issueLabel: migrated.meta.issue ?? null,
+                      data: migrated,
+                      clientUpdatedAt: nowTs,
+                    });
+                    saveBaseline(baselineKeyRef.current, {
+                      syncedAt: nowTs,
+                      hash: hashOf(migrated),
+                    });
+                  } catch (pushErr) {
+                    console.warn("[autosave] post-migration cloud push failed", pushErr);
+                  }
+                }
               }
             } catch (err) {
               console.warn("[autosave] image migration failed", err);
