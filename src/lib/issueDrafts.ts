@@ -9,6 +9,13 @@ export interface IssueDraftRecord<T = unknown> {
   updated_at: string;
 }
 
+/**
+ * Warn if a doc getting pushed to the cloud is bigger than this. After the
+ * base64 → Storage migration this should never fire; when it does it means
+ * some embedded image slipped past `migrateBase64Images`.
+ */
+const DRAFT_SIZE_WARN_BYTES = 1_000_000; // 1 MB
+
 export async function fetchIssueDraft<T = unknown>(
   issueId: string,
 ): Promise<IssueDraftRecord<T> | null> {
@@ -29,6 +36,21 @@ export async function upsertIssueDraft<T = unknown>(input: {
   data: T;
   clientUpdatedAt: number; // epoch ms
 }): Promise<IssueDraftRecord<T>> {
+  // Size guard: leftover base64 images balloon the JSON payload. Warn loudly
+  // so the leak surfaces in the console instead of silently paying the
+  // bandwidth + storage cost every autosave tick.
+  try {
+    const size = JSON.stringify(input.data ?? null).length;
+    if (size > DRAFT_SIZE_WARN_BYTES) {
+      console.warn(
+        `[issueDrafts] Draft for issue ${input.issueId} is ${(size / 1024).toFixed(0)} KB — ` +
+          `likely leftover base64 image data escaped migration.`,
+      );
+    }
+  } catch {
+    // JSON.stringify shouldn't throw on our own doc shape, but if it does
+    // we don't want the guard itself to break the save.
+  }
   const payload = {
     user_id: input.userId,
     issue_id: input.issueId,
