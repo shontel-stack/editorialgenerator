@@ -15,7 +15,11 @@ import { cn } from "@/lib/utils";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
-import { mermaid } from "@streamdown/mermaid";
+// mermaid plugin removed — @streamdown/mermaid crashes on production with
+// "Cannot read properties of undefined (reading 'positionOverrides')" when
+// mounted, taking down the entire app. Re-enable only after upgrading the
+// package and confirming it no longer throws during render.
+
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
