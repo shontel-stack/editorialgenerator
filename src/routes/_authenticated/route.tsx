@@ -35,53 +35,110 @@ export function hasLocalSupabaseSession(): boolean {
   return false;
 }
 
+function describeOauthParams(): { hasCode: boolean; hasAccessToken: boolean; hasRefreshToken: boolean; hasError: boolean; raw: string } {
+  if (typeof window === "undefined") {
+    return { hasCode: false, hasAccessToken: false, hasRefreshToken: false, hasError: false, raw: "" };
+  }
+  const url = window.location.href;
+  const search = window.location.search || "";
+  const hash = window.location.hash || "";
+  const combined = `${search}${hash}`;
+  return {
+    hasCode: /[?#&]code=/.test(url),
+    hasAccessToken: /[?#&]access_token=/.test(url),
+    hasRefreshToken: /[?#&]refresh_token=/.test(url),
+    hasError: /[?#&]error(_description)?=/.test(url),
+    raw: combined.slice(0, 200),
+  };
+}
+
 export function AuthGate() {
-  // Seed synchronously from localStorage so a signed-in user doesn't flash
-  // the sign-in form while getSession()/getUser() are still resolving.
-  // No local session → render sign-in immediately (getUser can still upgrade
-  // to "allowed" if it turns out a session exists). Prevents a stuck
-  // "Checking your session…" screen when getSession/getUser hang.
+  const initialLocal = typeof window !== "undefined" ? hasLocalSupabaseSession() : false;
+  if (typeof window !== "undefined") {
+    // Mount-time snapshot to correlate blank-screen reports with what the
+    // gate observed synchronously.
+    console.info("[AuthGate] mount", {
+      hasLocalSession: initialLocal,
+      href: window.location.href,
+      oauthParams: describeOauthParams(),
+      userAgent: window.navigator.userAgent,
+    });
+  }
+
   const [status, setStatus] = useState<"checking" | "allowed" | "denied" | "timeout">(
-    () => (hasLocalSupabaseSession() ? "allowed" : "denied"),
+    () => (initialLocal ? "allowed" : "denied"),
   );
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    console.info("[AuthGate] initial status", { status, attempt });
+    // We intentionally log the seed value only; subsequent transitions log below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
+    const t0 = performance.now();
+    console.info("[AuthGate] effect start", { attempt, oauthParams: describeOauthParams() });
+
+    const transition = (next: "checking" | "allowed" | "denied" | "timeout", reason: string, extra?: Record<string, unknown>) => {
+      setStatus((prev) => {
+        if (prev === next) {
+          console.debug("[AuthGate] transition skipped (same status)", { status: prev, reason, ...extra });
+          return prev;
+        }
+        console.info("[AuthGate] transition", { from: prev, to: next, reason, elapsedMs: Math.round(performance.now() - t0), ...extra });
+        return next;
+      });
+    };
 
     const timeout = window.setTimeout(() => {
       if (cancelled) return;
       console.warn("[AuthGate] supabase.auth.getUser() timed out after 5s; offering retry.");
-      setStatus((prev) => (prev === "checking" ? "timeout" : prev));
+      setStatus((prev) => {
+        if (prev === "checking") {
+          console.info("[AuthGate] transition", { from: prev, to: "timeout", reason: "getUser-timeout" });
+          return "timeout";
+        }
+        return prev;
+      });
     }, 5000);
 
-    // Listen for OAuth callbacks (Google full-page redirect) or delayed session
-    // hydration. If tokens land after our initial getSession/getUser resolved
-    // without a user, promote the gate to allowed instead of stranding the
-    // signed-in user on the sign-in form.
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
+      console.info("[AuthGate] onAuthStateChange", {
+        event,
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id ?? null,
+      });
       if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
         window.clearTimeout(timeout);
-        setStatus("allowed");
+        transition("allowed", `authStateChange:${event}`);
       } else if (event === "SIGNED_OUT") {
-        setStatus("denied");
+        transition("denied", "authStateChange:SIGNED_OUT");
       }
     });
 
-    // Fast local-storage path so a hung network call can't block render.
     void supabase.auth
       .getSession()
       .then(({ data }) => {
         if (cancelled) return;
+        console.info("[AuthGate] getSession resolved", {
+          hasSession: !!data.session,
+          hasUser: !!data.session?.user,
+          userId: data.session?.user?.id ?? null,
+          expiresAt: data.session?.expires_at ?? null,
+          elapsedMs: Math.round(performance.now() - t0),
+        });
         if (data.session?.user) {
           window.clearTimeout(timeout);
-          setStatus("allowed");
+          transition("allowed", "getSession:user-present");
         }
       })
       .catch((error) => {
         if (cancelled) return;
-        console.warn("[AuthGate] supabase.auth.getSession() failed; continuing to sign-in.", error);
+        console.warn("[AuthGate] getSession failed; continuing to sign-in.", error);
       });
 
     void supabase.auth
@@ -89,30 +146,38 @@ export function AuthGate() {
       .then(({ data, error }) => {
         if (cancelled) return;
         window.clearTimeout(timeout);
+        console.info("[AuthGate] getUser resolved", {
+          hasUser: !!data.user,
+          userId: data.user?.id ?? null,
+          error: error ? { name: error.name, message: error.message, status: (error as unknown as { status?: number }).status } : null,
+          elapsedMs: Math.round(performance.now() - t0),
+        });
         if (data.user) {
-          setStatus("allowed");
+          transition("allowed", "getUser:user-present");
           return;
         }
-        // Don't downgrade an already-allowed session on a transient getUser
-        // failure — getSession() succeeded from localStorage, so a network
-        // hiccup or pending token refresh shouldn't kick the user out.
-        // Also don't downgrade when an OAuth callback is still in the URL —
-        // cloud-auth-js is about to process it and fire SIGNED_IN.
-        const url = typeof window !== "undefined" ? window.location.href : "";
-        const oauthInFlight = /[?#&](code|access_token|refresh_token)=/.test(url);
+        const oauth = describeOauthParams();
+        const oauthInFlight = oauth.hasCode || oauth.hasAccessToken || oauth.hasRefreshToken;
         if (oauthInFlight) {
-          console.info("[AuthGate] OAuth callback params detected; waiting for session.");
+          console.info("[AuthGate] OAuth callback params detected; waiting for session.", oauth);
           return;
         }
-        setStatus((prev) => (prev === "allowed" ? prev : "denied"));
+        setStatus((prev) => {
+          if (prev === "allowed") {
+            console.info("[AuthGate] getUser returned no user but keeping 'allowed' (localStorage session).");
+            return prev;
+          }
+          console.info("[AuthGate] transition", { from: prev, to: "denied", reason: "getUser:no-user" });
+          return "denied";
+        });
         if (error) {
-          console.warn("[AuthGate] supabase.auth.getUser() returned no user.", error);
+          console.warn("[AuthGate] getUser returned no user.", error);
         }
       })
       .catch((error) => {
         if (cancelled) return;
         window.clearTimeout(timeout);
-        console.warn("[AuthGate] supabase.auth.getUser() failed; keeping prior status.", error);
+        console.warn("[AuthGate] getUser failed; keeping prior status.", error);
         setStatus((prev) => (prev === "allowed" ? prev : "denied"));
       });
 
@@ -120,13 +185,17 @@ export function AuthGate() {
       cancelled = true;
       window.clearTimeout(timeout);
       authSub.subscription.unsubscribe();
+      console.debug("[AuthGate] effect cleanup", { attempt });
     };
   }, [attempt]);
 
   const retry = useCallback(() => {
+    console.info("[AuthGate] retry requested by user");
     setStatus("checking");
     setAttempt((n) => n + 1);
   }, []);
+
+  console.debug("[AuthGate] render", { status });
 
   if (status === "checking") {
     return (
@@ -143,7 +212,10 @@ export function AuthGate() {
   if (status === "denied" || status === "timeout") {
     return (
       <AuthPageContent
-        onAuthenticated={() => setStatus("allowed")}
+        onAuthenticated={() => {
+          console.info("[AuthGate] AuthPageContent reported authenticated");
+          setStatus("allowed");
+        }}
         timedOut={status === "timeout"}
         onRetry={retry}
       />
@@ -152,3 +224,4 @@ export function AuthGate() {
 
   return <Outlet />;
 }
+
