@@ -27,6 +27,8 @@ import {
 } from "@/lib/mediaBlockDefaults";
 import { useBrandKit } from "@/lib/brandKitContext";
 import { SwatchPicker } from "@/components/SwatchPicker";
+import { uploadEditorImage } from "@/lib/imageUpload";
+import { toast } from "sonner";
 
 const SNAP = 20;
 const snap = (n: number) => Math.round(n / SNAP) * SNAP;
