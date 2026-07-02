@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { loadAutosave, saveAutosave, type AutosaveRecord } from "@/lib/issueAutosave";
 
 export type AutosaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
