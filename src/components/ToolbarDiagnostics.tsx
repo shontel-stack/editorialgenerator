@@ -8,6 +8,8 @@ import { useEffect, useState, useCallback } from "react";
  * and offers a "Take screenshot" button using the Screen Capture API (no deps).
  */
 export function ToolbarDiagnostics() {
+  // Dev-only widget. Never render in production builds.
+  if (!import.meta.env.DEV) return null;
   const [open, setOpen] = useState(false);
   const [dock, setDock] = useState<string>("(unset)");
   const [railTop, setRailTop] = useState<string>("");
