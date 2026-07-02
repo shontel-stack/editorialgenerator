@@ -355,6 +355,28 @@ function Index() {
               if (count > 0 && !cancelled) {
                 adoptSnapshot(migrated, null);
                 toast.success(`Moved ${count} embedded image${count === 1 ? "" : "s"} to cloud storage`);
+                // Push the cleaned doc back to issue_drafts right away so the
+                // cloud copy shrinks too — otherwise the next restore would
+                // re-download the bloated base64 version.
+                if (userId) {
+                  try {
+                    const nowTs = Date.now();
+                    await upsertIssueDraft<IssueDoc>({
+                      userId,
+                      issueId: migrated.meta.issueId,
+                      publicationId: activePublication?.id ?? null,
+                      issueLabel: migrated.meta.issue ?? null,
+                      data: migrated,
+                      clientUpdatedAt: nowTs,
+                    });
+                    saveBaseline(baselineKeyRef.current, {
+                      syncedAt: nowTs,
+                      hash: hashOf(migrated),
+                    });
+                  } catch (pushErr) {
+                    console.warn("[autosave] post-migration cloud push failed", pushErr);
+                  }
+                }
               }
             } catch (err) {
               console.warn("[autosave] image migration failed", err);
