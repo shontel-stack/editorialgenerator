@@ -2532,14 +2532,19 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
         type="file"
         accept="image/*"
         style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
-        onChange={(e) => {
+        onChange={async (e) => {
           const f = e.target.files?.[0];
           e.target.value = "";
           if (!f) return;
-          const r = new FileReader();
-          r.onload = () => onChange({ imageUrl: String(r.result) });
-          r.onerror = () => console.error("Failed to read image", r.error);
-          r.readAsDataURL(f);
+          try {
+            const issueId =
+              (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
+            const up = await uploadEditorImage({ issueId, input: f, fileName: f.name, folder: "block" });
+            onChange({ imageUrl: up.url });
+          } catch (err) {
+            console.error("Failed to upload image", err);
+            toast.error("Image upload failed", { description: (err as Error).message });
+          }
         }}
       />
       <select value={block.imageFit ?? "cover"} onChange={(e) => onChange({ imageFit: e.target.value as "cover" | "contain" })} style={inputStyle}>
