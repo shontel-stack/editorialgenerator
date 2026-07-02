@@ -3183,12 +3183,21 @@ function CoverEditor({
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0];
+                e.target.value = "";
                 if (!f || !f.type.startsWith("image/")) return;
-                const r = new FileReader();
-                r.onload = () => set({ mastheadLogoUrl: String(r.result) });
-                r.readAsDataURL(f);
+                try {
+                  const up = await uploadEditorImage({
+                    issueId: (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue",
+                    input: f,
+                    fileName: f.name,
+                    folder: "masthead",
+                  });
+                  set({ mastheadLogoUrl: up.url });
+                } catch (err) {
+                  toast.error("Logo upload failed", { description: (err as Error).message });
+                }
               }}
               className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
             />
