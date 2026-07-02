@@ -244,6 +244,13 @@ function Index() {
     if (userId) saveLastIssueId(userId, issue.meta.issueId);
   }, [userId, issue.meta.issueId]);
 
+  // Expose the current issueId to nested uploaders that can't be trivially
+  // threaded through props (image blocks, masthead logo). See src/lib/imageUpload.ts.
+  useEffect(() => {
+    (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId =
+      issue.meta.issueId;
+  }, [issue.meta.issueId]);
+
   // ----- Autosave: persist the IssueDoc per (user, issueId) -----
   const autosaveKeyStr = useMemo(
     () => autosaveKey(userId ?? null, issue.meta.issueId),
