@@ -154,6 +154,20 @@ export async function migrateBase64Images<T>(
           return v;
         }
       }
+      // Re-sign our own storage URLs so long-lived signed URLs don't 404
+      // once their token expires.
+      const path = extractAttachmentPath(v);
+      if (path && v.includes("/storage/v1/object/sign/")) {
+        try {
+          const fresh = await resignImageUrl(path);
+          if (fresh && fresh !== v) {
+            migrated += 1;
+            return fresh;
+          }
+        } catch {
+          // ignore — keep the stale URL rather than break the doc
+        }
+      }
       return v;
     }
     if (Array.isArray(v)) {
