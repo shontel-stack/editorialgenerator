@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { loadAutosave, saveAutosave, type AutosaveRecord } from "@/lib/issueAutosave";
 
 export type AutosaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
@@ -85,7 +86,19 @@ export function useAutosave<T>(value: T, opts: UseAutosaveOptions): UseAutosaveR
       firstDirtyAtRef.current = null;
       setLastSavedAt(rec.savedAt);
       setStatus("saved");
-    } catch {
+    } catch (err) {
+      const isQuota =
+        err instanceof DOMException &&
+        (err.name === "QuotaExceededError" ||
+          err.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+          err.code === 22);
+      if (isQuota) {
+        toast.error("Autosave paused: browser storage is full", {
+          description:
+            "Recent edits couldn't be saved locally. Cloud sync is still running — try removing large embedded images.",
+          id: "autosave-quota",
+        });
+      }
       setStatus("error");
     }
   };

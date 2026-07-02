@@ -19,6 +19,7 @@ import { AttachmentControl } from "@/components/AttachmentControl";
 import { PageReferencesEditor } from "@/components/PageReferencesEditor";
 import { PageBackgroundUploader, type BackgroundAssignment } from "@/components/PageBackgroundUploader";
 import { deleteBackground } from "@/lib/pageBackgrounds";
+import { uploadEditorImage, migrateBase64Images } from "@/lib/imageUpload";
 import { toast } from "sonner";
 
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
@@ -243,6 +244,13 @@ function Index() {
     if (userId) saveLastIssueId(userId, issue.meta.issueId);
   }, [userId, issue.meta.issueId]);
 
+  // Expose the current issueId to nested uploaders that can't be trivially
+  // threaded through props (image blocks, masthead logo). See src/lib/imageUpload.ts.
+  useEffect(() => {
+    (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId =
+      issue.meta.issueId;
+  }, [issue.meta.issueId]);
+
   // ----- Autosave: persist the IssueDoc per (user, issueId) -----
   const autosaveKeyStr = useMemo(
     () => autosaveKey(userId ?? null, issue.meta.issueId),
@@ -336,6 +344,22 @@ function Index() {
               ? detection.winner.ts
               : null;
           adoptSnapshot(detection.winner.data, baselineTs);
+          // One-time migration: any legacy `data:image/…` blobs still living
+          // in the doc get uploaded to storage and swapped for signed URLs.
+          void (async () => {
+            try {
+              const { doc: migrated, migrated: count } = await migrateBase64Images(
+                detection.winner!.data,
+                issue.meta.issueId,
+              );
+              if (count > 0 && !cancelled) {
+                adoptSnapshot(migrated, null);
+                toast.success(`Moved ${count} embedded image${count === 1 ? "" : "s"} to cloud storage`);
+              }
+            } catch (err) {
+              console.warn("[autosave] image migration failed", err);
+            }
+          })();
         }
       } finally {
         if (!cancelled && !needsUserChoice) {
@@ -3182,12 +3206,21 @@ function CoverEditor({
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0];
+                e.target.value = "";
                 if (!f || !f.type.startsWith("image/")) return;
-                const r = new FileReader();
-                r.onload = () => set({ mastheadLogoUrl: String(r.result) });
-                r.readAsDataURL(f);
+                try {
+                  const up = await uploadEditorImage({
+                    issueId: (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue",
+                    input: f,
+                    fileName: f.name,
+                    folder: "masthead",
+                  });
+                  set({ mastheadLogoUrl: up.url });
+                } catch (err) {
+                  toast.error("Logo upload failed", { description: (err as Error).message });
+                }
               }}
               className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
             />
@@ -3460,11 +3493,16 @@ function ImageBlock({
 }) {
   const [dragOver, setDragOver] = useState(false);
   const focalRef = useRef<HTMLDivElement>(null);
-  const handle = (file: File | undefined) => {
+  const handle = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
-    const r = new FileReader();
-    r.onload = () => onUrl(String(r.result));
-    r.readAsDataURL(file);
+    try {
+      const issueId =
+        (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
+      const up = await uploadEditorImage({ issueId, input: file, fileName: file.name, folder: "slot" });
+      onUrl(up.url);
+    } catch (err) {
+      toast.error("Image upload failed", { description: (err as Error).message });
+    }
   };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
