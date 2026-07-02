@@ -3477,11 +3477,16 @@ function ImageBlock({
 }) {
   const [dragOver, setDragOver] = useState(false);
   const focalRef = useRef<HTMLDivElement>(null);
-  const handle = (file: File | undefined) => {
+  const handle = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
-    const r = new FileReader();
-    r.onload = () => onUrl(String(r.result));
-    r.readAsDataURL(file);
+    try {
+      const issueId =
+        (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
+      const up = await uploadEditorImage({ issueId, input: file, fileName: file.name, folder: "slot" });
+      onUrl(up.url);
+    } catch (err) {
+      toast.error("Image upload failed", { description: (err as Error).message });
+    }
   };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
