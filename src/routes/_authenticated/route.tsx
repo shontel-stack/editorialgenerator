@@ -4,6 +4,12 @@ import { AuthPageContent } from "@/components/AuthPageContent";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
+  // Session lives in client-only localStorage, so SSR always renders the
+  // "denied" branch and produces a hydration flash of the sign-in form
+  // (or a blank tree if a downstream client-only component throws during
+  // the mismatch). Opting out of SSR lets the client run the AuthGate
+  // useState initializer against localStorage on first render.
+  ssr: false,
   component: AuthGate,
 });
 
