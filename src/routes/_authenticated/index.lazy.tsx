@@ -344,6 +344,22 @@ function Index() {
               ? detection.winner.ts
               : null;
           adoptSnapshot(detection.winner.data, baselineTs);
+          // One-time migration: any legacy `data:image/…` blobs still living
+          // in the doc get uploaded to storage and swapped for signed URLs.
+          void (async () => {
+            try {
+              const { doc: migrated, migrated: count } = await migrateBase64Images(
+                detection.winner!.data,
+                issue.meta.issueId,
+              );
+              if (count > 0 && !cancelled) {
+                adoptSnapshot(migrated, null);
+                toast.success(`Moved ${count} embedded image${count === 1 ? "" : "s"} to cloud storage`);
+              }
+            } catch (err) {
+              console.warn("[autosave] image migration failed", err);
+            }
+          })();
         }
       } finally {
         if (!cancelled && !needsUserChoice) {
