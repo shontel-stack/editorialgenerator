@@ -891,6 +891,12 @@ function Index() {
           };
         case "back":
           return { ...p, data: { ...p.data, pageNumber: num } };
+        case "blank":
+          return { ...p, data: { ...p.data, folio, pageNumber: num } };
+        case "custom-contents":
+          return { ...p, data: { ...p.data, folio, pageNumber: num } };
+        default:
+          return p;
       }
     }) as IssuePageNode[];
   }, [issue]);
