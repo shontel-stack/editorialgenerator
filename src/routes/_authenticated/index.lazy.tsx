@@ -251,6 +251,24 @@ function Index() {
       issue.meta.issueId;
   }, [issue.meta.issueId]);
 
+  // One-time housekeeping per session: drop legacy bloated version snapshots
+  // (pre image-storage migration) that still carry inline base64.
+  const versionCleanupRanRef = useRef(false);
+  useEffect(() => {
+    if (!userId || versionCleanupRanRef.current) return;
+    versionCleanupRanRef.current = true;
+    void (async () => {
+      try {
+        const removed = await cleanupLegacyBase64Versions(userId);
+        if (removed > 0) {
+          console.info(`[issueVersions] pruned ${removed} legacy base64 snapshot(s)`);
+        }
+      } catch (err) {
+        console.warn("[issueVersions] legacy cleanup failed", err);
+      }
+    })();
+  }, [userId]);
+
   // ----- Autosave: persist the IssueDoc per (user, issueId) -----
   const autosaveKeyStr = useMemo(
     () => autosaveKey(userId ?? null, issue.meta.issueId),
