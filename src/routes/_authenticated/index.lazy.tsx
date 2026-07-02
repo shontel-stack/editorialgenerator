@@ -53,6 +53,7 @@ import { useCloudSync } from "@/hooks/useCloudSync";
 import { useSyncQueueDrainer } from "@/hooks/useSyncQueueDrainer";
 import { autosaveKey, loadAutosave, loadLastIssueId, saveLastIssueId } from "@/lib/issueAutosave";
 import { fetchIssueDraft, upsertIssueDraft } from "@/lib/issueDrafts";
+import { cleanupLegacyBase64Versions } from "@/lib/issueVersions";
 import { enqueueDraft } from "@/lib/syncQueue";
 import {
   baselineKey,
