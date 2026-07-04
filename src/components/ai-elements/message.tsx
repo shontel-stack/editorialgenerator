@@ -319,153 +319,98 @@ export type MessageResponseProps = HTMLAttributes<HTMLDivElement> & {
   isAnimating?: boolean;
 };
 
-const inlineTokenPattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g;
-
-function renderInlineMarkdown(text: string) {
-  return text.split(inlineTokenPattern).map((part, index) => {
-    if (!part) return null;
-
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index}>{part.slice(2, -2)}</strong>;
-    }
-
-    if (part.startsWith("`") && part.endsWith("`")) {
-      return (
-        <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-[0.92em] text-foreground" key={index}>
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-
-    const link = part.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
-    if (link) {
-      return (
-        <a
-          className="font-medium text-primary underline-offset-4 hover:underline"
-          href={link[2]}
-          key={index}
-          rel="noreferrer"
-          target="_blank"
-        >
-          {link[1]}
-        </a>
-      );
-    }
-
-    return part;
-  });
-}
-
-function renderMarkdownBlocks(text: string) {
-  const normalized = text.replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
-  const blocks: ReactNode[] = [];
-  let index = 0;
-
-  while (index < lines.length) {
-    const line = lines[index];
-
-    if (!line.trim()) {
-      index += 1;
-      continue;
-    }
-
-    const fence = line.match(/^```\s*([\w-]+)?\s*$/);
-    if (fence) {
-      const codeLines: string[] = [];
-      index += 1;
-      while (index < lines.length && !lines[index].startsWith("```")) {
-        codeLines.push(lines[index]);
-        index += 1;
-      }
-      if (index < lines.length) index += 1;
-      blocks.push(
-        <pre
-          className="overflow-x-auto rounded-md border border-border bg-muted/40 p-3 text-xs text-foreground"
-          key={`code-${blocks.length}`}
-        >
-          <code>{codeLines.join("\n")}</code>
-        </pre>
-      );
-      continue;
-    }
-
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      const Tag = heading[1].length === 1 ? "h3" : heading[1].length === 2 ? "h4" : "h5";
-      blocks.push(
-        <Tag className="mt-3 font-semibold leading-tight text-foreground first:mt-0" key={`heading-${blocks.length}`}>
-          {renderInlineMarkdown(heading[2])}
-        </Tag>
-      );
-      index += 1;
-      continue;
-    }
-
-    if (/^\s*[-*]\s+/.test(line)) {
-      const items: string[] = [];
-      while (index < lines.length && /^\s*[-*]\s+/.test(lines[index])) {
-        items.push(lines[index].replace(/^\s*[-*]\s+/, ""));
-        index += 1;
-      }
-      blocks.push(
-        <ul className="list-disc space-y-1 pl-5" key={`list-${blocks.length}`}>
-          {items.map((item, itemIndex) => (
-            <li key={itemIndex}>{renderInlineMarkdown(item)}</li>
-          ))}
-        </ul>
-      );
-      continue;
-    }
-
-    if (/^\s*\d+\.\s+/.test(line)) {
-      const items: string[] = [];
-      while (index < lines.length && /^\s*\d+\.\s+/.test(lines[index])) {
-        items.push(lines[index].replace(/^\s*\d+\.\s+/, ""));
-        index += 1;
-      }
-      blocks.push(
-        <ol className="list-decimal space-y-1 pl-5" key={`ordered-${blocks.length}`}>
-          {items.map((item, itemIndex) => (
-            <li key={itemIndex}>{renderInlineMarkdown(item)}</li>
-          ))}
-        </ol>
-      );
-      continue;
-    }
-
-    const paragraph: string[] = [line];
-    index += 1;
-    while (
-      index < lines.length &&
-      lines[index].trim() &&
-      !/^```/.test(lines[index]) &&
-      !/^(#{1,3})\s+/.test(lines[index]) &&
-      !/^\s*[-*]\s+/.test(lines[index]) &&
-      !/^\s*\d+\.\s+/.test(lines[index])
-    ) {
-      paragraph.push(lines[index]);
-      index += 1;
-    }
-    blocks.push(
-      <p className="leading-relaxed" key={`paragraph-${blocks.length}`}>
-        {renderInlineMarkdown(paragraph.join(" "))}
-      </p>
-    );
-  }
-
-  return blocks.length > 0 ? blocks : text;
-}
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export const MessageResponse = memo(
   ({ className, children, isAnimating: _isAnimating, ...props }: MessageResponseProps) => {
-    const renderedChildren = typeof children === "string" ? renderMarkdownBlocks(children) : children;
+    const renderedChildren =
+      typeof children === "string" ? (
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h1: ({ node: _n, ...p }) => (
+              <h3 className="mt-3 text-lg font-semibold leading-tight text-foreground first:mt-0" {...p} />
+            ),
+            h2: ({ node: _n, ...p }) => (
+              <h4 className="mt-3 text-base font-semibold leading-tight text-foreground first:mt-0" {...p} />
+            ),
+            h3: ({ node: _n, ...p }) => (
+              <h5 className="mt-3 text-sm font-semibold leading-tight text-foreground first:mt-0" {...p} />
+            ),
+            h4: ({ node: _n, ...p }) => (
+              <h6 className="mt-3 text-sm font-semibold leading-tight text-foreground first:mt-0" {...p} />
+            ),
+            h5: ({ node: _n, ...p }) => (
+              <h6 className="mt-3 text-xs font-semibold uppercase tracking-wide text-foreground first:mt-0" {...p} />
+            ),
+            h6: ({ node: _n, ...p }) => (
+              <h6 className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground first:mt-0" {...p} />
+            ),
+            p: ({ node: _n, ...p }) => <p className="leading-relaxed" {...p} />,
+            a: ({ node: _n, ...p }) => (
+              <a
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                rel="noreferrer"
+                target="_blank"
+                {...p}
+              />
+            ),
+            ul: ({ node: _n, ...p }) => <ul className="list-disc space-y-1 pl-5" {...p} />,
+            ol: ({ node: _n, ...p }) => <ol className="list-decimal space-y-1 pl-5" {...p} />,
+            blockquote: ({ node: _n, ...p }) => (
+              <blockquote className="border-l-2 border-border pl-3 italic text-muted-foreground" {...p} />
+            ),
+            code: ({ node: _n, className: cls, children: c, ...p }: any) => {
+              const isBlock = /language-/.test(cls ?? "");
+              if (isBlock) {
+                return (
+                  <code className={cn("font-mono text-xs", cls)} {...p}>
+                    {c}
+                  </code>
+                );
+              }
+              return (
+                <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-[0.92em] text-foreground" {...p}>
+                  {c}
+                </code>
+              );
+            },
+            pre: ({ node: _n, ...p }) => (
+              <pre
+                className="overflow-x-auto rounded-md border border-border bg-muted/40 p-3 text-xs text-foreground"
+                {...p}
+              />
+            ),
+            table: ({ node: _n, ...p }) => (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm" {...p} />
+              </div>
+            ),
+            th: ({ node: _n, ...p }) => (
+              <th className="border border-border bg-muted/40 px-2 py-1 text-left font-semibold" {...p} />
+            ),
+            td: ({ node: _n, ...p }) => (
+              <td className="border border-border px-2 py-1 align-top" {...p} />
+            ),
+            img: ({ node: _n, ...p }) => (
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <img className="max-w-full rounded-md" {...p} />
+            ),
+            hr: ({ node: _n, ...p }) => <hr className="my-3 border-border" {...p} />,
+          }}
+        >
+          {children}
+        </ReactMarkdown>
+      ) : (
+        children
+      );
 
     return (
       <div
         className={cn(
           "size-full space-y-2 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-          className
+          className,
         )}
         {...props}
       >
@@ -475,7 +420,7 @@ export const MessageResponse = memo(
   },
   (prevProps, nextProps) =>
     prevProps.children === nextProps.children &&
-    nextProps.isAnimating === prevProps.isAnimating
+    nextProps.isAnimating === prevProps.isAnimating,
 );
 
 MessageResponse.displayName = "MessageResponse";
