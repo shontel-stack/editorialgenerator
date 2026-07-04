@@ -363,6 +363,10 @@ function Index() {
               ? detection.winner.ts
               : null;
           adoptSnapshot(detection.winner.data, baselineTs);
+          // Snapshot the JSON we just adopted so we can detect whether the
+          // user has typed/edited anything while the migration runs. If they
+          // have, we must NOT overwrite their edits with the migrated copy.
+          const preMigrationJSON = lastSavedRef.current;
           // One-time migration: any legacy `data:image/…` blobs still living
           // in the doc get uploaded to storage and swapped for signed URLs.
           void (async () => {
@@ -372,6 +376,17 @@ function Index() {
                 issue.meta.issueId,
               );
               if (count > 0 && !cancelled) {
+                // If the user edited the doc while migration was running,
+                // `lastSavedRef.current` no longer matches the snapshot we
+                // started from. Skip the in-memory adopt and the cloud push
+                // so we don't clobber their live edits; the next load will
+                // migrate whatever base64 remains.
+                if (lastSavedRef.current !== preMigrationJSON) {
+                  console.warn(
+                    "[autosave] skipping post-migration adopt — user edited during migration",
+                  );
+                  return;
+                }
                 adoptSnapshot(migrated, null);
                 toast.success(`Moved ${count} embedded image${count === 1 ? "" : "s"} to cloud storage`);
                 // Push the cleaned doc back to issue_drafts right away so the
