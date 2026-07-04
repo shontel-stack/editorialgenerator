@@ -363,10 +363,12 @@ function Index() {
               ? detection.winner.ts
               : null;
           adoptSnapshot(detection.winner.data, baselineTs);
-          // Snapshot the JSON we just adopted so we can detect whether the
-          // user has typed/edited anything while the migration runs. If they
-          // have, we must NOT overwrite their edits with the migrated copy.
-          const preMigrationJSON = lastSavedRef.current;
+          // Snapshot the serialized doc we just adopted. After the async
+          // image migration finishes we compare the *current* issue state
+          // (via setIssue's functional updater) against this baseline — if
+          // it doesn't match, the user has edited during migration and we
+          // must NOT clobber their work.
+          const preMigrationJSON = JSON.stringify(detection.winner.data);
           // One-time migration: any legacy `data:image/…` blobs still living
           // in the doc get uploaded to storage and swapped for signed URLs.
           void (async () => {
@@ -376,18 +378,28 @@ function Index() {
                 issue.meta.issueId,
               );
               if (count > 0 && !cancelled) {
-                // If the user edited the doc while migration was running,
-                // `lastSavedRef.current` no longer matches the snapshot we
-                // started from. Skip the in-memory adopt and the cloud push
-                // so we don't clobber their live edits; the next load will
-                // migrate whatever base64 remains.
-                if (lastSavedRef.current !== preMigrationJSON) {
+                let userEdited = false;
+                // Atomic check-and-swap: only adopt migrated data if the
+                // current issue state is byte-identical to what we started
+                // migrating from. Using the functional updater guarantees
+                // we see the latest state, not a stale closure.
+                setIssue((curr) => {
+                  if (JSON.stringify(curr) !== preMigrationJSON) {
+                    userEdited = true;
+                    return curr;
+                  }
+                  lastSavedRef.current = JSON.stringify(migrated);
+                  return migrated;
+                });
+                if (userEdited) {
                   console.warn(
                     "[autosave] skipping post-migration adopt — user edited during migration",
                   );
                   return;
                 }
-                adoptSnapshot(migrated, null);
+                if (!migrated.pages.some((p: IssuePageNode) => p.id === selectedId)) {
+                  setSelectedId(migrated.pages[0].id);
+                }
                 toast.success(`Moved ${count} embedded image${count === 1 ? "" : "s"} to cloud storage`);
                 // Push the cleaned doc back to issue_drafts right away so the
                 // cloud copy shrinks too — otherwise the next restore would
