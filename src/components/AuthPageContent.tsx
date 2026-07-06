@@ -18,10 +18,12 @@ export function AuthPageContent({
   onAuthenticated,
   timedOut = false,
   onRetry,
+  nextPath,
 }: {
   onAuthenticated?: () => void;
   timedOut?: boolean;
   onRetry?: () => void;
+  nextPath?: string;
 } = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
