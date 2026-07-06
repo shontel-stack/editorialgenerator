@@ -55,14 +55,30 @@ export function AuthPageContent({
   const rateLimited = cooldownSeconds > 0;
 
 
+  // Only accept same-origin relative paths as redirect targets.
+  const safeNext = nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
+    ? nextPath
+    : null;
+  const goNext = () => {
+    if (safeNext) {
+      window.location.href = safeNext;
+    } else {
+      navigate({ to: "/" });
+    }
+  };
+  const returnUrl = safeNext
+    ? `${window.location.origin}/auth?next=${encodeURIComponent(safeNext)}`
+    : window.location.origin;
+
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         onAuthenticated?.();
-        navigate({ to: "/" });
+        goNext();
       }
     });
-  }, [navigate, onAuthenticated]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, onAuthenticated, safeNext]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,13 +90,13 @@ export function AuthPageContent({
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: returnUrl },
         });
         if (error) throw error;
         if (data.session?.user) {
           toast.success("Account created. You're signed in.");
           onAuthenticated?.();
-          navigate({ to: "/" });
+          goNext();
           return;
         }
         toast.success("Account created. Check your email to confirm it, then sign in.");
@@ -89,7 +105,7 @@ export function AuthPageContent({
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         onAuthenticated?.();
-        navigate({ to: "/" });
+        goNext();
       }
     } catch (err) {
       const raw = err instanceof Error ? err.message : "";
