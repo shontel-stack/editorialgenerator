@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://cdennwljidfkmkrqymtb.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "editorial-generator-mcp",
+      "version": "0.1.0",
+      "title": "Editorial Generator"
+    },
+    "tools": [
+      {
+        "name": "list_issues",
+        "title": "List issues",
+        "description": "List the signed-in user's editorial issues (drafts) with id, label, publication, and last-updated timestamp.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Maximum number of issues to return. Defaults to 25.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_publications",
+        "title": "List publications",
+        "description": "List the signed-in user's publications (id, name, slug, tagline).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_issue",
+        "title": "Get issue",
+        "description": "Fetch the full draft document (JSON) for one of the signed-in user's editorial issues by issue_id.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "issue_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The issue_id from list_issues."
+            }
+          },
+          "required": [
+            "issue_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_staff_note",
+        "title": "Create staff note",
+        "description": "File an actionable note into the signed-in user's inbox for a given issue (comment, edit suggestion, status change, or flag).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "issue_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "comment",
+                "edit_suggestion",
+                "status_change",
+                "flag"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 120
+            },
+            "body": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "page_id": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "low",
+                "med",
+                "high"
+              ]
+            }
+          },
+          "required": [
+            "issue_id",
+            "type",
+            "title"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
