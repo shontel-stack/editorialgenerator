@@ -256,7 +256,7 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
         </p>
       </Draggable>
 
-      {/* Bottom rule + meta */}
+      {/* Bottom rule + featuring/toc row */}
       <Draggable
         blockKey="bottom-rule"
         style={{
@@ -266,36 +266,127 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
           bottom: 160,
           borderTop: `1px solid ${pal.rule}`,
           paddingTop: 36,
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
           color: pal.fg,
         }}
       >
-        <div
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: 22,
-            letterSpacing: 4,
-            textTransform: "uppercase",
-            maxWidth: "70%",
-            opacity: 0.85,
-          }}
-        >
-          {data.feature}
-        </div>
-        <div
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: 22,
-            letterSpacing: 6,
-            textTransform: "uppercase",
-            fontWeight: 600,
-            color: pal.rule,
-          }}
-        >
-          {data.price}
-        </div>
+        {(() => {
+          const entries = data.tocEntries ?? [];
+          if (entries.length > 0) {
+            return (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${entries.length}, 1fr) auto`,
+                  columnGap: 32,
+                  alignItems: "end",
+                }}
+              >
+                {entries.map((e, i) => {
+                  const clickable = Boolean(e.targetPageId);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      data-toc-entry={i}
+                      data-target-page-id={e.targetPageId ?? ""}
+                      onClick={() => {
+                        if (!e.targetPageId) return;
+                        window.dispatchEvent(
+                          new CustomEvent("pageluxe:goto-page", { detail: e.targetPageId }),
+                        );
+                      }}
+                      style={{
+                        appearance: "none",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        margin: 0,
+                        textAlign: "left",
+                        cursor: clickable ? "pointer" : "default",
+                        color: pal.fg,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                      }}
+                      title={clickable ? "Go to page" : "Not linked to a page yet"}
+                    >
+                      <span
+                        style={{
+                          fontFamily: "var(--font-sans)",
+                          fontSize: 22,
+                          letterSpacing: 4,
+                          textTransform: "uppercase",
+                          opacity: 0.85,
+                        }}
+                      >
+                        {e.label}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-serif)",
+                          fontStyle: "italic",
+                          fontSize: 28,
+                          color: pal.rule,
+                          textDecoration: clickable ? "underline" : "none",
+                          textUnderlineOffset: 6,
+                        }}
+                      >
+                        Pg. {e.page}
+                      </span>
+                    </button>
+                  );
+                })}
+                <div
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 22,
+                    letterSpacing: 6,
+                    textTransform: "uppercase",
+                    fontWeight: 600,
+                    color: pal.rule,
+                    alignSelf: "end",
+                  }}
+                >
+                  {data.price}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "space-between",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 22,
+                  letterSpacing: 4,
+                  textTransform: "uppercase",
+                  maxWidth: "70%",
+                  opacity: 0.85,
+                }}
+              >
+                {data.feature}
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 22,
+                  letterSpacing: 6,
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                  color: pal.rule,
+                }}
+              >
+                {data.price}
+              </div>
+            </div>
+          );
+        })()}
       </Draggable>
 
       {/* Credit micro-text */}
