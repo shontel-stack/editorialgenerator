@@ -4,7 +4,8 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listAllPageStatus,
@@ -131,39 +132,48 @@ function CalendarPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-px bg-border border border-border">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="bg-background text-[10px] tracking-[0.3em] uppercase text-muted-foreground px-2 py-1">
-              {d}
-            </div>
-          ))}
-          {cells.map((c) => {
-            const items = c.date ? byDate[fmtKey(c.date)] ?? [] : [];
-            return (
-              <div key={c.key} className="bg-background min-h-[110px] p-2 text-xs">
-                {c.date ? (
-                  <>
-                    <div className="text-[10px] text-muted-foreground mb-1">{c.date.getDate()}</div>
-                    <div className="space-y-1">
-                      {items.slice(0, 4).map((r) => (
-                        <div
-                          key={r.id}
-                          className={`truncate px-1.5 py-0.5 rounded-sm text-[10px] ${STATUS_TONES[r.status as PageStatusValue]}`}
-                          title={`${r.page_label ?? r.page_id} · ${STATUS_LABELS[r.status as PageStatusValue]}`}
-                        >
-                          {r.page_label ?? r.page_id}
-                        </div>
-                      ))}
-                      {items.length > 4 ? (
-                        <div className="text-[10px] text-muted-foreground">+{items.length - 4} more</div>
-                      ) : null}
-                    </div>
-                  </>
-                ) : null}
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={CalendarDays}
+            title="No due dates scheduled"
+            body="Set a due date on any page in the production checklist and it'll appear on the calendar. Use the board to assign one at a glance."
+            action={{ label: "Open the board", href: "/board" }}
+          />
+        ) : (
+          <div className="grid grid-cols-7 gap-px bg-border border border-border">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+              <div key={d} className="bg-background text-[10px] tracking-[0.3em] uppercase text-muted-foreground px-2 py-1">
+                {d}
               </div>
-            );
-          })}
-        </div>
+            ))}
+            {cells.map((c) => {
+              const items = c.date ? byDate[fmtKey(c.date)] ?? [] : [];
+              return (
+                <div key={c.key} className="bg-background min-h-[110px] p-2 text-xs">
+                  {c.date ? (
+                    <>
+                      <div className="text-[10px] text-muted-foreground mb-1">{c.date.getDate()}</div>
+                      <div className="space-y-1">
+                        {items.slice(0, 4).map((r) => (
+                          <div
+                            key={r.id}
+                            className={`truncate px-1.5 py-0.5 rounded-sm text-[10px] ${STATUS_TONES[r.status as PageStatusValue]}`}
+                            title={`${r.page_label ?? r.page_id} · ${STATUS_LABELS[r.status as PageStatusValue]}`}
+                          >
+                            {r.page_label ?? r.page_id}
+                          </div>
+                        ))}
+                        {items.length > 4 ? (
+                          <div className="text-[10px] text-muted-foreground">+{items.length - 4} more</div>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
