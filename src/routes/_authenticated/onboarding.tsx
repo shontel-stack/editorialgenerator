@@ -5,9 +5,9 @@
  * editor with a publication (and a starter template choice) in hand.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Feather, LayoutTemplate, ArrowRight, Check, Sparkles } from "lucide-react";
+import { BookOpen, Feather, ArrowRight, Check, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useActivePublication } from "@/hooks/useActivePublication";
 import { MagazineTemplatePicker } from "@/components/MagazineTemplatePicker";
