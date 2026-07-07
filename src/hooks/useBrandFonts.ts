@@ -108,7 +108,7 @@ export function useBrandFonts(publicationId: string | null) {
       cleanupFaces();
       lastPubRef.current = publicationId;
     }
-    (async () => {
+    void (async () => {
       // Remove faces for fonts that disappeared.
       const liveIds = new Set(fonts.map((f) => f.id));
       for (const [id, face] of facesRef.current.entries()) {
@@ -130,7 +130,11 @@ export function useBrandFonts(publicationId: string | null) {
         if (cancelled) return;
         if (face) facesRef.current.set(font.id, face);
       }
-    })();
+    })().catch((e) => {
+      // Transient network failures (token refresh, offline) shouldn't surface
+      // as unhandled promise rejections.
+      console.warn("[useBrandFonts] font face registration failed", (e as Error).message);
+    });
     return () => {
       cancelled = true;
     };
