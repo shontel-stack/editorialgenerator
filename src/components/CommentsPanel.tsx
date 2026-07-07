@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MessageSquare, CheckCircle2, Circle, Trash2, Loader2 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import {
   addPageComment,
   deletePageComment,
