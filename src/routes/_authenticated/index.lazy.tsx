@@ -1,5 +1,6 @@
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { confirmDiscardUnsaved } from "@/lib/unsavedGuards";
+import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
@@ -187,7 +188,31 @@ function Index() {
     },
     [navigate],
   );
-  const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
+  const [issue, setIssue] = useState<IssueDoc>(() => {
+    const base = makeDefaultIssue();
+    // Apply onboarding hints once, if the first-run wizard left them behind.
+    try {
+      if (typeof window !== "undefined") {
+        const name = window.localStorage.getItem("pageluxe:onboarding:issueName");
+        const layoutRaw = window.localStorage.getItem("pageluxe:onboarding:layoutStyle");
+        if (name) base.meta.issue = name;
+        if (layoutRaw) {
+          try {
+            base.meta.layoutStyle = JSON.parse(layoutRaw);
+          } catch {
+            // ignore malformed onboarding payload
+          }
+        }
+        if (name || layoutRaw) {
+          window.localStorage.removeItem("pageluxe:onboarding:issueName");
+          window.localStorage.removeItem("pageluxe:onboarding:layoutStyle");
+        }
+      }
+    } catch {
+      // localStorage may be unavailable (privacy mode); silently continue
+    }
+    return base;
+  });
   const [migrationBanner, setMigrationBanner] = useState<"modernizing" | "done" | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
   const [newsletterOpen, setNewsletterOpen] = useState(false);
@@ -238,6 +263,42 @@ function Index() {
   const [proposalOps, setProposalOps] = useState<LayoutPlanOp[]>([]);
   const [pagesQuery, setPagesQuery] = useState("");
   const { userId, active: activePublication } = useActivePublication();
+
+  // ----- Getting-started hint: dismissible card for users who have a
+  // publication but no saved issue drafts yet. Runs once per session at
+  // mount and only paints if nothing has been auto-saved to the cloud.
+  const [firstIssueHint, setFirstIssueHint] = useState(false);
+  const firstIssueHintCheckedRef = useRef(false);
+  useEffect(() => {
+    if (!userId || firstIssueHintCheckedRef.current) return;
+    firstIssueHintCheckedRef.current = true;
+    try {
+      if (window.localStorage.getItem("pageluxe:hint:firstIssueDismissed") === "1") return;
+    } catch {
+      // ignore
+    }
+    void (async () => {
+      try {
+        const { count, error } = await supabase
+          .from("issue_drafts")
+          .select("issue_id", { count: "exact", head: true })
+          .eq("user_id", userId);
+        if (error) return;
+        if ((count ?? 0) === 0) setFirstIssueHint(true);
+      } catch {
+        // ignore — hint is purely optional
+      }
+    })();
+  }, [userId]);
+  const dismissFirstIssueHint = useCallback(() => {
+    setFirstIssueHint(false);
+    try {
+      window.localStorage.setItem("pageluxe:hint:firstIssueDismissed", "1");
+    } catch {
+      // ignore
+    }
+  }, []);
+
 
   // ----- Continue where I left off: swap to last opened issueId on login. -----
   const lastIssueSwapRef = useRef(false);
@@ -2799,7 +2860,37 @@ function Index() {
       </div>
       </div>
 
+      {firstIssueHint ? (
+        <div className="px-3 pt-3">
+          <div className="mx-auto max-w-5xl border border-[color:var(--ruby)]/25 bg-[color:var(--ruby)]/5 rounded-sm p-4 flex items-start gap-4">
+            <div className="hidden sm:grid place-items-center h-10 w-10 shrink-0 rounded-full border border-[color:var(--ruby)]/30 bg-background/70 font-brand text-lg text-[color:var(--ruby-deep)]" style={{ fontFamily: "var(--font-brand)" }} aria-hidden>
+              I
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] tracking-[0.3em] uppercase text-[color:var(--ruby-deep)] mb-1">
+                Getting started
+              </div>
+              <h3 className="font-display text-base md:text-lg tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+                Sketch your first issue.
+              </h3>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                Rename the issue up top, edit the cover, and add pages from the <span className="font-medium text-foreground">Pages</span> palette on the left. Autosave and cloud sync are on — nothing you type here goes anywhere until you save or export.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismissFirstIssueHint}
+              aria-label="Dismiss getting-started hint"
+              className="shrink-0 p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-background/70 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="px-3 pt-1 pb-3">
+
         <div className="pl-3 flex flex-col gap-3">
           {editLayout && (
             <p className="text-[10px] leading-relaxed text-muted-foreground px-1">
