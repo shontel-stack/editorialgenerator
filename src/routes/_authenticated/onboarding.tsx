@@ -55,7 +55,7 @@ function OnboardingPage() {
 
   const currentPubName = active?.name ?? publications[0]?.name ?? pubName;
 
-  const submitPublication = async (e: React.FormEvent) => {
+  const submitPublication = async (e: FormEvent) => {
     e.preventDefault();
     const name = pubName.trim();
     if (!name) {
@@ -82,7 +82,7 @@ function OnboardingPage() {
     }
   };
 
-  const submitIssueName = (e: React.FormEvent) => {
+  const submitIssueName = (e: FormEvent) => {
     e.preventDefault();
     const name = issueName.trim();
     if (!name) {
@@ -311,7 +311,7 @@ function Step({
   done: boolean;
   title: string;
   hint: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }) {
   const numeral = useMemo(() => ["I", "II", "III"][n - 1], [n]);
   return (
@@ -363,7 +363,7 @@ function StepSummary({
   label,
   value,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
 }) {
@@ -377,4 +377,4 @@ function StepSummary({
 }
 
 // keep import used for the type only
-export type { LayoutTemplate };
+
