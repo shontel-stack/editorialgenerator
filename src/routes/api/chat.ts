@@ -269,6 +269,12 @@ export const Route = createFileRoute("/api/chat")({
             inputSchema: scaleBlockSchema,
             execute: async (args) => ({ kind: "scale_block", ...args }),
           }),
+          set_cover_toc: tool({
+            description:
+              "Set the cover's aligned 'featuring' row — a grid of {label, page, targetPageId?} entries rendered as one column each (guaranteed alignment). Use this when the user wants the cover's page-number links to point at articles in the issue, or to add/remove/rename entries. Pass 2–6 entries, in order. targetPageId (optional) is an id from the snapshot; when set, clicking that column in the editor jumps to that page.",
+            inputSchema: setCoverTocSchema,
+            execute: async (args) => ({ kind: "set_cover_toc", ...args }),
+          }),
         };
 
         const result = streamText({
