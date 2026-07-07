@@ -250,6 +250,17 @@ function Index() {
 
 
   const [selectedId, setSelectedId] = useState<string>(() => issue.pages[0].id);
+  // Cover TOC entries dispatch `pageluxe:goto-page` when clicked — jump the editor to that page.
+  useEffect(() => {
+    const onGoto = (ev: Event) => {
+      const id = (ev as CustomEvent<string>).detail;
+      if (typeof id === "string" && issue.pages.some((p) => p.id === id)) {
+        setSelectedId(id);
+      }
+    };
+    window.addEventListener("pageluxe:goto-page", onGoto as EventListener);
+    return () => window.removeEventListener("pageluxe:goto-page", onGoto as EventListener);
+  }, [issue.pages]);
   const [busy, setBusy] = useState<string | null>(null);
   const [spreadView, setSpreadView] = useState(false);
   const [editLayout, setEditLayout] = useState(false);
