@@ -187,7 +187,31 @@ function Index() {
     },
     [navigate],
   );
-  const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
+  const [issue, setIssue] = useState<IssueDoc>(() => {
+    const base = makeDefaultIssue();
+    // Apply onboarding hints once, if the first-run wizard left them behind.
+    try {
+      if (typeof window !== "undefined") {
+        const name = window.localStorage.getItem("pageluxe:onboarding:issueName");
+        const layoutRaw = window.localStorage.getItem("pageluxe:onboarding:layoutStyle");
+        if (name) base.meta.issue = name;
+        if (layoutRaw) {
+          try {
+            base.meta.layoutStyle = JSON.parse(layoutRaw);
+          } catch {
+            // ignore malformed onboarding payload
+          }
+        }
+        if (name || layoutRaw) {
+          window.localStorage.removeItem("pageluxe:onboarding:issueName");
+          window.localStorage.removeItem("pageluxe:onboarding:layoutStyle");
+        }
+      }
+    } catch {
+      // localStorage may be unavailable (privacy mode); silently continue
+    }
+    return base;
+  });
   const [migrationBanner, setMigrationBanner] = useState<"modernizing" | "done" | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
   const [newsletterOpen, setNewsletterOpen] = useState(false);
