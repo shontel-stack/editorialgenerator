@@ -183,6 +183,16 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
         }),
       };
     }
+    case "set_cover_toc": {
+      return {
+        ...issue,
+        pages: issue.pages.map((p) => {
+          if (p.id !== patch.pageId || p.pageType !== "cover") return p;
+          const next: CoverData = { ...(p.data as CoverData), tocEntries: patch.entries };
+          return { ...p, data: next } as IssuePageNode;
+        }),
+      };
+    }
   }
 }
 
@@ -198,5 +208,6 @@ export function describePatch(patch: IssuePatch): string {
     case "reorder_pages":       return `Reordered pages`;
     case "move_block":          return patch.reset ? `Reset ${patch.blockKey} position` : `Moved ${patch.blockKey} (${patch.dx >= 0 ? "+" : ""}${patch.dx}, ${patch.dy >= 0 ? "+" : ""}${patch.dy})`;
     case "scale_block":         return patch.reset ? `Reset ${patch.blockKey} size` : `Scaled ${patch.blockKey} to ${Math.round(patch.scale * 100)}%`;
+    case "set_cover_toc":       return `Cover TOC → ${patch.entries.length} entries`;
   }
 }
