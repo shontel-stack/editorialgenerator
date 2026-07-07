@@ -12,6 +12,8 @@ import {
   makeNode,
   type ArticleData,
   type ArticleLayout,
+  type CoverData,
+  type CoverTocEntry,
   type FolioTemplate,
   type IssueDoc,
   type IssueFonts,
@@ -36,7 +38,8 @@ export type IssuePatch =
   | { kind: "remove_page"; pageId: string; removeSpread?: boolean }
   | { kind: "reorder_pages"; orderedPageIds: string[] }
   | { kind: "move_block"; pageId: string; blockKey: string; dx: number; dy: number; reset?: boolean }
-  | { kind: "scale_block"; pageId: string; blockKey: string; scale: number; reset?: boolean };
+  | { kind: "scale_block"; pageId: string; blockKey: string; scale: number; reset?: boolean }
+  | { kind: "set_cover_toc"; pageId: string; entries: CoverTocEntry[] };
 
 function fontStack(label: string | undefined, kind: keyof IssueFonts): string | undefined {
   if (!label) return undefined;
