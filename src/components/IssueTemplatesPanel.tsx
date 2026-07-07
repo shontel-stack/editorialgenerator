@@ -4,7 +4,8 @@
  * into the editor.
  */
 import { useCallback, useEffect, useState } from "react";
-import { BookOpen, Check, Copy, Pencil, Save, Trash2, Upload, X } from "lucide-react";
+import { BookOpen, BookmarkPlus, Check, Copy, Pencil, Save, Trash2, Upload, X } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import {
   deleteIssueTemplate,
