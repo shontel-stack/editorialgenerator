@@ -2860,7 +2860,37 @@ function Index() {
       </div>
       </div>
 
+      {firstIssueHint ? (
+        <div className="px-3 pt-3">
+          <div className="mx-auto max-w-5xl border border-[color:var(--ruby)]/25 bg-[color:var(--ruby)]/5 rounded-sm p-4 flex items-start gap-4">
+            <div className="hidden sm:grid place-items-center h-10 w-10 shrink-0 rounded-full border border-[color:var(--ruby)]/30 bg-background/70 font-brand text-lg text-[color:var(--ruby-deep)]" style={{ fontFamily: "var(--font-brand)" }} aria-hidden>
+              I
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] tracking-[0.3em] uppercase text-[color:var(--ruby-deep)] mb-1">
+                Getting started
+              </div>
+              <h3 className="font-display text-base md:text-lg tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+                Sketch your first issue.
+              </h3>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                Rename the issue up top, edit the cover, and add pages from the <span className="font-medium text-foreground">Pages</span> palette on the left. Autosave and cloud sync are on — nothing you type here goes anywhere until you save or export.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismissFirstIssueHint}
+              aria-label="Dismiss getting-started hint"
+              className="shrink-0 p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-background/70 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="px-3 pt-1 pb-3">
+
         <div className="pl-3 flex flex-col gap-3">
           {editLayout && (
             <p className="text-[10px] leading-relaxed text-muted-foreground px-1">
