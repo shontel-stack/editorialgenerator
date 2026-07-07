@@ -37,7 +37,8 @@ export default defineTool({
         title: input.title,
         body: input.body ?? null,
         page_id: input.page_id ?? null,
-        severity: input.severity ?? null,
+        role: "assistant",
+        payload: { severity: input.severity ?? null, source: "mcp" },
       })
       .select()
       .single();
