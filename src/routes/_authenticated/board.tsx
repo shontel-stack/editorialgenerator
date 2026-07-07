@@ -5,7 +5,8 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, KanbanSquare } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import {
   PAGE_STATUSES,
@@ -109,9 +110,13 @@ function BoardPage() {
         {loading && rows.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-16">Loading board…</div>
         ) : rows.length === 0 ? (
-          <div className="text-center text-sm text-muted-foreground py-16">
-            No pages tracked yet. Open the production checklist in the editor to start.
-          </div>
+          <EmptyState
+            icon={KanbanSquare}
+            title="No pages on the board yet"
+            body="Open an issue in the editor and mark a page's status to start tracking it here — drafts, edits, approvals, and print-ready pages all flow through this board."
+            action={{ label: "Open the editor", href: "/" }}
+          />
+
         ) : (
           <div className="flex gap-4 min-w-max">
             {PAGE_STATUSES.map((status) => (

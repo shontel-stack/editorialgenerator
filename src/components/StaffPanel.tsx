@@ -21,6 +21,7 @@ import type { IssueDoc } from "@/lib/coverDefaults";
 import { STAFF_ROLES, STAFF_BY_ID, type StaffRole } from "@/lib/staffRoles";
 import { ChevronLeft, X, Users, Inbox, Check, Trash2, Flag, FileEdit, MessageSquare, GitBranch, MapPin } from "lucide-react";
 import { PublicationBadge } from "@/components/PublicationBadge";
+import { EmptyState } from "@/components/EmptyState";
 
 /* ------------------------------------------------------------------ */
 /*                              Types                                   */
@@ -498,14 +499,23 @@ function InboxView({
             Loading…
           </p>
         ) : filtered.length === 0 ? (
-          <p className="text-xs tracking-[0.25em] uppercase text-muted-foreground py-8 text-center">
-            No {filter} notes yet.
-            {filter === "open" && (
-              <span className="block normal-case tracking-normal text-[11px] mt-2 text-muted-foreground/70">
-                Ask a staff member for a critique or edit — they'll file actionable items here.
-              </span>
-            )}
-          </p>
+          <EmptyState
+            icon={Inbox}
+            title={
+              filter === "open"
+                ? "Inbox is clear"
+                : filter === "resolved"
+                  ? "Nothing resolved yet"
+                  : "No dismissed notes"
+            }
+            body={
+              filter === "open"
+                ? "Ask a staff member for a critique, edit, or flag — actionable items land here so nothing slips through before print."
+                : filter === "resolved"
+                  ? "Notes marked as resolved will appear here for the record."
+                  : "Notes you dismiss will archive here — nothing lost, just out of the way."
+            }
+          />
         ) : (
           <ul className="space-y-2">
             {filtered.map((n) => {
