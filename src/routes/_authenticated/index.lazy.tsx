@@ -263,6 +263,42 @@ function Index() {
   const [pagesQuery, setPagesQuery] = useState("");
   const { userId, active: activePublication } = useActivePublication();
 
+  // ----- Getting-started hint: dismissible card for users who have a
+  // publication but no saved issue drafts yet. Runs once per session at
+  // mount and only paints if nothing has been auto-saved to the cloud.
+  const [firstIssueHint, setFirstIssueHint] = useState(false);
+  const firstIssueHintCheckedRef = useRef(false);
+  useEffect(() => {
+    if (!userId || firstIssueHintCheckedRef.current) return;
+    firstIssueHintCheckedRef.current = true;
+    try {
+      if (window.localStorage.getItem("pageluxe:hint:firstIssueDismissed") === "1") return;
+    } catch {
+      // ignore
+    }
+    void (async () => {
+      try {
+        const { count, error } = await supabase
+          .from("issue_drafts")
+          .select("issue_id", { count: "exact", head: true })
+          .eq("user_id", userId);
+        if (error) return;
+        if ((count ?? 0) === 0) setFirstIssueHint(true);
+      } catch {
+        // ignore — hint is purely optional
+      }
+    })();
+  }, [userId]);
+  const dismissFirstIssueHint = useCallback(() => {
+    setFirstIssueHint(false);
+    try {
+      window.localStorage.setItem("pageluxe:hint:firstIssueDismissed", "1");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+
   // ----- Continue where I left off: swap to last opened issueId on login. -----
   const lastIssueSwapRef = useRef(false);
   useEffect(() => {
