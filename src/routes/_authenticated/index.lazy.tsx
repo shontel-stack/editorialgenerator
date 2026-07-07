@@ -2632,15 +2632,34 @@ function Index() {
           </Section>
           </PopoverContent>
         </Popover>
-        <button
-          title="Ask the editor"
-          aria-label="Ask the editor"
-          aria-pressed={assistantOpen}
-          onClick={() => setAssistantOpen((v) => !v)}
-          className="mt-auto h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition"
-        >
-          <Sparkles className="h-[18px] w-[18px]" />
-        </button>
+        <div className="mt-auto flex flex-col items-center gap-1.5">
+          <div className="my-1 h-px w-8 bg-border/70" />
+          <button
+            title="BOARD"
+            aria-label="BOARD"
+            onClick={() => void goProduction("/board")}
+            className="h-10 w-10 flex items-center justify-center rounded-md text-foreground/70 hover:bg-secondary hover:text-foreground transition"
+          >
+            <KanbanSquare className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            title="CALENDAR"
+            aria-label="CALENDAR"
+            onClick={() => void goProduction("/calendar")}
+            className="h-10 w-10 flex items-center justify-center rounded-md text-foreground/70 hover:bg-secondary hover:text-foreground transition"
+          >
+            <CalendarDays className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            title="Ask the editor"
+            aria-label="Ask the editor"
+            aria-pressed={assistantOpen}
+            onClick={() => setAssistantOpen((v) => !v)}
+            className="h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition"
+          >
+            <Sparkles className="h-[18px] w-[18px]" />
+          </button>
+        </div>
       </aside>
 
       {/* Canvas ribbon — page-specific controls, sticky alongside the header */}
