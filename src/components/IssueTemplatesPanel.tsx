@@ -183,9 +183,12 @@ export function IssueTemplatesPanel({ userId, publicationId, issue, onLoad }: Pr
         {loading ? (
           <div className="text-[11px] text-muted-foreground">Loading…</div>
         ) : rows.length === 0 ? (
-          <div className="text-[11px] text-muted-foreground">
-            No templates yet. Save the current issue to reuse it next month.
-          </div>
+          <EmptyState
+            compact
+            icon={BookmarkPlus}
+            title="No templates saved"
+            body="Save the current issue as a template to reuse its structure — sections, page order, and cover — next month with one click."
+          />
         ) : (
           <ul className="space-y-1">
             {rows.map((r) => {
