@@ -112,6 +112,15 @@ export const LOGO_COLORS: { value: string; label: string }[] = [
   { value: "#ffffff", label: "White" },
 ];
 
+export type CoverTocEntry = {
+  /** Short caption above the page number, e.g. "PORTFOLIO". */
+  label: string;
+  /** Page-number caption as shown, e.g. "1" or "24". */
+  page: string;
+  /** Optional link to a page in the same issue (id). Clicking navigates the editor. */
+  targetPageId?: string | null;
+};
+
 export type CoverData = {
   masthead: string;
   tagline: string;
@@ -122,6 +131,8 @@ export type CoverData = {
   feature: string;
   credit: string;
   price: string;
+  /** Aligned "featuring" row: one column per entry, page numbers linked to article pages. */
+  tocEntries?: CoverTocEntry[];
   imageUrl: string | null;
   imageFit: "cover" | "contain";
   imageY: number;
