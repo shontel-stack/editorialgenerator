@@ -1,8 +1,9 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import { confirmDiscardUnsaved } from "@/lib/unsavedGuards";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -177,6 +178,15 @@ export const Route = createLazyFileRoute("/_authenticated/")({
 
 function Index() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const goProduction = useCallback(
+    async (to: "/board" | "/calendar") => {
+      const ok = await confirmDiscardUnsaved("leave the editor");
+      if (!ok) return;
+      navigate({ to });
+    },
+    [navigate],
+  );
   const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
   const [migrationBanner, setMigrationBanner] = useState<"modernizing" | "done" | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
@@ -2622,15 +2632,34 @@ function Index() {
           </Section>
           </PopoverContent>
         </Popover>
-        <button
-          title="Ask the editor"
-          aria-label="Ask the editor"
-          aria-pressed={assistantOpen}
-          onClick={() => setAssistantOpen((v) => !v)}
-          className="mt-auto h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition"
-        >
-          <Sparkles className="h-[18px] w-[18px]" />
-        </button>
+        <div className="mt-auto flex flex-col items-center gap-1.5">
+          <div className="my-1 h-px w-8 bg-border/70" />
+          <button
+            title="BOARD"
+            aria-label="BOARD"
+            onClick={() => void goProduction("/board")}
+            className="h-10 w-10 flex items-center justify-center rounded-md text-foreground/70 hover:bg-secondary hover:text-foreground transition"
+          >
+            <KanbanSquare className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            title="CALENDAR"
+            aria-label="CALENDAR"
+            onClick={() => void goProduction("/calendar")}
+            className="h-10 w-10 flex items-center justify-center rounded-md text-foreground/70 hover:bg-secondary hover:text-foreground transition"
+          >
+            <CalendarDays className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            title="Ask the editor"
+            aria-label="Ask the editor"
+            aria-pressed={assistantOpen}
+            onClick={() => setAssistantOpen((v) => !v)}
+            className="h-10 w-10 flex items-center justify-center rounded-md bg-[color:var(--ruby)] text-[color:var(--accent-foreground)] hover:bg-[color:var(--ruby-deep)] transition"
+          >
+            <Sparkles className="h-[18px] w-[18px]" />
+          </button>
+        </div>
       </aside>
 
       {/* Canvas ribbon — page-specific controls, sticky alongside the header */}
