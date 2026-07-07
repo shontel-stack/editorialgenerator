@@ -178,6 +178,15 @@ export const Route = createLazyFileRoute("/_authenticated/")({
 
 function Index() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const goProduction = useCallback(
+    async (to: "/board" | "/calendar") => {
+      const ok = await confirmDiscardUnsaved("leave the editor");
+      if (!ok) return;
+      navigate({ to });
+    },
+    [navigate],
+  );
   const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
   const [migrationBanner, setMigrationBanner] = useState<"modernizing" | "done" | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
