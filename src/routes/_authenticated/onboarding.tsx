@@ -68,15 +68,25 @@ function OnboardingPage() {
     }
     setPubBusy(true);
     try {
-      const pub = await create({
-        name,
-        tagline: pubTagline.trim() || undefined,
-      });
-      if (!pub) throw new Error("Could not create publication.");
-      toast.success(`Masthead “${pub.name}” set.`);
-      setStep(2);
-    } catch (err) {
-      toast.error(`Couldn't save: ${(err as Error).message}`);
+      const pub = await toast.promise(
+        (async () => {
+          const created = await create({
+            name,
+            tagline: pubTagline.trim() || undefined,
+          });
+          if (!created) throw new Error("Could not create publication.");
+          return created;
+        })(),
+        {
+          loading: "Setting your masthead…",
+          success: (p) => `Masthead “${p.name}” set.`,
+          error: (err) =>
+            `Couldn't save masthead: ${(err as Error).message ?? "unknown error"}`,
+        },
+      ).unwrap();
+      if (pub) setStep(2);
+    } catch {
+      // toast.promise already surfaced the error
     } finally {
       setPubBusy(false);
     }
@@ -89,30 +99,57 @@ function OnboardingPage() {
       toast.error("Give your first issue a working title.");
       return;
     }
-    try {
-      window.localStorage.setItem("pageluxe:onboarding:issueName", name);
-    } catch {
-      // ignore quota / privacy-mode failures
-    }
-    setStep(3);
+    void toast
+      .promise(
+        (async () => {
+          window.localStorage.setItem("pageluxe:onboarding:issueName", name);
+          return name;
+        })(),
+        {
+          loading: "Saving issue title…",
+          success: (n) => `First issue “${n}” queued.`,
+          error: (err) =>
+            `Couldn't save issue title: ${(err as Error).message ?? "storage unavailable"}`,
+        },
+      )
+      .unwrap()
+      .then(() => setStep(3))
+      .catch(() => {
+        // toast.promise already surfaced the error; stay on step 2
+      });
   };
 
   const openEditor = async () => {
-    if (chosenLayout) {
-      try {
-        window.localStorage.setItem(
-          "pageluxe:onboarding:layoutStyle",
-          JSON.stringify(chosenLayout),
-        );
-      } catch {
-        // ignore
-      }
+    try {
+      await toast.promise(
+        (async () => {
+          if (chosenLayout) {
+            window.localStorage.setItem(
+              "pageluxe:onboarding:layoutStyle",
+              JSON.stringify(chosenLayout),
+            );
+          }
+          // Make sure the newly-created publication is the active one so the
+          // editor opens against it.
+          if (active?.id) await select(active.id);
+        })(),
+        {
+          loading: chosenLayout
+            ? "Applying template & opening the editor…"
+            : "Opening the editor…",
+          success: chosenLayout
+            ? `Template “${chosenLayout.label}” applied.`
+            : "Ready — off to the drawing board.",
+          error: (err) =>
+            `Couldn't open the editor: ${(err as Error).message ?? "unknown error"}`,
+        },
+      ).unwrap();
+      navigate({ to: "/" });
+    } catch {
+      // toast.promise already surfaced the error; stay on step 3
     }
-    // Make sure the newly-created publication is the active one so the
-    // editor opens against it.
-    if (active?.id) await select(active.id);
-    navigate({ to: "/" });
   };
+
 
   return (
     <main className="min-h-screen bg-background text-foreground">
