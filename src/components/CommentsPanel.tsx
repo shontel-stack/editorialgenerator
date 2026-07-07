@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MessageSquare, CheckCircle2, Circle, Trash2, Loader2 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import {
   addPageComment,
   deletePageComment,
@@ -107,9 +108,12 @@ export function CommentsPanel({ userId, issueId, pageId, pageLabel }: Props) {
           </div>
         )}
         {!loading && rows.length === 0 && (
-          <div className="flex items-center gap-2 px-3 py-3 text-[11px] text-muted-foreground">
-            <MessageSquare className="h-3 w-3" /> No comments on this page.
-          </div>
+          <EmptyState
+            icon={MessageSquare}
+            title="No comments on this page"
+            body={pageLabel ? `Leave a note for ${pageLabel} — great for edit checks and reminders.` : "Leave a note for this page — great for edit checks and reminders."}
+            compact
+          />
         )}
         {rows.map((r) => (
           <div key={r.id} className="flex items-start gap-2 px-2 py-1.5">

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { History, Save, RotateCcw, Trash2, Loader2 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import type { IssueDoc } from "@/lib/coverDefaults";
 import {
   listIssueVersions,
@@ -112,9 +113,13 @@ export function VersionHistoryPanel({ userId, issue, onRestore }: Props) {
           </div>
         )}
         {!loading && rows.length === 0 && (
-          <div className="flex items-center gap-2 px-3 py-3 text-[11px] text-muted-foreground">
-            <History className="h-3 w-3" /> No saved versions yet.
-          </div>
+          <EmptyState
+            icon={History}
+            title="No saved versions yet"
+            body="Save a snapshot before big edits — you can restore it any time from this list."
+            action={userId ? { label: "Save current version", onClick: () => void onSave() } : undefined}
+            compact
+          />
         )}
         {rows.map((r) => (
           <div key={r.id} className="flex items-center gap-2 px-2 py-1.5">

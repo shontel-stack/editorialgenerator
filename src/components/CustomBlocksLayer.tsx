@@ -10,7 +10,7 @@ import {
 import { createPortal } from "react-dom";
 
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Layers, Eye, EyeOff, Undo2, Redo2, Pin, PanelLeft, PanelRight, PanelTop } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Layers, Eye, EyeOff, Undo2, Redo2, Pin, PanelLeft, PanelRight, PanelTop, Loader2 } from "lucide-react";
 import type { CustomBlock, ContentsSlot, ContentsSlotField } from "@/lib/coverDefaults";
 import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
@@ -1160,6 +1160,7 @@ function BlockContent({
   const editCtx = useLayoutEdit();
   const tokens = editCtx?.tokenContext;
   const slotResolved = editCtx?.contentsSlotResolved;
+  const [uploadingImage, setUploadingImage] = useState(false);
   // Resolve slot-bound text. Returns null when no binding, '' when binding
   // exists but the slot is empty (lets us still show the placeholder text
   // typed in the block while editing).
@@ -1321,9 +1322,13 @@ function BlockContent({
             ...radiusStyle,
           }}
         >
-          <ImageIcon size={28} />
-          <span>{slotImg != null ? "Slot empty" : "Click to upload"}</span>
-          {onChange && slotImg == null && (
+          {uploadingImage ? (
+            <Loader2 size={28} className="animate-spin" color="var(--ruby, #b91c1c)" />
+          ) : (
+            <ImageIcon size={28} />
+          )}
+          <span>{uploadingImage ? "Uploading…" : slotImg != null ? "Slot empty" : "Click to upload"}</span>
+          {onChange && slotImg == null && !uploadingImage && (
             <input
               type="file"
               accept="image/*"
@@ -1332,14 +1337,23 @@ function BlockContent({
                 const f = e.target.files?.[0];
                 e.target.value = "";
                 if (!f) return;
+                const issueId =
+                  (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
+                setUploadingImage(true);
                 try {
-                  const issueId =
-                    (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
-                  const up = await uploadEditorImage({ issueId, input: f, fileName: f.name, folder: "block" });
-                  onChange({ imageUrl: up.url } as Partial<CustomBlock>);
-                } catch (err) {
-                  console.error("Failed to upload image", err);
-                  toast.error("Image upload failed", { description: (err as Error).message });
+                  await toast.promise(
+                    (async () => {
+                      const up = await uploadEditorImage({ issueId, input: f, fileName: f.name, folder: "block" });
+                      onChange({ imageUrl: up.url } as Partial<CustomBlock>);
+                    })(),
+                    {
+                      loading: "Uploading image…",
+                      success: "Image uploaded",
+                      error: (err) => `Image upload failed — ${(err as Error).message ?? "please retry"}`,
+                    },
+                  );
+                } finally {
+                  setUploadingImage(false);
                 }
               }}
             />
@@ -2536,15 +2550,19 @@ function ImageControls({ block, onChange }: { block: Extract<CustomBlock, { kind
           const f = e.target.files?.[0];
           e.target.value = "";
           if (!f) return;
-          try {
-            const issueId =
-              (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
-            const up = await uploadEditorImage({ issueId, input: f, fileName: f.name, folder: "block" });
-            onChange({ imageUrl: up.url });
-          } catch (err) {
-            console.error("Failed to upload image", err);
-            toast.error("Image upload failed", { description: (err as Error).message });
-          }
+          const issueId =
+            (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
+          await toast.promise(
+            (async () => {
+              const up = await uploadEditorImage({ issueId, input: f, fileName: f.name, folder: "block" });
+              onChange({ imageUrl: up.url });
+            })(),
+            {
+              loading: "Uploading image…",
+              success: "Image uploaded",
+              error: (err) => `Image upload failed — ${(err as Error).message ?? "please retry"}`,
+            },
+          );
         }}
       />
       <select value={block.imageFit ?? "cover"} onChange={(e) => onChange({ imageFit: e.target.value as "cover" | "contain" })} style={inputStyle}>

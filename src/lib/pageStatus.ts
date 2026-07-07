@@ -30,10 +30,10 @@ export const STATUS_LABELS: Record<PageStatusValue, string> = {
 
 export const STATUS_TONES: Record<PageStatusValue, string> = {
   idea: "bg-muted text-muted-foreground",
-  writing: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200",
-  editing: "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200",
-  review: "bg-purple-100 text-purple-900 dark:bg-purple-900/40 dark:text-purple-200",
-  approved: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200",
+  writing: "bg-amber-100 text-amber-900",
+  editing: "bg-blue-100 text-blue-900",
+  review: "bg-purple-100 text-purple-900",
+  approved: "bg-emerald-100 text-emerald-900",
   published: "bg-foreground text-background",
   archived: "bg-secondary text-muted-foreground line-through",
 };

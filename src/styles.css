@@ -4,7 +4,7 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Dark mode intentionally not shipped. Do not add `dark:` utilities. */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

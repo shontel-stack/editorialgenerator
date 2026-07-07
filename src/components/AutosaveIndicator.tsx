@@ -60,7 +60,7 @@ export function AutosaveIndicator({
     case "dirty":
       icon = <CircleDot className="h-3 w-3" />;
       label = "Unsaved changes";
-      tone = "text-amber-600 dark:text-amber-400";
+      tone = "text-amber-600";
       break;
     case "error":
       icon = <CloudOff className="h-3 w-3" />;
@@ -112,12 +112,12 @@ export function AutosaveIndicator({
     case "dirty":
       cIcon = <CloudUpload className="h-3 w-3" />;
       cLabel = "Pending sync";
-      cTone = "text-amber-600 dark:text-amber-400";
+      cTone = "text-amber-600";
       break;
     case "offline":
       cIcon = <WifiOff className="h-3 w-3" />;
       cLabel = "Offline";
-      cTone = "text-amber-600 dark:text-amber-400";
+      cTone = "text-amber-600";
       break;
     case "error":
       cIcon = <CloudOff className="h-3 w-3" />;
@@ -168,7 +168,7 @@ export function AutosaveIndicator({
             ? `Uploading ${queuePending} queued update${queuePending === 1 ? "" : "s"}…`
             : `${queuePending} draft update${queuePending === 1 ? "" : "s"} queued — click to retry`
         }
-        className="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-[10px] tracking-[0.25em] uppercase text-amber-600 dark:text-amber-400 hover:bg-secondary transition disabled:opacity-70 disabled:cursor-default"
+        className="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-[10px] tracking-[0.25em] uppercase text-amber-600 hover:bg-secondary transition disabled:opacity-70 disabled:cursor-default"
       >
         {queueDraining ? (
           <Loader2 className="h-3 w-3 animate-spin" />

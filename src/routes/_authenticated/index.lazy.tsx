@@ -21,6 +21,8 @@ import { PageBackgroundUploader, type BackgroundAssignment } from "@/components/
 import { deleteBackground } from "@/lib/pageBackgrounds";
 import { uploadEditorImage, migrateBase64Images } from "@/lib/imageUpload";
 import { toast } from "sonner";
+import { EditorMobileGuard } from "@/components/EditorMobileGuard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
@@ -174,7 +176,9 @@ export const Route = createLazyFileRoute("/_authenticated/")({
 });
 
 function Index() {
+  const isMobile = useIsMobile();
   const [issue, setIssue] = useState<IssueDoc>(() => makeDefaultIssue());
+  const [migrationBanner, setMigrationBanner] = useState<"modernizing" | "done" | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
   const [newsletterOpen, setNewsletterOpen] = useState(false);
   useUnsavedGuard(
@@ -369,6 +373,11 @@ function Index() {
           // it doesn't match, the user has edited during migration and we
           // must NOT clobber their work.
           const preMigrationJSON = JSON.stringify(detection.winner.data);
+          // Show the "Modernizing images…" banner only when the winner
+          // actually contains legacy base64 (checking upfront avoids a
+          // useless banner for the more common resign-only pass).
+          const hasLegacyBase64 = preMigrationJSON.includes("data:image/");
+          if (hasLegacyBase64) setMigrationBanner("modernizing");
           // One-time migration: any legacy `data:image/…` blobs still living
           // in the doc get uploaded to storage and swapped for signed URLs.
           void (async () => {
@@ -379,10 +388,6 @@ function Index() {
               );
               if (count > 0 && !cancelled) {
                 let userEdited = false;
-                // Atomic check-and-swap: only adopt migrated data if the
-                // current issue state is byte-identical to what we started
-                // migrating from. Using the functional updater guarantees
-                // we see the latest state, not a stale closure.
                 setIssue((curr) => {
                   if (JSON.stringify(curr) !== preMigrationJSON) {
                     userEdited = true;
@@ -395,15 +400,17 @@ function Index() {
                   console.warn(
                     "[autosave] skipping post-migration adopt — user edited during migration",
                   );
+                  if (hasLegacyBase64) setMigrationBanner(null);
                   return;
                 }
                 if (!migrated.pages.some((p: IssuePageNode) => p.id === selectedId)) {
                   setSelectedId(migrated.pages[0].id);
                 }
+                if (hasLegacyBase64) {
+                  setMigrationBanner("done");
+                  setTimeout(() => setMigrationBanner(null), 2500);
+                }
                 toast.success(`Moved ${count} embedded image${count === 1 ? "" : "s"} to cloud storage`);
-                // Push the cleaned doc back to issue_drafts right away so the
-                // cloud copy shrinks too — otherwise the next restore would
-                // re-download the bloated base64 version.
                 if (userId) {
                   try {
                     const nowTs = Date.now();
@@ -423,9 +430,12 @@ function Index() {
                     console.warn("[autosave] post-migration cloud push failed", pushErr);
                   }
                 }
+              } else if (hasLegacyBase64) {
+                setMigrationBanner(null);
               }
             } catch (err) {
               console.warn("[autosave] image migration failed", err);
+              if (hasLegacyBase64) setMigrationBanner(null);
             }
           })();
         }
@@ -1391,12 +1401,22 @@ function Index() {
     const node = refs.current.get(selected.id);
     if (!node) return;
     setBusy(kind.toUpperCase());
+    const name = `arts-today-${issueSlug}-${selected.pageType}-${pageNumberFor(issue, selected.id)}`;
+    const exportDim = { inches: dimInches, px: dimPx };
+    const kindLabel = kind === "pdf" ? "PDF" : kind === "png" ? "PNG" : "JPEG";
     try {
-      const name = `arts-today-${issueSlug}-${selected.pageType}-${pageNumberFor(issue, selected.id)}`;
-      const exportDim = { inches: dimInches, px: dimPx };
-      if (kind === "pdf") await exportPdf(node, `${name}.pdf`, exportDim);
-      else if (kind === "png") await exportPng(node, `${name}.png`, exportDim);
-      else await exportJpeg(node, `${name}.jpg`, exportDim);
+      await toast.promise(
+        (async () => {
+          if (kind === "pdf") await exportPdf(node, `${name}.pdf`, exportDim);
+          else if (kind === "png") await exportPng(node, `${name}.png`, exportDim);
+          else await exportJpeg(node, `${name}.jpg`, exportDim);
+        })(),
+        {
+          loading: `Rendering ${kindLabel}…`,
+          success: `${kindLabel} ready — check your downloads`,
+          error: (e) => `${kindLabel} export failed — ${(e as Error).message ?? "please retry"}`,
+        },
+      );
     } finally {
       setBusy(null);
     }
@@ -1412,15 +1432,22 @@ function Index() {
         const label = labelForNode(p);
         pages.push({ id: p.id, pageType: p.pageType, node, label });
       }
-      await exportIssuePdf(
-        pages,
+      await toast.promise(
+        exportIssuePdf(
+          pages,
+          {
+            title: `The Arts Today — ${issue.meta.issue}`,
+            author: "The Arts Today",
+            subject: issue.meta.date,
+          },
+          `arts-today-${issueSlug}-publication.pdf`,
+          { inches: dimInches, px: dimPx },
+        ),
         {
-          title: `The Arts Today — ${issue.meta.issue}`,
-          author: "The Arts Today",
-          subject: issue.meta.date,
+          loading: `Rendering publication PDF · ${pages.length} pages…`,
+          success: "Publication PDF ready — check your downloads",
+          error: (e) => `Publication PDF failed — ${(e as Error).message ?? "please retry"}`,
         },
-        `arts-today-${issueSlug}-publication.pdf`,
-        { inches: dimInches, px: dimPx },
       );
     } finally {
       setBusy(null);
@@ -1517,12 +1544,35 @@ function Index() {
     else void commitLayoutChange(next);
   };
 
+  if (isMobile) {
+    return <EditorMobileGuard issueLabel={issue.meta?.issue ?? null} />;
+  }
+
   return (
     <BrandKitProvider value={brandKitContextValue}>
     <main
       className="min-h-screen bg-background text-foreground md:pl-14 pb-10"
       style={{ scrollPaddingTop: `calc(${stickyH}px + var(--top-dock-h, 0px))`, paddingTop: "var(--top-dock-h, 0px)", ["--rail-top" as never]: `${stickyH}px`, ["--rail-width" as never]: "56px", ["--statusbar-h" as never]: "2rem" }}
     >
+      {migrationBanner ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-3 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-2 rounded-sm border border-[color:var(--ruby)]/30 bg-card px-3 py-1.5 shadow-md text-[10px] tracking-[0.3em] uppercase text-muted-foreground"
+        >
+          {migrationBanner === "modernizing" ? (
+            <>
+              <span className="h-3 w-3 rounded-full border-2 border-[color:var(--ruby)] border-t-transparent animate-spin" />
+              Modernizing images…
+            </>
+          ) : (
+            <>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Images modernized
+            </>
+          )}
+        </div>
+      ) : null}
       <div ref={stickyRef} className="sticky top-0 z-30 bg-background">
 
       <header className="border-b border-border bg-card">
@@ -2511,8 +2561,17 @@ function Index() {
             </div>
             <button
               onClick={async () => {
-                const { downloadIdml } = await import("@/lib/idmlExport");
-                downloadIdml(issue, issueSlug || "issue", idmlDim);
+                await toast.promise(
+                  (async () => {
+                    const { downloadIdml } = await import("@/lib/idmlExport");
+                    downloadIdml(issue, issueSlug || "issue", idmlDim);
+                  })(),
+                  {
+                    loading: "Building IDML…",
+                    success: "IDML .zip ready — check your downloads",
+                    error: (e) => `IDML export failed — ${(e as Error).message ?? "please retry"}`,
+                  },
+                );
               }}
               className="w-full border border-border px-3 py-2 text-[10px] uppercase tracking-[0.3em] hover:bg-secondary rounded-sm flex items-center justify-center gap-1.5"
               title="Download a .zip containing the InDesign-editable IDML file"
@@ -2524,19 +2583,25 @@ function Index() {
                 if (busy) return;
                 setBusy("IDML_PKG");
                 try {
-                  const { downloadIdmlPackage } = await import("@/lib/idmlExport");
-                  const { fetched, skipped } = await downloadIdmlPackage(
-                    issue,
-                    issueSlug || "issue",
-                    idmlDim,
+                  await toast.promise(
+                    (async () => {
+                      const { downloadIdmlPackage } = await import("@/lib/idmlExport");
+                      const { fetched, skipped } = await downloadIdmlPackage(
+                        issue,
+                        issueSlug || "issue",
+                        idmlDim,
+                      );
+                      return { fetched, skipped };
+                    })(),
+                    {
+                      loading: "Bundling IDML package · fetching images…",
+                      success: ({ fetched, skipped }) =>
+                        skipped.length
+                          ? `IDML package ready · ${fetched} image${fetched === 1 ? "" : "s"} bundled, ${skipped.length} skipped (see relink-manifest.txt)`
+                          : `IDML package ready · ${fetched} image${fetched === 1 ? "" : "s"} bundled`,
+                      error: (e) => `Package build failed — ${(e as Error).message ?? "please retry"}`,
+                    },
                   );
-                  if (skipped.length) {
-                    alert(
-                      `Package ready: ${fetched} image(s) bundled, ${skipped.length} skipped (likely CORS-blocked). See relink-manifest.txt — relink those in InDesign manually.`,
-                    );
-                  }
-                } catch (e) {
-                  alert(`Could not build package: ${(e as Error).message}`);
                 } finally {
                   setBusy(null);
                 }
@@ -3278,17 +3343,22 @@ function CoverEditor({
                 const f = e.target.files?.[0];
                 e.target.value = "";
                 if (!f || !f.type.startsWith("image/")) return;
-                try {
-                  const up = await uploadEditorImage({
-                    issueId: (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue",
-                    input: f,
-                    fileName: f.name,
-                    folder: "masthead",
-                  });
-                  set({ mastheadLogoUrl: up.url });
-                } catch (err) {
-                  toast.error("Logo upload failed", { description: (err as Error).message });
-                }
+                await toast.promise(
+                  (async () => {
+                    const up = await uploadEditorImage({
+                      issueId: (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue",
+                      input: f,
+                      fileName: f.name,
+                      folder: "masthead",
+                    });
+                    set({ mastheadLogoUrl: up.url });
+                  })(),
+                  {
+                    loading: "Uploading logo…",
+                    success: "Masthead logo updated",
+                    error: (err) => `Logo upload failed — ${(err as Error).message ?? "please retry"}`,
+                  },
+                );
               }}
               className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
             />
@@ -3560,16 +3630,27 @@ function ImageBlock({
   hideFit?: boolean;
 }) {
   const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const focalRef = useRef<HTMLDivElement>(null);
   const handle = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
+    setUploading(true);
     try {
       const issueId =
         (window as unknown as { __pageluxeIssueId?: string }).__pageluxeIssueId ?? "issue";
-      const up = await uploadEditorImage({ issueId, input: file, fileName: file.name, folder: "slot" });
-      onUrl(up.url);
-    } catch (err) {
-      toast.error("Image upload failed", { description: (err as Error).message });
+      await toast.promise(
+        (async () => {
+          const up = await uploadEditorImage({ issueId, input: file, fileName: file.name, folder: "slot" });
+          onUrl(up.url);
+        })(),
+        {
+          loading: "Uploading image…",
+          success: "Image uploaded",
+          error: (err) => `Image upload failed — ${(err as Error).message ?? "please retry"}`,
+        },
+      );
+    } finally {
+      setUploading(false);
     }
   };
   const onDrop = (e: React.DragEvent) => {
@@ -3593,19 +3674,25 @@ function ImageBlock({
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`border-2 border-dashed p-3 transition ${
+        className={`relative border-2 border-dashed p-3 transition ${
           dragOver ? "border-[color:var(--ruby)] bg-secondary" : "border-border"
-        }`}
+        } ${uploading ? "opacity-70" : ""}`}
       >
         <input
           type="file"
           accept="image/*"
           onChange={(e) => handle(e.target.files?.[0])}
-          className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer"
+          disabled={uploading}
+          className="block w-full text-sm file:mr-3 file:rounded-none file:border file:border-border file:bg-secondary file:px-3 file:py-2 file:text-xs file:uppercase file:tracking-widest file:cursor-pointer disabled:opacity-60"
         />
         <p className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mt-2">
-          {dragOver ? "Drop to upload" : "Or drag an image file here"}
+          {uploading ? "Uploading…" : dragOver ? "Drop to upload" : "Or drag an image file here"}
         </p>
+        {uploading && (
+          <div className="absolute inset-0 grid place-items-center pointer-events-none">
+            <div className="h-6 w-6 rounded-full border-2 border-[color:var(--ruby)] border-t-transparent animate-spin" />
+          </div>
+        )}
       </div>
       {url && (
         <button

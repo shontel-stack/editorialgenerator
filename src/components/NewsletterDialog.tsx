@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, Download, FileText, Link as LinkIcon, Loader2, Sparkles, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,7 @@ export function NewsletterDialog({
     setError(null);
     try {
       const snap = snapshotIssue(issue);
-      const result = await generate({
+      const pending = generate({
         data: {
           publication: issue.master.publication || "The Arts Today",
           issueLabel,
@@ -94,6 +95,12 @@ export function NewsletterDialog({
           })),
         },
       });
+      toast.promise(pending, {
+        loading: "Drafting newsletter highlights…",
+        success: "Newsletter draft ready",
+        error: (e) => `Newsletter draft failed — ${(e as Error).message ?? "please retry"}`,
+      });
+      const result = await pending;
 
       const highlights: NewsletterHighlight[] = result.highlights.map((h) => {
         const page = issue.pages.find((p) => p.id === h.pageId);
@@ -130,19 +137,25 @@ export function NewsletterDialog({
 
   const onCopy = async () => {
     if (!html) return;
-    await navigator.clipboard.writeText(html);
+    try {
+      await navigator.clipboard.writeText(html);
+      toast.success("Newsletter HTML copied to clipboard");
+    } catch (e) {
+      toast.error(`Copy failed — ${(e as Error).message ?? "please retry"}`);
+    }
   };
 
   const onDownloadHtml = () => {
     if (!html) return;
     download(`${issueSlug || "newsletter"}-email.html`, "text/html", html);
+    toast.success("Newsletter HTML downloaded");
   };
 
   const onDownloadPdf = async () => {
     const node = previewRef.current;
     if (!node) return;
     setBusy("pdf");
-    try {
+    const pending = (async () => {
       const rect = node.getBoundingClientRect();
       const widthPx = Math.max(600, Math.round(rect.width));
       const heightPx = Math.max(800, Math.round(rect.height));
@@ -158,7 +171,6 @@ export function NewsletterDialog({
         quality: 0.95,
         backgroundColor: "#f5f3ee",
       });
-      const PT_PER_IN = 72;
       const widthIn = 8.5;
       const heightIn = (heightPx / widthPx) * widthIn;
       const pdf = new jsPDF({
@@ -169,7 +181,14 @@ export function NewsletterDialog({
       });
       pdf.addImage(jpeg, "JPEG", 0, 0, widthIn, heightIn, undefined, "FAST");
       pdf.save(`${issueSlug || "newsletter"}-email.pdf`);
-      void PT_PER_IN;
+    })();
+    toast.promise(pending, {
+      loading: "Rendering newsletter PDF…",
+      success: "Newsletter PDF ready — check your downloads",
+      error: (e) => `Newsletter PDF failed — ${(e as Error).message ?? "please retry"}`,
+    });
+    try {
+      await pending;
     } catch (e) {
       setError((e as Error).message || "Could not export PDF.");
     } finally {
@@ -186,7 +205,7 @@ export function NewsletterDialog({
     }
     setBusy("ipdf");
     setError(null);
-    try {
+    const pending = (async () => {
       const map = new Map<string, HTMLElement>();
       pageNodes.forEach((el, id) => {
         if (el) map.set(id, el);
@@ -204,6 +223,14 @@ export function NewsletterDialog({
           subject: dateLabel,
         },
       });
+    })();
+    toast.promise(pending, {
+      loading: "Rendering interactive newsletter PDF…",
+      success: "Interactive PDF ready — check your downloads",
+      error: (e) => `Interactive PDF failed — ${(e as Error).message ?? "please retry"}`,
+    });
+    try {
+      await pending;
     } catch (e) {
       setError((e as Error).message || "Could not export interactive PDF.");
     } finally {

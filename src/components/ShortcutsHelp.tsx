@@ -67,8 +67,13 @@ export function ShortcutsHelp() {
       e.preventDefault();
       setOpen((v) => !v);
     };
+    const onOpenEvent = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("shortcuts:open", onOpenEvent);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("shortcuts:open", onOpenEvent);
+    };
   }, []);
 
   return (

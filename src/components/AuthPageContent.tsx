@@ -188,7 +188,7 @@ export function AuthPageContent({
         </p>
 
         {timedOut && (
-          <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+          <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700">
             <p>Couldn't reach the auth service. You can sign in below, or retry the check.</p>
             {onRetry && (
               <button
@@ -206,7 +206,7 @@ export function AuthPageContent({
           <div
             role="status"
             aria-live="polite"
-            className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300"
+            className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700"
           >
             <p className="font-medium">Sign-in temporarily paused</p>
             <p className="mt-1">
