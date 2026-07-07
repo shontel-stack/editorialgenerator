@@ -80,35 +80,44 @@ export function LayoutProposalPanel({
     setBusy(true);
     setPlan(null);
     setExcluded(new Set());
+    const pending = propose({
+      data: {
+        instruction: instruction.trim(),
+        publication: publicationName ?? "",
+        pages: issue.pages.map((p, i) => ({
+          id: p.id,
+          index: i,
+          pageType: p.pageType,
+          title:
+            (p.data as { title?: string; headline?: string })?.title ??
+            (p.data as { headline?: string })?.headline ??
+            "",
+        })),
+        library: library.map((a) => ({
+          id: a.id,
+          fileName: a.file_name,
+          mimeType: a.mime_type,
+          kind: a.kind,
+          summary: (a.extracted_text ?? "").slice(0, 300),
+        })),
+      },
+    });
+    toast.promise(pending, {
+      loading: "Drafting layout proposal…",
+      success: (result) =>
+        result.operations.length
+          ? `Layout proposal ready · ${result.operations.length} operation${result.operations.length === 1 ? "" : "s"}`
+          : "Layout proposal ready · no operations",
+      error: (e) => `Layout proposal failed — ${(e as Error).message ?? "retry with a more specific instruction"}`,
+    });
     try {
-      const result = await propose({
-        data: {
-          instruction: instruction.trim(),
-          publication: publicationName ?? "",
-          pages: issue.pages.map((p, i) => ({
-            id: p.id,
-            index: i,
-            pageType: p.pageType,
-            title:
-              (p.data as { title?: string; headline?: string })?.title ??
-              (p.data as { headline?: string })?.headline ??
-              "",
-          })),
-          library: library.map((a) => ({
-            id: a.id,
-            fileName: a.file_name,
-            mimeType: a.mime_type,
-            kind: a.kind,
-            summary: (a.extracted_text ?? "").slice(0, 300),
-          })),
-        },
-      });
+      const result = await pending;
       setPlan(result);
       if (result.operations.length === 0) {
         toast.info("No operations proposed — try a more specific instruction.");
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not generate plan.");
+    } catch {
+      // toast.promise already surfaced the error to the user
     } finally {
       setBusy(false);
     }
