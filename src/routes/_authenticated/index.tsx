@@ -17,19 +17,15 @@ export const Route = createFileRoute("/_authenticated/")({
     // render the sign-in screen. Don't try to redirect from here.
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
-    try {
-      const { count, error } = await supabase
-        .from("publications")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userData.user.id);
-      if (error) return; // fail open — better to show the editor than to loop
-      if (!count) {
-        throw redirect({ to: "/onboarding" });
-      }
-    } catch (err) {
-      // Re-throw router redirects; swallow only real query failures.
-      if (err instanceof Error && err.name === "Error" && !("to" in err)) return;
-      throw err;
+    const { count, error } = await supabase
+      .from("publications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userData.user.id);
+    // Fail open — if the count query errors, show the editor rather than
+    // trapping the user in an onboarding loop.
+    if (error) return;
+    if (!count) {
+      throw redirect({ to: "/onboarding" });
     }
   },
   head: () => ({
