@@ -175,3 +175,23 @@ export const scaleBlockSchema = z.object({
   scale: z.number().min(0.25).max(3).describe("CSS scale factor for the block contents (1 = default)."),
   reset: z.boolean().optional(),
 });
+
+/** Cover TOC — the aligned "FEATURING · Pg. 1  ATELIER NOTES · Pg. 2 …" row.
+ *  Each entry renders as one column in an evenly distributed grid, so alignment
+ *  is guaranteed by the layout. `targetPageId` (optional) links the entry to a
+ *  page in the same issue — clicking Pg. N in the editor jumps to it. */
+export const setCoverTocSchema = z.object({
+  pageId: z.string().describe("Cover page id from the snapshot."),
+  entries: z
+    .array(
+      z.object({
+        label: z.string().describe("Short section label, uppercase in the design (e.g. 'PORTFOLIO')."),
+        page: z.string().describe("Page number caption as shown (e.g. '1' or '024')."),
+        targetPageId: z
+          .string()
+          .nullish()
+          .describe("Optional page id in the same issue this entry links to."),
+      }),
+    )
+    .describe("Ordered list of TOC entries. Pass 2–6 entries; the grid distributes them evenly."),
+});

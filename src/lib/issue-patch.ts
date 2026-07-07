@@ -12,6 +12,8 @@ import {
   makeNode,
   type ArticleData,
   type ArticleLayout,
+  type CoverData,
+  type CoverTocEntry,
   type FolioTemplate,
   type IssueDoc,
   type IssueFonts,
@@ -36,7 +38,8 @@ export type IssuePatch =
   | { kind: "remove_page"; pageId: string; removeSpread?: boolean }
   | { kind: "reorder_pages"; orderedPageIds: string[] }
   | { kind: "move_block"; pageId: string; blockKey: string; dx: number; dy: number; reset?: boolean }
-  | { kind: "scale_block"; pageId: string; blockKey: string; scale: number; reset?: boolean };
+  | { kind: "scale_block"; pageId: string; blockKey: string; scale: number; reset?: boolean }
+  | { kind: "set_cover_toc"; pageId: string; entries: CoverTocEntry[] };
 
 function fontStack(label: string | undefined, kind: keyof IssueFonts): string | undefined {
   if (!label) return undefined;
@@ -180,6 +183,16 @@ export function applyPatch(issue: IssueDoc, patch: IssuePatch): IssueDoc {
         }),
       };
     }
+    case "set_cover_toc": {
+      return {
+        ...issue,
+        pages: issue.pages.map((p) => {
+          if (p.id !== patch.pageId || p.pageType !== "cover") return p;
+          const next: CoverData = { ...(p.data as CoverData), tocEntries: patch.entries };
+          return { ...p, data: next } as IssuePageNode;
+        }),
+      };
+    }
   }
 }
 
@@ -195,5 +208,6 @@ export function describePatch(patch: IssuePatch): string {
     case "reorder_pages":       return `Reordered pages`;
     case "move_block":          return patch.reset ? `Reset ${patch.blockKey} position` : `Moved ${patch.blockKey} (${patch.dx >= 0 ? "+" : ""}${patch.dx}, ${patch.dy >= 0 ? "+" : ""}${patch.dy})`;
     case "scale_block":         return patch.reset ? `Reset ${patch.blockKey} size` : `Scaled ${patch.blockKey} to ${Math.round(patch.scale * 100)}%`;
+    case "set_cover_toc":       return `Cover TOC → ${patch.entries.length} entries`;
   }
 }

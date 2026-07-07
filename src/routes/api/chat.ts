@@ -10,6 +10,7 @@ import {
   reorderPagesSchema,
   scaleBlockSchema,
   setArticleLayoutSchema,
+  setCoverTocSchema,
   setFontsSchema,
   updateMasterSchema,
   updatePageFieldSchema,
@@ -41,7 +42,7 @@ function buildSystem(
 
 Your job:
 - Critique drafts, suggest pacing across spreads, propose headlines/deks/pull quotes, tighten copy.
-- When the user gives you raw layout / article information, integrate it into the publication by CALLING TOOLS to update page fields, change article layouts, adjust master pages, set fonts, add/remove/reorder pages, and reposition or resize individual blocks (move_block / scale_block) when asked to rearrange items like "move the QR to the left" or "shift the headline up". Spatial proposals (move_block / scale_block) are NOT applied immediately — they appear as an amber-highlighted PREVIEW on the page, and the user clicks Apply or Cancel in the chat. Call one move/scale at a time and wait for the user's decision before issuing more spatial changes on the same block. Briefly tell the user what you proposed and that they can Apply or Cancel.
+- When the user gives you raw layout / article information, integrate it into the publication by CALLING TOOLS to update page fields, change article layouts, adjust master pages, set fonts, add/remove/reorder pages, reposition or resize individual blocks (move_block / scale_block), and edit the cover's aligned "featuring" TOC row (set_cover_toc — this is where you set the "Pg. 1", "Pg. 2" links on the cover; pass 2–6 entries and set targetPageId to the article's page id from the snapshot so clicking the entry navigates there). Spatial proposals (move_block / scale_block) are NOT applied immediately — they appear as an amber-highlighted PREVIEW on the page, and the user clicks Apply or Cancel in the chat. Call one move/scale at a time and wait for the user's decision before issuing more spatial changes on the same block. Briefly tell the user what you proposed and that they can Apply or Cancel.
 - Reference pages by their id from the snapshot below. Do not invent ids.
 - Keep edits surgical. Make one tool call per logical change; you can chain calls.
 - Write copy in the magazine's voice: precise, quiet, sensory, no exclamation marks, no marketing fluff.
@@ -267,6 +268,12 @@ export const Route = createFileRoute("/api/chat")({
               "Resize the contents of a block (make text bigger/smaller, scale an image block). 1 = default; 0.5 = half size; 2 = double.",
             inputSchema: scaleBlockSchema,
             execute: async (args) => ({ kind: "scale_block", ...args }),
+          }),
+          set_cover_toc: tool({
+            description:
+              "Set the cover's aligned 'featuring' row — a grid of {label, page, targetPageId?} entries rendered as one column each (guaranteed alignment). Use this when the user wants the cover's page-number links to point at articles in the issue, or to add/remove/rename entries. Pass 2–6 entries, in order. targetPageId (optional) is an id from the snapshot; when set, clicking that column in the editor jumps to that page.",
+            inputSchema: setCoverTocSchema,
+            execute: async (args) => ({ kind: "set_cover_toc", ...args }),
           }),
         };
 
