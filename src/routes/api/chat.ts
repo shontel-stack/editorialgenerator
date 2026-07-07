@@ -10,6 +10,7 @@ import {
   reorderPagesSchema,
   scaleBlockSchema,
   setArticleLayoutSchema,
+  setCoverTocSchema,
   setFontsSchema,
   updateMasterSchema,
   updatePageFieldSchema,
