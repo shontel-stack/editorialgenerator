@@ -66,14 +66,22 @@ export async function listBrandFonts(publicationId: string): Promise<BrandFont[]
 }
 
 export async function signFontUrl(path: string): Promise<string | null> {
-  const { data, error } = await supabase.storage
-    .from(ATTACHMENT_BUCKET)
-    .createSignedUrl(path, 60 * 60 * 6); // 6 h
-  if (error) {
-    console.warn("[brandAssets] sign url failed", error.message);
+  try {
+    const { data, error } = await supabase.storage
+      .from(ATTACHMENT_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 6); // 6 h
+    if (error) {
+      console.warn("[brandAssets] sign url failed", error.message);
+      return null;
+    }
+    return data.signedUrl;
+  } catch (e) {
+    // Network failures (offline, token-refresh in flight) throw instead of
+    // returning `{ error }`. Swallow so callers see a null URL rather than an
+    // unhandled rejection.
+    console.warn("[brandAssets] sign url failed", (e as Error).message);
     return null;
   }
-  return data.signedUrl;
 }
 
 function fileExt(name: string): string {
