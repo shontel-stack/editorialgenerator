@@ -709,6 +709,12 @@ export const DEFAULT_COVER: CoverData = {
   feature: "FEATURING ·  ATELIER NOTES  ·  PORTFOLIO  ·  IN CONVERSATION",
   credit: "Cover: Untitled, 2026 — courtesy of the artist",
   price: "ISSUE №03",
+  tocEntries: [
+    { label: "FEATURING",      page: "1", targetPageId: null },
+    { label: "ATELIER NOTES",  page: "2", targetPageId: null },
+    { label: "PORTFOLIO",      page: "3", targetPageId: null },
+    { label: "IN CONVERSATION", page: "4", targetPageId: null },
+  ],
   imageUrl: null,
   imageFit: "cover",
   imageY: 50,
