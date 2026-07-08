@@ -786,6 +786,9 @@ interface FetchedImage {
   url: string;
   filename: string;
   bytes: Uint8Array;
+  width: number;
+  height: number;
+  format: "JPEG" | "PNG" | "GIF";
 }
 
 interface SkippedImage {
@@ -793,29 +796,83 @@ interface SkippedImage {
   reason: string;
 }
 
+function formatFromBytes(bytes: Uint8Array): "JPEG" | "PNG" | "GIF" | null {
+  if (bytes.length < 8) return null;
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return "JPEG";
+  if (
+    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+  ) return "PNG";
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return "GIF";
+  return null;
+}
+
+/** Read the pixel width/height of a JPEG, PNG, or GIF byte buffer. */
+function readImageDims(bytes: Uint8Array, format: "JPEG" | "PNG" | "GIF"): { w: number; h: number } | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  try {
+    if (format === "PNG") {
+      // IHDR at offset 16: width @16 (big-endian u32), height @20.
+      return { w: view.getUint32(16), h: view.getUint32(20) };
+    }
+    if (format === "GIF") {
+      // Logical Screen Descriptor at offset 6: width/height little-endian u16.
+      return { w: view.getUint16(6, true), h: view.getUint16(8, true) };
+    }
+    // JPEG: scan segments for an SOF marker (0xC0..0xCF except C4/C8/CC).
+    let off = 2;
+    while (off < bytes.length) {
+      if (bytes[off] !== 0xff) return null;
+      const marker = bytes[off + 1];
+      const len = view.getUint16(off + 2);
+      if (
+        marker >= 0xc0 && marker <= 0xcf &&
+        marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc
+      ) {
+        return { w: view.getUint16(off + 7), h: view.getUint16(off + 5) };
+      }
+      off += 2 + len;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 async function fetchImage(url: string, index: number): Promise<FetchedImage | SkippedImage> {
   try {
-    // data: URLs — decode without a network round-trip.
+    let bytes: Uint8Array;
+    let contentType: string | null = null;
     if (url.startsWith("data:")) {
       const comma = url.indexOf(",");
       if (comma < 0) return { url, reason: "Malformed data URL" };
       const header = url.slice(5, comma);
       const payload = url.slice(comma + 1);
-      const ct = header.split(";")[0] || null;
+      contentType = header.split(";")[0] || null;
       const isB64 = /;base64/i.test(header);
       const binary = isB64 ? atob(payload) : decodeURIComponent(payload);
-      const bytes = new Uint8Array(binary.length);
+      bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return { url, filename: deriveFilename(url, ct, index), bytes };
+    } else {
+      const res = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (!res.ok) return { url, reason: `HTTP ${res.status}` };
+      const buf = await res.arrayBuffer();
+      bytes = new Uint8Array(buf);
+      contentType = res.headers.get("content-type");
     }
 
-    const res = await fetch(url, { mode: "cors", credentials: "omit" });
-    if (!res.ok) return { url, reason: `HTTP ${res.status}` };
-    const buf = await res.arrayBuffer();
+    const format = formatFromBytes(bytes);
+    if (!format) {
+      return { url, reason: "Unsupported image format (need JPEG/PNG/GIF)" };
+    }
+    const dims = readImageDims(bytes, format);
+    if (!dims) return { url, reason: "Could not read image dimensions" };
     return {
       url,
-      filename: deriveFilename(url, res.headers.get("content-type"), index),
-      bytes: new Uint8Array(buf),
+      filename: deriveFilename(url, contentType, index),
+      bytes,
+      width: dims.w,
+      height: dims.h,
+      format,
     };
   } catch (e) {
     return { url, reason: (e as Error).message || "Fetch blocked (CORS or network)" };
@@ -828,7 +885,7 @@ export async function buildIdmlPackage(
   slug: string,
   dim?: IdmlDim,
 ): Promise<{ bytes: Uint8Array; fetched: number; skipped: SkippedImage[] }> {
-  const idmlBytes = buildIdml(issue, dim);
+  // Only bundle images actually referenced by the current issue's frames.
   const urls = collectImageUrls(issue);
   const results = await Promise.all(urls.map((u, i) => fetchImage(u, i)));
 
@@ -853,6 +910,20 @@ export async function buildIdmlPackage(
       skipped.push(r);
     }
   }
+
+  // Map URL -> embedded-image metadata (dims + filename + format) so the
+  // IDML generator can write real Image/Link children in graphic frames.
+  const assets = new Map<string, EmbeddedImage>();
+  for (const f of fetched) {
+    assets.set(f.url, {
+      url: f.url,
+      filename: f.filename,
+      width: f.width,
+      height: f.height,
+      format: f.format,
+    });
+  }
+  const idmlBytes = buildIdml(issue, dim, assets);
 
   const manifestLines: string[] = [
     `# ${issue.master.publication} — ${issue.meta.issue}`,
