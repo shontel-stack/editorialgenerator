@@ -356,62 +356,88 @@ interface BuiltStory {
   filename: string;
 }
 
-const buildStory = (
-  text: PageText,
-  pageIndex: number,
-): BuiltStory => {
-  const selfId = `Story_p${pageIndex + 1}`;
-  const lines: string[] = [];
+/** One paragraph with a paragraph style + literal content. */
+interface StoryPara {
+  style: string;
+  content: string;
+}
 
-  const para = (style: string, content: string) => {
-    if (!content) return;
-    // split into paragraphs by blank-line / newline
-    const parts = content.split(/\n+/).filter((p) => p.trim().length > 0);
+const wrapStoryXml = (selfId: string, paras: StoryPara[]): string => {
+  const lines: string[] = [];
+  for (const p of paras) {
+    if (!p.content) continue;
+    const parts = p.content.split(/\n+/).filter((s) => s.trim().length > 0);
     for (const part of parts) {
+      // Br goes INSIDE the CharacterStyleRange, after the Content —
+      // matching InDesign's own IDML output.
       lines.push(
-        `    <ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/${style}">` +
+        `    <ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/${p.style}">` +
           `<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]">` +
           `<Content>${xmlEscape(part)}</Content>` +
-          `</CharacterStyleRange>` +
           `<Br/>` +
+          `</CharacterStyleRange>` +
           `</ParagraphStyleRange>`,
       );
     }
-  };
-
-  para("Headline", text.heading);
-  para("Dek", text.subhead ?? "");
-  para("Byline", text.byline ?? "");
-  para("Body", text.body);
-
-  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
+  }
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
   <Story Self="${selfId}" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
 ${lines.join("\n")}
   </Story>
 </idPkg:Story>`;
+};
 
-  return { selfId, xml, filename: `Stories/Story_${selfId}.xml` };
+/** Substitute the {n} page-number placeholder (renderFolio doesn't know pn). */
+const resolveFolio = (raw: string, pageNumber: string): string =>
+  raw.replace(/\{n\}/g, pageNumber);
+
+const buildStory = (
+  text: PageText,
+  page: IssuePageNode,
+  pageIndex: number,
+): BuiltStory => {
+  const selfId = `Story_p${pageIndex + 1}`;
+  const paras: StoryPara[] = [];
+
+  paras.push({ style: "Headline", content: text.heading });
+  paras.push({ style: "Dek",      content: text.subhead ?? "" });
+  paras.push({ style: "Byline",   content: text.byline ?? "" });
+  paras.push({ style: "Body",     content: text.body });
+
+  // Fold in every text-bearing custom block on the page so nothing is lost.
+  // Blocks with slot bindings that resolved to nothing are skipped.
+  for (const block of page.customBlocks ?? []) {
+    if (block.hidden) continue;
+    if (block.kind === "text" && block.text && block.text.trim().length > 0) {
+      // Very lightweight style routing based on the block's declared font/role.
+      const style =
+        (block.fontSize ?? 0) >= 24
+          ? "PullQuote"
+          : block.italic
+            ? "Caption"
+            : "Body";
+      paras.push({ style, content: block.text });
+    }
+  }
+
+  return {
+    selfId,
+    xml: wrapStoryXml(selfId, paras),
+    filename: `Stories/Story_${selfId}.xml`,
+  };
 };
 
 const folioStory = (text: PageText, pageIndex: number): BuiltStory | null => {
   if (!text.folio && !text.pageNumber) return null;
   const selfId = `Folio_p${pageIndex + 1}`;
-  const content = [text.pageNumber, text.folio].filter(Boolean).join("   ");
-  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
-  <Story Self="${selfId}" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
-    <ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Folio">
-      <CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]">
-        <Content>${xmlEscape(content)}</Content>
-      </CharacterStyleRange>
-      <Br/>
-    </ParagraphStyleRange>
-  </Story>
-</idPkg:Story>`;
-  return { selfId, xml, filename: `Stories/Story_${selfId}.xml` };
+  const resolvedFolio = resolveFolio(text.folio, text.pageNumber);
+  const content = [text.pageNumber, resolvedFolio].filter(Boolean).join("   ");
+  return {
+    selfId,
+    xml: wrapStoryXml(selfId, [{ style: "Folio", content }]),
+    filename: `Stories/Story_${selfId}.xml`,
+  };
 };
 
 interface BuiltSpread {
@@ -419,34 +445,20 @@ interface BuiltSpread {
   xml: string;
   filename: string;
   storyIds: string[];
+  pageSelfId: string;
 }
 
-const buildSpread = (
-  page: IssuePageNode,
-  text: PageText,
-  pageIndex: number,
-  bodyStory: BuiltStory,
-  folio: BuiltStory | null,
-  geom: Geom,
-): BuiltSpread => {
-  const { PAGE_W, PAGE_H, MT, MR, MB, ML } = geom;
-  const spreadSelf = `uSpread_${pageIndex + 1}`;
-  const pageSelf = `uPage_${pageIndex + 1}`;
+/** Metadata for one image asset available for embedding in graphic frames. */
+export interface EmbeddedImage {
+  url: string;
+  filename: string;
+  width: number;   // px
+  height: number;  // px
+  format: "JPEG" | "PNG" | "GIF";
+}
 
-  const items: string[] = [];
-  const usedStories: string[] = [bodyStory.selfId];
-
-  // Main text frame: fills the live area (inside margins).
-  const tfId = nextSelfId("uTF");
-  const left = ML;
-  const top = MT;
-  const right = PAGE_W - MR;
-  const bottom = PAGE_H - MB - 24; // leave room for folio
-  // GeometricBounds: y1 x1 y2 x2 (top left bottom right)
-  items.push(
-    `      <TextFrame Self="${tfId}" ParentStory="${bodyStory.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${top} ${left} ${bottom} ${right}" ItemTransform="1 0 0 1 0 0">
-        <Properties>
-          <PathGeometry>
+const pathGeomBox = (left: number, top: number, right: number, bottom: number): string =>
+  `          <PathGeometry>
             <GeometryPathType PathOpen="false">
               <PathPointArray>
                 <PathPointType Anchor="${left} ${top}" LeftDirection="${left} ${top}" RightDirection="${left} ${top}"/>
@@ -455,34 +467,105 @@ const buildSpread = (
                 <PathPointType Anchor="${right} ${top}" LeftDirection="${right} ${top}" RightDirection="${right} ${top}"/>
               </PathPointArray>
             </GeometryPathType>
-          </PathGeometry>
+          </PathGeometry>`;
+
+const imageChild = (
+  asset: EmbeddedImage,
+  frameLeft: number,
+  frameTop: number,
+  frameRight: number,
+  frameBottom: number,
+): string => {
+  const frameW = frameRight - frameLeft;
+  const frameH = frameBottom - frameTop;
+  const s = Math.max(frameW / asset.width, frameH / asset.height);
+  const scaledW = asset.width * s;
+  const scaledH = asset.height * s;
+  const tx = +(frameLeft + (frameW - scaledW) / 2).toFixed(4);
+  const ty = +(frameTop + (frameH - scaledH) / 2).toFixed(4);
+  const linkSelf = nextSelfId("uLINK");
+  return `        <Image Self="${nextSelfId("uIMGobj")}" Space="$ID/#Links_RGB" ActualPpi="72 72" ImageRenderingIntent="UseColorSettings" LocalDisplaySetting="Default" ImageTypeName="$ID/${asset.format}" AppliedObjectStyle="ObjectStyle/$ID/[None]" Visible="true" Name="$ID/" ItemTransform="${s} 0 0 ${s} ${tx} ${ty}">
+          <Properties>
+            <Profile type="string">$ID/Use Document Default</Profile>
+            <GraphicBounds Left="0" Top="0" Right="${asset.width}" Bottom="${asset.height}"/>
+          </Properties>
+          <Link Self="${linkSelf}" AssetURL="$ID/" AssetID="$ID/" RenditionData="Actual" LinkResourceURI="file:Links/${asset.filename}" LinkResourceFormat="$ID/${asset.format}" StoredState="Normal" LinkClassID="35906" LinkClientID="257" LinkResourceModified="false" LinkObjectModified="false" ShowInUI="true" CanEmbed="true" CanUnembed="true" CanPackage="true" ImportPolicy="NoAutoImport" ExportPolicy="NoAutoExport"/>
+        </Image>`;
+};
+
+const buildSpread = (
+  page: IssuePageNode,
+  text: PageText,
+  pageIndex: number,
+  bodyStory: BuiltStory,
+  folio: BuiltStory | null,
+  geom: Geom,
+  imageAssets: Map<string, EmbeddedImage>,
+): BuiltSpread => {
+  const { PAGE_W, PAGE_H, MT, MR, MB, ML } = geom;
+  const spreadSelf = `uSpread_${pageIndex + 1}`;
+  const pageSelf = `uPage_${pageIndex + 1}`;
+  const pageTx = `1 0 0 1 0 ${-PAGE_H / 2}`;
+
+  const items: string[] = [];
+  const usedStories: string[] = [bodyStory.selfId];
+
+  const left = ML;
+  const top = MT;
+  const right = PAGE_W - MR;
+  const bottom = PAGE_H - MB - 24;
+
+  // Main text frame: fills the live area (inside margins).
+  const tfId = nextSelfId("uTF");
+  items.push(
+    `      <TextFrame Self="${tfId}" ParentStory="${bodyStory.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${top} ${left} ${bottom} ${right}" ItemTransform="${pageTx}">
+        <Properties>
+${pathGeomBox(left, top, right, bottom)}
         </Properties>
         <TextFramePreference TextColumnCount="${page.pageType === "article" ? 2 : 1}" TextColumnGutter="14" Inset="0 0 0 0"/>
       </TextFrame>`,
   );
 
-  // Image placeholder frame (top of page, half height) when an image is referenced.
+  // Image placeholder frame (top of page) when a hero image is referenced.
   if (text.imageUrl) {
     const imgId = nextSelfId("uIMG");
     const imgTop = MT;
     const imgBottom = MT + (PAGE_H - MT - MB) * 0.45;
+    const asset = imageAssets.get(text.imageUrl);
     items.push(
-      `      <Rectangle Self="${imgId}" ContentType="GraphicType" GeometricBounds="${imgTop} ${left} ${imgBottom} ${right}" ItemTransform="1 0 0 1 0 0" Label="${xmlEscape(text.imageUrl)}">
+      `      <Rectangle Self="${imgId}" ContentType="GraphicType" GeometricBounds="${imgTop} ${left} ${imgBottom} ${right}" ItemTransform="${pageTx}">
         <Properties>
-          <PathGeometry>
-            <GeometryPathType PathOpen="false">
-              <PathPointArray>
-                <PathPointType Anchor="${left} ${imgTop}" LeftDirection="${left} ${imgTop}" RightDirection="${left} ${imgTop}"/>
-                <PathPointType Anchor="${left} ${imgBottom}" LeftDirection="${left} ${imgBottom}" RightDirection="${left} ${imgBottom}"/>
-                <PathPointType Anchor="${right} ${imgBottom}" LeftDirection="${right} ${imgBottom}" RightDirection="${right} ${imgBottom}"/>
-                <PathPointType Anchor="${right} ${imgTop}" LeftDirection="${right} ${imgTop}" RightDirection="${right} ${imgTop}"/>
-              </PathPointArray>
-            </GeometryPathType>
-          </PathGeometry>
+${pathGeomBox(left, imgTop, right, imgBottom)}
           <Label>
             <KeyValuePair Key="source-url" Value="${xmlEscape(text.imageUrl)}"/>
           </Label>
         </Properties>
+${asset ? imageChild(asset, left, imgTop, right, imgBottom) : ""}
+      </Rectangle>`,
+    );
+  }
+
+  // Custom image blocks — coords are in the intrinsic 3200x4267 pixel space.
+  const SCALE_X = PAGE_W / 3200;
+  const SCALE_Y = PAGE_H / 4267;
+  for (const block of page.customBlocks ?? []) {
+    if (block.hidden) continue;
+    if (block.kind !== "image" || !block.imageUrl) continue;
+    const bLeft   = +(block.x * SCALE_X).toFixed(4);
+    const bTop    = +(block.y * SCALE_Y).toFixed(4);
+    const bRight  = +((block.x + block.w) * SCALE_X).toFixed(4);
+    const bBottom = +((block.y + block.h) * SCALE_Y).toFixed(4);
+    const asset = imageAssets.get(block.imageUrl);
+    const imgId = nextSelfId("uIMG");
+    items.push(
+      `      <Rectangle Self="${imgId}" ContentType="GraphicType" GeometricBounds="${bTop} ${bLeft} ${bBottom} ${bRight}" ItemTransform="${pageTx}">
+        <Properties>
+${pathGeomBox(bLeft, bTop, bRight, bBottom)}
+          <Label>
+            <KeyValuePair Key="source-url" Value="${xmlEscape(block.imageUrl)}"/>
+          </Label>
+        </Properties>
+${asset ? imageChild(asset, bLeft, bTop, bRight, bBottom) : ""}
       </Rectangle>`,
     );
   }
@@ -493,18 +576,9 @@ const buildSpread = (
     const fTop = PAGE_H - MB - 18;
     const fBottom = PAGE_H - MB;
     items.push(
-      `      <TextFrame Self="${folId}" ParentStory="${folio.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${fTop} ${left} ${fBottom} ${right}" ItemTransform="1 0 0 1 0 0">
+      `      <TextFrame Self="${folId}" ParentStory="${folio.selfId}" PreviousTextFrame="n" NextTextFrame="n" ContentType="TextType" GeometricBounds="${fTop} ${left} ${fBottom} ${right}" ItemTransform="${pageTx}">
         <Properties>
-          <PathGeometry>
-            <GeometryPathType PathOpen="false">
-              <PathPointArray>
-                <PathPointType Anchor="${left} ${fTop}" LeftDirection="${left} ${fTop}" RightDirection="${left} ${fTop}"/>
-                <PathPointType Anchor="${left} ${fBottom}" LeftDirection="${left} ${fBottom}" RightDirection="${left} ${fBottom}"/>
-                <PathPointType Anchor="${right} ${fBottom}" LeftDirection="${right} ${fBottom}" RightDirection="${right} ${fBottom}"/>
-                <PathPointType Anchor="${right} ${fTop}" LeftDirection="${right} ${fTop}" RightDirection="${right} ${fTop}"/>
-              </PathPointArray>
-            </GeometryPathType>
-          </PathGeometry>
+${pathGeomBox(left, fTop, right, fBottom)}
         </Properties>
       </TextFrame>`,
     );
@@ -512,23 +586,19 @@ const buildSpread = (
   }
 
   const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:Spread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
+<idPkg:Spread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
   <Spread Self="${spreadSelf}" PageCount="1" BindingLocation="0" AllowPageShuffle="true" ItemTransform="1 0 0 1 0 ${pageIndex * (PAGE_H + 50)}" ShowMasterItems="true" PageTransitionType="None" PageTransitionDirection="NotApplicable" PageTransitionDuration="Medium" FlattenerOverride="Default">
     <FlattenerPreference LineArtAndTextResolution="300" GradientAndMeshResolution="150" ClipComplexRegions="false" ConvertAllStrokesToOutlines="false" ConvertAllTextToOutlines="false"/>
-    <Page Self="${pageSelf}" Name="${pageIndex + 1}" AppliedTrapPreset="TrapPreset/$ID/kDefaultTrapStyleName" OverrideList="" AppliedMaster="uMaster" MasterPageTransform="1 0 0 1 0 0" TabOrder="" GridStartingPoint="TopOutside" UseMasterGrid="true" GeometricBounds="0 0 ${PAGE_H} ${PAGE_W}" ItemTransform="1 0 0 1 0 0">
+    <Page Self="${pageSelf}" Name="${pageIndex + 1}" AppliedTrapPreset="TrapPreset/$ID/kDefaultTrapStyleName" OverrideList="" AppliedMaster="uMaster" MasterPageTransform="1 0 0 1 0 0" TabOrder="" GridStartingPoint="TopOutside" UseMasterGrid="true" GeometricBounds="0 0 ${PAGE_H} ${PAGE_W}" ItemTransform="${pageTx}">
       <Properties>
         <Descriptor type="list">
-          <ListItem type="string">$ID/</ListItem>
+          <ListItem type="string"></ListItem>
           <ListItem type="enumeration">Arabic</ListItem>
           <ListItem type="boolean">true</ListItem>
           <ListItem type="boolean">false</ListItem>
           <ListItem type="long">1</ListItem>
-          <ListItem type="string">${pageIndex + 1}</ListItem>
-          <ListItem type="boolean">false</ListItem>
-          <ListItem type="boolean">false</ListItem>
-          <ListItem type="boolean">true</ListItem>
-          <ListItem type="boolean">false</ListItem>
+          <ListItem type="long">${pageIndex + 1}</ListItem>
+          <ListItem type="string"></ListItem>
         </Descriptor>
         <PageColor type="enumeration">UseMasterColor</PageColor>
       </Properties>
@@ -543,6 +613,7 @@ ${items.join("\n")}
     xml,
     filename: `Spreads/Spread_${spreadSelf}.xml`,
     storyIds: usedStories,
+    pageSelfId: pageSelf,
   };
 };
 
