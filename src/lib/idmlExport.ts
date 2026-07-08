@@ -617,6 +617,8 @@ ${items.join("\n")}
   };
 };
 
+const AID_PI = `<?aid style="50" type="document" readerVersion="6.0" featureSet="257" product="21.4(4)" ?>`;
+
 const designmapXml = (
   issue: IssueDoc,
   spreads: BuiltSpread[],
@@ -636,23 +638,33 @@ const designmapXml = (
     .join("\n");
 
   const docTitle = `${issue.master.publication} — ${issue.meta.issue}`;
+  const firstPageSelf = spreads[0]?.pageSelfId ?? "uPage_1";
+  const pageCount = spreads.length;
+  const storyList = [BACKING_STORY_SELF, ...stories.map((s) => s.selfId)].join(" ");
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<Document xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0" Self="d" StoryList="${stories.map((s) => s.selfId).join(" ")}" Name="${xmlEscape(docTitle)}.indd" ZeroPoint="0 0" ActiveLayer="Layer_1" CMYKProfile="U.S. Web Coated (SWOP) v2" RGBProfile="sRGB IEC61966-2.1" SolidColorIntent="UseColorSettings" AfterBlendingIntent="UseColorSettings" DefaultImageIntent="UseColorSettings" RGBProfilePolicy="PreserveEmbeddedProfiles" CMYKProfilePolicy="PreserveEmbeddedProfiles" ProfileMismatchForRGBPolicy="None" ProfileMismatchForCMYKPolicy="None" ProfileMismatchForImportedImagesPolicy="None" MissingProfileForRGBPolicy="None" MissingProfileForCMYKPolicy="None">
+${AID_PI}
+<Document xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}" Self="d" StoryList="${storyList}" Name="${xmlEscape(docTitle)}.indd" ZeroPoint="0 0" ActiveLayer="Layer_1" CMYKProfile="U.S. Web Coated (SWOP) v2" RGBProfile="sRGB IEC61966-2.1" SolidColorIntent="UseColorSettings" AfterBlendingIntent="UseColorSettings" DefaultImageIntent="UseColorSettings" RGBProfilePolicy="PreserveEmbeddedProfiles" CMYKProfilePolicy="PreserveEmbeddedProfiles" ProfileMismatchForRGBPolicy="None" ProfileMismatchForCMYKPolicy="None" ProfileMismatchForImportedImagesPolicy="None" MissingProfileForRGBPolicy="None" MissingProfileForCMYKPolicy="None">
   <Language Self="Language/$ID/English: USA" Name="$ID/English: USA" SingleQuotes="‘’" DoubleQuotes="“”" PrimaryLanguageName="English" SublanguageName="USA" Id="1033" HyphenationVendor="Proximity" SpellingVendor="Proximity"/>
   <Layer Self="Layer_1" Name="Layer 1" Visible="true" Locked="false" IgnoreWrap="false" ShowGuides="true" LockGuides="false" UI="true" Expendable="true" Printable="true"/>
+  <Section Self="uSection0" Length="${pageCount}" Name="" ContinueNumbering="true" IncludeSectionPrefix="false" Marker="" PageStart="${firstPageSelf}" SectionPrefix=""/>
   <idPkg:Fonts src="Resources/Fonts.xml" xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging"/>
   <idPkg:Styles src="Resources/Styles.xml" xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging"/>
   <idPkg:Preferences src="Resources/Preferences.xml" xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging"/>
   <idPkg:Graphic src="Resources/Graphic.xml" xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging"/>
+  <idPkg:Tags src="XML/Tags.xml" xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging"/>
   <idPkg:MasterSpread src="MasterSpreads/MasterSpread_uMaster.xml" xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging"/>
 ${spreadSrcs}
 ${storySrcs}
+  <idPkg:BackingStory src="XML/BackingStory.xml" xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging"/>
 </Document>`;
 };
 
-export function buildIdml(issue: IssueDoc, dim?: IdmlDim): Uint8Array {
+export function buildIdml(
+  issue: IssueDoc,
+  dim?: IdmlDim,
+  imageAssets: Map<string, EmbeddedImage> = new Map(),
+): Uint8Array {
   reset();
   const geom = geomFromInches(dim);
   const spreads: BuiltSpread[] = [];
@@ -661,25 +673,27 @@ export function buildIdml(issue: IssueDoc, dim?: IdmlDim): Uint8Array {
   const physIdx = computePhysicalIndices(issue.pages);
   issue.pages.forEach((page, i) => {
     const text = collectPageText(page, issue, i, physIdx[i]);
-    const body = buildStory(text, i);
+    const body = buildStory(text, page, i);
     stories.push(body);
     const folio = folioStory(text, i);
     if (folio) stories.push(folio);
-    spreads.push(buildSpread(page, text, i, body, folio, geom));
+    spreads.push(buildSpread(page, text, i, body, folio, geom, imageAssets));
   });
 
   const files: Zippable = {};
   // `mimetype` MUST be the first entry and stored UNCOMPRESSED in a true
   // OCF/UCF zip — InDesign can reject the .idml as damaged otherwise.
-  // fflate supports per-entry options via [data, opts] tuples; level 0 = stored.
   files["mimetype"] = [strToU8(MIME), { level: 0 }];
   files["META-INF/container.xml"] = strToU8(containerXml);
+  files["META-INF/metadata.xml"] = strToU8(metadataXml);
   files["designmap.xml"] = strToU8(designmapXml(issue, spreads, stories));
   files["Resources/Fonts.xml"] = strToU8(fontsXml);
   files["Resources/Styles.xml"] = strToU8(stylesXml);
   files["Resources/Graphic.xml"] = strToU8(graphicXml);
   files["Resources/Preferences.xml"] = strToU8(preferencesXml(geom));
   files["MasterSpreads/MasterSpread_uMaster.xml"] = strToU8(masterSpreadXml(geom));
+  files["XML/Tags.xml"] = strToU8(tagsXml);
+  files["XML/BackingStory.xml"] = strToU8(backingStoryXml);
   for (const s of spreads) files[s.filename] = strToU8(s.xml);
   for (const s of stories) files[s.filename] = strToU8(s.xml);
 
