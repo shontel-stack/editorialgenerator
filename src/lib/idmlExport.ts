@@ -214,18 +214,32 @@ const collectPageText = (
 };
 
 // --- XML builders ----------------------------------------------------------
+// container.xml rootfile media-type must be "text/xml", not the package MIME.
 const MIME = "application/vnd.adobe.indesign-idml-package";
+const DOM_VERSION = "21.4";
 
 const containerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
-    <rootfile full-path="designmap.xml" media-type="${MIME}"/>
+    <rootfile full-path="designmap.xml" media-type="text/xml"/>
   </rootfiles>
 </container>`;
 
+// Minimal XMP metadata. dc:format identifies the IDML package to InDesign.
+const metadataXml = `<?xml version="1.0" encoding="UTF-8"?>
+<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about=""
+        xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:format>application/vnd.adobe.indesign-idml-package</dc:format>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="r"?>`;
+
 const fontsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:Fonts xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
+<idPkg:Fonts xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
   <FontFamily Self="FontFamily_Minion" Name="Minion Pro">
     <Font Self="Font_MinionPro_Regular" FontFamily="Minion Pro" Name="Minion Pro\\tRegular" PostScriptName="MinionPro-Regular" Status="Installed" FontStyleName="Regular" FontType="OpenTypeCFF"/>
   </FontFamily>
@@ -235,37 +249,32 @@ const fontsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </idPkg:Fonts>`;
 
 const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:Styles xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
+<idPkg:Styles xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
   <RootCharacterStyleGroup Self="u1">
     <CharacterStyle Self="CharacterStyle/$ID/[No character style]" Imported="false" KeyboardShortcut="0 0" Name="$ID/[No character style]"/>
   </RootCharacterStyleGroup>
   <RootParagraphStyleGroup Self="u2">
     <ParagraphStyle Self="ParagraphStyle/$ID/[No paragraph style]" Imported="false" Name="$ID/[No paragraph style]" PointSize="11" Justification="LeftAlign"/>
     <ParagraphStyle Self="ParagraphStyle/Headline" Name="Headline" Imported="false" PointSize="36" Leading="40" FontStyle="Regular" SpaceAfter="12" Justification="LeftAlign">
-      <Properties>
-        <AppliedFont type="string">Minion Pro</AppliedFont>
-      </Properties>
+      <Properties><AppliedFont type="string">Minion Pro</AppliedFont></Properties>
     </ParagraphStyle>
     <ParagraphStyle Self="ParagraphStyle/Dek" Name="Dek" Imported="false" PointSize="14" Leading="18" FontStyle="Italic" SpaceAfter="8" Justification="LeftAlign">
-      <Properties>
-        <AppliedFont type="string">Minion Pro</AppliedFont>
-      </Properties>
+      <Properties><AppliedFont type="string">Minion Pro</AppliedFont></Properties>
     </ParagraphStyle>
     <ParagraphStyle Self="ParagraphStyle/Byline" Name="Byline" Imported="false" PointSize="9" Leading="12" FontStyle="Regular" SpaceAfter="18" Justification="LeftAlign">
-      <Properties>
-        <AppliedFont type="string">Helvetica</AppliedFont>
-      </Properties>
+      <Properties><AppliedFont type="string">Helvetica</AppliedFont></Properties>
     </ParagraphStyle>
     <ParagraphStyle Self="ParagraphStyle/Body" Name="Body" Imported="false" PointSize="10" Leading="14" FontStyle="Regular" SpaceAfter="4" Justification="LeftAlign" FirstLineIndent="12">
-      <Properties>
-        <AppliedFont type="string">Minion Pro</AppliedFont>
-      </Properties>
+      <Properties><AppliedFont type="string">Minion Pro</AppliedFont></Properties>
+    </ParagraphStyle>
+    <ParagraphStyle Self="ParagraphStyle/Caption" Name="Caption" Imported="false" PointSize="8" Leading="11" FontStyle="Italic" SpaceAfter="4" Justification="LeftAlign">
+      <Properties><AppliedFont type="string">Helvetica</AppliedFont></Properties>
+    </ParagraphStyle>
+    <ParagraphStyle Self="ParagraphStyle/PullQuote" Name="Pull Quote" Imported="false" PointSize="18" Leading="22" FontStyle="Italic" SpaceAfter="10" Justification="LeftAlign">
+      <Properties><AppliedFont type="string">Minion Pro</AppliedFont></Properties>
     </ParagraphStyle>
     <ParagraphStyle Self="ParagraphStyle/Folio" Name="Folio" Imported="false" PointSize="8" Leading="10" FontStyle="Regular" Justification="LeftAlign">
-      <Properties>
-        <AppliedFont type="string">Helvetica</AppliedFont>
-      </Properties>
+      <Properties><AppliedFont type="string">Helvetica</AppliedFont></Properties>
     </ParagraphStyle>
   </RootParagraphStyleGroup>
   <RootObjectStyleGroup Self="u3">
@@ -280,19 +289,43 @@ const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </idPkg:Styles>`;
 
 const graphicXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:Graphic xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
+<idPkg:Graphic xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
   <Color Self="Color/Black" Model="Process" Space="CMYK" ColorValue="0 0 0 100" Name="Black" ColorEditable="false" ColorRemovable="false" Visible="true" AlternateSpace="NoAlternateColor" AlternateColorValue=""/>
   <Color Self="Color/Paper" Model="Process" Space="CMYK" ColorValue="0 0 0 0" Name="Paper" ColorEditable="false" ColorRemovable="false" Visible="true" AlternateSpace="NoAlternateColor" AlternateColorValue=""/>
   <Swatch Self="Swatch/None" Name="None"/>
   <StrokeStyle Self="StrokeStyle/$ID/Solid" Name="$ID/Solid"/>
 </idPkg:Graphic>`;
 
+// Minimal Tags + BackingStory required by real InDesign IDML packages.
+const tagsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:Tags xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
+  <XMLTag Self="XMLTag/Root" Name="Root">
+    <Properties>
+      <TagColor type="enumeration">LightBlue</TagColor>
+    </Properties>
+  </XMLTag>
+</idPkg:Tags>`;
+
+const BACKING_STORY_SELF = "uBackingStory";
+const backingStoryXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:BackingStory xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
+  <XmlStory Self="${BACKING_STORY_SELF}" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
+    <StoryPreference OpticalMarginAlignment="false" OpticalMarginSize="12" FrameType="TextFrameType" StoryOrientation="Horizontal" StoryDirection="LeftToRightDirection"/>
+    <InCopyExportOption IncludeGraphics="false"/>
+    <XMLElement Self="di_1" MarkupTag="XMLTag/Root" XMLContent="${BACKING_STORY_SELF}">
+      <ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/[No paragraph style]">
+        <CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]">
+          <Content>\uFEFF</Content>
+        </CharacterStyleRange>
+      </ParagraphStyleRange>
+    </XMLElement>
+  </XmlStory>
+</idPkg:BackingStory>`;
+
 const preferencesXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML, BLEED }: Geom): string => {
   const orientation = PAGE_W > PAGE_H ? "Landscape" : "Portrait";
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:Preferences xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
+<idPkg:Preferences xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
   <DocumentPreference Self="dpref" PageHeight="${PAGE_H}" PageWidth="${PAGE_W}" PageOrientation="${orientation}" PagesPerDocument="1" FacingPages="false" AllowPageShuffle="true" DocumentBleedBottomOffset="${BLEED}" DocumentBleedTopOffset="${BLEED}" DocumentBleedInsideOrLeftOffset="${BLEED}" DocumentBleedOutsideOrRightOffset="${BLEED}" SlugBottomOffset="0" SlugTopOffset="0" SlugInsideOrLeftOffset="0" SlugRightOrOutsideOffset="0" DocumentBleedUniformSize="true" DocumentSlugUniformSize="false" PreserveLayoutWhenShuffling="true" ColumnDirection="Horizontal" ColumnGuideColor="PurpleRed"/>
   <MarginPreference Self="mpref" ColumnCount="1" ColumnGutter="12" Top="${MT}" Bottom="${MB}" Left="${ML}" Right="${MR}" ColumnDirection="Horizontal" ColumnsPositions="0 ${PAGE_W - ML - MR}"/>
   <TransparencyDefaultContainerObject Self="TransparencyDefaultContainer">
@@ -302,11 +335,12 @@ const preferencesXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML, BLEED }: Geom): string
 </idPkg:Preferences>`;
 };
 
-const masterSpreadXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML }: Geom): string => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<?aid style="50" type="document" readerVersion="14.0" featureSet="513" product="14.0(148)" ?>
-<idPkg:MasterSpread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="14.0">
+const masterSpreadXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML }: Geom): string => {
+  const pageTx = `1 0 0 1 0 ${-PAGE_H / 2}`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:MasterSpread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="${DOM_VERSION}">
   <MasterSpread Self="uMaster" Name="A-Master" NamePrefix="A" BaseName="Master" ShowMasterItems="true" PageCount="1" OverriddenPageItemProps="">
-    <Page Self="uMasterPage" Name="A" AppliedTrapPreset="TrapPreset/$ID/kDefaultTrapStyleName" OverrideList="" GeometricBounds="0 0 ${PAGE_H} ${PAGE_W}" ItemTransform="1 0 0 1 0 0">
+    <Page Self="uMasterPage" Name="A" AppliedTrapPreset="TrapPreset/$ID/kDefaultTrapStyleName" OverrideList="" GeometricBounds="0 0 ${PAGE_H} ${PAGE_W}" ItemTransform="${pageTx}">
       <Properties>
         <PageColor type="enumeration">UseMasterColor</PageColor>
       </Properties>
@@ -314,6 +348,7 @@ const masterSpreadXml = ({ PAGE_W, PAGE_H, MT, MR, MB, ML }: Geom): string => `<
     </Page>
   </MasterSpread>
 </idPkg:MasterSpread>`;
+};
 
 interface BuiltStory {
   selfId: string;
