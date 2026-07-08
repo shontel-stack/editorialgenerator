@@ -167,14 +167,21 @@ describe("IDML export — structural correctness", () => {
     expect(allContent).toMatch(/Custom body text block that must survive export/);
   });
 
-  it("graphic-frame rectangles built without an EmbeddedImage map contain no Image children (placeholder mode)", () => {
-    // The base buildIdml call has no image assets, so no <Image> appears — but
-    // the Rectangle is still emitted with a valid geometry. When assets are
-    // provided, an <Image>+<Link> would appear inside.
-    const spreadFiles = Object.entries(files).filter(([n]) => n.startsWith("Spreads/"));
-    const anyRectangle = spreadFiles.some(([, s]) => /ContentType="GraphicType"/.test(s));
-    // Cover / photo / article default data references imageUrl, so at least one
-    // graphic rectangle must exist.
-    expect(anyRectangle).toBe(true);
+  it("emits Image+Link inside graphic rectangles when EmbeddedImage assets are provided", () => {
+    // Give the cover an imageUrl and a matching embedded asset.
+    const issue2 = makeTestIssue();
+    (issue2.pages[0].data as { imageUrl?: string }).imageUrl = "http://example.com/hero.jpg";
+    const assets = new Map([
+      [
+        "http://example.com/hero.jpg",
+        { url: "http://example.com/hero.jpg", filename: "hero.jpg", width: 1000, height: 800, format: "JPEG" as const },
+      ],
+    ]);
+    const bytes2 = buildIdml(issue2, undefined, assets);
+    const files2 = readPkg(bytes2);
+    const spread1 = files2["Spreads/Spread_uSpread_1.xml"];
+    expect(spread1).toMatch(/ContentType="GraphicType"/);
+    expect(spread1).toMatch(/<Image[^>]+ImageTypeName="\$ID\/JPEG"/);
+    expect(spread1).toMatch(/<Link[^>]+LinkResourceURI="file:Links\/hero\.jpg"/);
   });
 });
