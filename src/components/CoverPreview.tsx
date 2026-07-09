@@ -273,14 +273,30 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
           const entries = data.tocEntries ?? [];
           if (entries.length > 0) {
             return (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${entries.length}, 1fr) auto`,
-                  columnGap: 32,
-                  alignItems: "end",
-                }}
-              >
+              <>
+                {data.feature?.trim() && (
+                  <div
+                    style={{
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 22,
+                      letterSpacing: 4,
+                      textTransform: "uppercase",
+                      opacity: 0.85,
+                      marginBottom: 24,
+                    }}
+                  >
+                    {data.feature}
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${entries.length}, 1fr) auto`,
+                    columnGap: 32,
+                    alignItems: "end",
+                  }}
+                >
+
                 {entries.map((e, i) => {
                   const clickable = Boolean(e.targetPageId);
                   return (
