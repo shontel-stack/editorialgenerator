@@ -365,9 +365,11 @@ export const CoverPreview = forwardRef<HTMLDivElement, Props>(function CoverPrev
                 >
                   {data.price}
                 </div>
-              </div>
+                </div>
+              </>
             );
           }
+
           return (
             <div
               style={{
