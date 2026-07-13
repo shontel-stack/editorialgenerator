@@ -3511,17 +3511,17 @@ function CoverEditor({
           </div>
         </Field>
       </Section>
-      <CoverTocEditor
-        entries={data.tocEntries ?? []}
-        pages={pages}
-        onChange={(entries) => set({ tocEntries: entries })}
-      />
       <Section title="Cover Story">
         <Field label="Headline"><Input value={data.headline} onChange={(v) => set({ headline: v })} /></Field>
         <Field label="Dek"><Textarea value={data.dek} onChange={(v) => set({ dek: v })} rows={3} /></Field>
         <Field label="Feature line"><Input value={data.feature} onChange={(v) => set({ feature: v })} /></Field>
         <Field label="Image credit"><Input value={data.credit} onChange={(v) => set({ credit: v })} /></Field>
       </Section>
+      <CoverTocEditor
+        entries={data.tocEntries ?? []}
+        pages={pages}
+        onChange={(entries) => set({ tocEntries: entries })}
+      />
       <Section title="QR Code">
         <Field label="URL (leave empty to hide)"><Input value={data.qrUrl} onChange={(v) => set({ qrUrl: v })} /></Field>
         <Field label="Caption"><Input value={data.qrCaption} onChange={(v) => set({ qrCaption: v })} /></Field>
