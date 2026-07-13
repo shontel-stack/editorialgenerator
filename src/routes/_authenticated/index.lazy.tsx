@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays } from "lucide-react";
+import { Aperture, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -17,6 +17,7 @@ import { useSnapSettings, mergeSnapSettings, type SnapSettings } from "@/lib/sna
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
+import { GeneratorStudio, type GeneratorBrandContext } from "@/components/GeneratorStudio";
 import { AttachmentControl } from "@/components/AttachmentControl";
 import { PageReferencesEditor } from "@/components/PageReferencesEditor";
 import { PageBackgroundUploader, type BackgroundAssignment } from "@/components/PageBackgroundUploader";
@@ -1746,6 +1747,48 @@ function Index() {
         <button title="AI Layout · propose from library" aria-label="AI Layout" aria-pressed={layoutAiOpen} onClick={() => setLayoutAiOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${layoutAiOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <Wand2 className="h-[18px] w-[18px]" />
         </button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button title="AI Image Generator" aria-label="AI Image Generator" className={RAIL_BUTTON_CLASS}>
+              <Aperture className="h-[18px] w-[18px]" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="right" sideOffset={12} align="start" className="w-[420px] max-h-[90vh] overflow-y-auto p-4">
+            <div className="mb-3">
+              <div className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">AI Image Generator</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Model shots, ads, still-life, and hero art — drop them straight onto the selected page.
+              </div>
+            </div>
+            <GeneratorStudio
+              context="editor"
+              brand={(() => {
+                const cover = issue.pages.find((p) => p.pageType === "cover");
+                const palette = (cover?.data as { palette?: unknown } | undefined)?.palette;
+                const paletteHex = Array.isArray(palette)
+                  ? (palette as string[]).filter((c) => typeof c === "string")
+                  : typeof palette === "string"
+                    ? [palette]
+                    : undefined;
+                return {
+                  publication: issue.master.publication,
+                  tagline: (cover?.data as { tagline?: string } | undefined)?.tagline,
+                  paletteHex,
+                  fontLabel: issue.master.fonts?.display,
+                  tone: "editorial magazine",
+                } satisfies GeneratorBrandContext;
+              })()}
+              onUseImage={(url) => {
+                const data = selected.data as { imageUrl?: unknown };
+                if ("imageUrl" in data || selected.pageType === "cover" || selected.pageType === "article" || selected.pageType === "photo" || selected.pageType === "ad") {
+                  updateData<typeof selected>(selected.id, { imageUrl: url } as never);
+                } else {
+                  toast.info("This page has no image slot — saved to library instead.");
+                }
+              }}
+            />
+          </PopoverContent>
+        </Popover>
         <button title="Production" aria-label="Production" aria-pressed={checklistOpen} onClick={() => setChecklistOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${checklistOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <ClipboardList className="h-[18px] w-[18px]" />
         </button>

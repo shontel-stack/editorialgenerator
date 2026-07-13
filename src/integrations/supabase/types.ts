@@ -92,6 +92,56 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_assets: {
+        Row: {
+          aspect: string | null
+          brand_applied: boolean
+          created_at: string
+          creative_type: string
+          id: string
+          prompt: string
+          public_url: string
+          publication_id: string | null
+          refined_prompt: string | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          aspect?: string | null
+          brand_applied?: boolean
+          created_at?: string
+          creative_type: string
+          id?: string
+          prompt: string
+          public_url: string
+          publication_id?: string | null
+          refined_prompt?: string | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          aspect?: string | null
+          brand_applied?: boolean
+          created_at?: string
+          creative_type?: string
+          id?: string
+          prompt?: string
+          public_url?: string
+          publication_id?: string | null
+          refined_prompt?: string | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_assets_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       issue_attachments: {
         Row: {
           created_at: string
