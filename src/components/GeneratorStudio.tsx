@@ -61,6 +61,10 @@ export function GeneratorStudio({
   const [adCopy, setAdCopy] = useState<AdCopy | null>(null);
   const [composited, setComposited] = useState<string | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
+  const [variantCount, setVariantCount] = useState<number>(6);
+  const [variants, setVariants] = useState<Array<{ url: string | null; final: boolean; error?: string }>>([]);
+  const [variantsRunning, setVariantsRunning] = useState(false);
+  const variantAbortsRef = useRef<AbortController[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
   const craft = useServerFn(craftGenerationPrompt);
