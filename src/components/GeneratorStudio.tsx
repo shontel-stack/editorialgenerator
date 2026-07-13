@@ -135,10 +135,12 @@ export function GeneratorStudio({
     }
   }
 
+  const exportSrc = composited || image;
+
   async function handleSave() {
-    if (!image || !isFinal) return;
+    if (!exportSrc || !isFinal) return;
     try {
-      const blob = dataUrlToBlob(image);
+      const blob = dataUrlToBlob(exportSrc);
       const up = await uploadEditorImage({
         issueId: "generated",
         input: blob,
@@ -164,19 +166,17 @@ export function GeneratorStudio({
   }
 
   function handleDownload() {
-    if (!image || !isFinal) return;
+    if (!exportSrc || !isFinal) return;
     const a = document.createElement("a");
-    a.href = image;
+    a.href = exportSrc;
     a.download = `${creativeType}-${Date.now()}.png`;
     a.click();
   }
 
   async function handleUse() {
-    if (!image || !isFinal || !onUseImage) return;
+    if (!exportSrc || !isFinal || !onUseImage) return;
     try {
-      // Upload before placing so the issue doc stores a persistent URL, not
-      // a fat data: URL that breaks autosave/localStorage.
-      const blob = dataUrlToBlob(image);
+      const blob = dataUrlToBlob(exportSrc);
       const up = await uploadEditorImage({
         issueId: "generated",
         input: blob,
@@ -190,8 +190,62 @@ export function GeneratorStudio({
     }
   }
 
+  async function handleGenerateCopy() {
+    if (!brief.trim() && !refined.trim()) {
+      toast.error("Add a brief first.");
+      return;
+    }
+    setCopyLoading(true);
+    try {
+      const res = await craftCopy({
+        data: {
+          brief: brief.trim() || refined.trim(),
+          refinedPrompt: refined.trim() || undefined,
+          brand: brandForPrompt(),
+        },
+      });
+      setAdCopy({
+        headline: res.headline,
+        subhead: res.subhead || "",
+        body: res.body,
+        cta: res.cta,
+        placement: res.placement as AdPlacement,
+        textPolarity: res.textPolarity,
+        fontFamily: "serif",
+        accent: brand?.paletteHex?.[0],
+      });
+      toast.success("Ad copy generated");
+    } catch (err) {
+      toast.error((err as Error).message ?? "Copy generation failed");
+    } finally {
+      setCopyLoading(false);
+    }
+  }
+
+  // Re-composite whenever the image or ad copy changes.
+  useEffect(() => {
+    if (!image || !isFinal || !adCopy) {
+      setComposited(null);
+      return;
+    }
+    let cancelled = false;
+    renderAdComposite(image, adCopy)
+      .then((url) => {
+        if (!cancelled) setComposited(url);
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error((err as Error).message ?? "Overlay render failed");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [image, isFinal, adCopy]);
+
+  const displaySrc = composited || image;
+
   const previewAspectClass =
     aspect === "portrait" ? "aspect-[3/4]" : aspect === "landscape" ? "aspect-[16/9]" : "aspect-square";
+
 
   return (
     <div className="space-y-4">
