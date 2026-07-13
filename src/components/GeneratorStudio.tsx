@@ -123,6 +123,9 @@ export function GeneratorStudio({
     setSaved(false);
     setAdCopy(null);
     setComposited(null);
+    setVariants([]);
+    variantAbortsRef.current.forEach((c) => c.abort());
+    variantAbortsRef.current = [];
     try {
       await streamImage(
         "/api/generate-image",
