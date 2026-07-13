@@ -445,6 +445,110 @@ export function GeneratorStudio({
         {generating ? "Generating…" : image ? "Regenerate" : "Generate"}
       </button>
 
+      {/* Variant mode */}
+      <div className="border border-border p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+            Variants
+          </div>
+          <div className="flex gap-1">
+            {[6, 9, 12].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setVariantCount(n)}
+                disabled={variantsRunning}
+                className={
+                  "px-2 py-0.5 border text-[10px] tracking-[0.2em] " +
+                  (variantCount === n
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border hover:border-foreground/40")
+                }
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleGenerateVariants}
+          disabled={variantsRunning || generating || (!brief.trim() && !refined.trim())}
+          className="w-full inline-flex items-center justify-center gap-2 border border-border px-3 py-2 text-[10px] tracking-[0.3em] uppercase hover:border-foreground/40 disabled:opacity-40"
+        >
+          <Wand2 className="h-3 w-3" />
+          {variantsRunning
+            ? `Generating ${variantCount} variants…`
+            : variants.length
+              ? `Regenerate ${variantCount} variants`
+              : `Generate ${variantCount} variants`}
+        </button>
+
+        {variants.length > 0 && (
+          <>
+            <div
+              className={
+                "grid gap-1.5 " +
+                (variantCount >= 12
+                  ? "grid-cols-4"
+                  : variantCount >= 9
+                    ? "grid-cols-3"
+                    : "grid-cols-3")
+              }
+            >
+              {variants.map((v, i) => {
+                const isSelected = v.final && v.url && v.url === image;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSelectVariant(i)}
+                    disabled={!v.final || !v.url}
+                    className={
+                      "relative overflow-hidden border bg-secondary transition-colors " +
+                      previewAspectClass +
+                      " " +
+                      (isSelected
+                        ? "border-foreground ring-2 ring-foreground"
+                        : "border-border hover:border-foreground/40") +
+                      (v.final && v.url ? " cursor-pointer" : " cursor-wait")
+                    }
+                  >
+                    {v.url ? (
+                      <img
+                        src={v.url}
+                        alt=""
+                        className={
+                          "w-full h-full object-cover transition-[filter] duration-500 " +
+                          (v.final ? "blur-0" : "blur-xl scale-105 opacity-90")
+                        }
+                      />
+                    ) : v.error ? (
+                      <div className="absolute inset-0 flex items-center justify-center text-[9px] text-destructive px-1 text-center">
+                        {v.error}
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-[9px] tracking-[0.2em] uppercase text-muted-foreground">
+                        …
+                      </div>
+                    )}
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 h-4 w-4 bg-foreground text-background inline-flex items-center justify-center">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Click a variant to promote it — then Save, Use on this page, or add ad copy.
+            </div>
+          </>
+        )}
+      </div>
+
+
       {/* Preview */}
       {image && (
         <div className="space-y-2">
