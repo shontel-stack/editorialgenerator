@@ -1,90 +1,86 @@
+## AI Creative Generator — Plan
 
-# Visual & UX Polish Audit — Prioritized Punch List
+A brand-aware image generator that produces model shots, full ad layouts, product/still-life images, and article hero art. Available as **both** a standalone route and an in-editor sidebar panel, sharing one backend.
 
-Scope: read-only audit of dark mode, empty states, async feedback, panel/toolbar ergonomics, and responsive behavior. Findings below are ranked quick-wins-first (impact / effort). Effort: **S** = <½ day, **M** = ½–2 days, **L** = 2+ days.
+### 1. Backend (shared by both surfaces)
 
----
+**Streaming image endpoint** — `src/routes/api/generate-image.ts` (server route, not a serverFn — server functions can't stream `Response`).
+- Uses Lovable AI Gateway, model `google/gemini-3.1-flash-image` (Nano Banana 2) — fast, high quality, supports partial previews natively.
+- Body shape: `{ messages, modalities: ["image","text"], stream: true }` per the image-gen knowledge.
+- Passes upstream SSE body straight through — no re-wrapping.
 
-## Findings at a glance
+**Prompt-craft server function** — `src/lib/generator.functions.ts`
+- `craftGenerationPrompt({ creativeType, subject, mood, aspect, brandContext? })` — uses `google/gemini-2.5-flash` via AI Gateway to expand the user's short inputs into a detailed image prompt tuned per creative type (model / ad / still-life / hero).
+- Non-streaming, typed RPC. Called by both surfaces before hitting the streaming endpoint.
 
-| Area | Key gap |
-|---|---|
-| Dark mode | `@custom-variant dark` declared in `src/styles.css:7`; no `.dark` token block, no toggle anywhere. Handful of `dark:` classes exist as dead code. |
-| Empty states | Panels are mostly covered with one-liners; **main routes (dashboard `index.tsx`, calendar, editor cold-open)** and **zero-publications first run** are not. |
-| Async feedback | Autosave/cloud sync indicator is excellent; **exports (PDF/IDML/cover), newsletter send, AI layout proposals, image upload** have no toast layer in `src/lib/*` (0 hits) — failures can be silent. |
-| Panels | Widths inconsistent (`420px` brand/attach/assistant, `460px` layout, `560px` staff, full-width mobile with no close affordance in some). ShortcutsHelp exists but only mounted in `__root.tsx` — no visible entry point. |
-| Responsive | Editor (`index.lazy.tsx`, 4047 LOC) is desktop-only; board/calendar use `min-h-screen` with no responsive grid tuning; no "best on desktop" state. |
+**Save-to-project server function** — `src/lib/generator.functions.ts`
+- `saveGeneratedAsset({ dataUrl, meta })` — decodes base64 PNG, uploads to `issue-attachments` bucket under `generated/{userId}/{uuid}.png`, inserts a `generated_assets` row.
+- Uses `requireSupabaseAuth`.
 
----
+### 2. Database
 
-## Top 10 prioritized items
+New table `public.generated_assets`:
 
-### 1. Remove or ship dark mode — don't leave it half-declared  ·  **S (remove) / L (complete)**
-- **Area:** Dark mode
-- **Files:** `src/styles.css` (L7 custom variant, no `.dark {}` block), stray `dark:` usages in `src/components/AutosaveIndicator.tsx`, `CustomBlocksLayer.tsx`, `CoverPreview.tsx`, `AuthPageContent.tsx`, `ai-elements/*`, `ui/alert.tsx`, `ui/chart.tsx`, `ui/input-group.tsx`, `lib/pageStatus.ts`.
-- **Why it matters:** No toggle exists anywhere in the UI, and no `.dark` token overrides are defined, so every `dark:` class is dead. It bloats CSS, misleads contributors, and if a user ever adds `class="dark"` the app renders with paper tokens on paper — broken contrast.
-- **Recommendation (quick win):** delete `@custom-variant dark` + strip `dark:` prefixes. If ship-later, propose an editorial dark set: `--paper → oklch(0.18 0.006 270)`, `--ink → oklch(0.96 0.004 90)`, `--ruby → oklch(0.62 0.17 22)` (brighter for contrast on dark), muted/border shifted up ~0.1L, then add a header toggle next to `SignOutButton`.
+```text
+id uuid pk, user_id uuid, publication_id uuid nullable,
+creative_type text, prompt text, refined_prompt text,
+storage_path text, public_url text,
+brand_applied boolean, created_at timestamptz
+```
 
-### 2. Add a real first-run / zero-publications state on the dashboard  ·  **M**
-- **Area:** Empty states / onboarding
-- **Files:** `src/routes/_authenticated/index.tsx` (20 LOC — currently a stub), `src/routes/_authenticated/index.lazy.tsx` cold-open branch, `src/hooks/useActivePublication.ts`, `WorkspaceSwitcher.tsx`.
-- **Why:** A brand-new user with zero publications lands on the editor with no guidance. There's no "Create your first publication → new issue → pick template" path.
-- **Recommendation:** editorial hero on `index.tsx` with 3-step onboarding card ("Name your publication", "Start an issue", "Pick a masthead") + CTA to `MagazineTemplatePicker`. Guard the editor route so it redirects to onboarding when publications = 0.
+- RLS: owner-only (`auth.uid() = user_id`).
+- GRANTs: `authenticated` CRUD, `service_role` ALL.
 
-### 3. Wire toasts around every silent async action  ·  **S**
-- **Area:** Loading & feedback
-- **Files:** `src/lib/idmlExport.ts`, `src/lib/exportCover.ts`, `src/lib/pdfRender.ts`, `src/lib/newsletter.ts`, `src/lib/proposeLayout.functions.ts`, `src/lib/imageUpload.ts` — **0 `toast.*` calls across all six**.
-- **Why:** Failures currently only surface via console. Export/AI/upload are the actions most likely to fail (network, file size, model timeout).
-- **Recommendation:** wrap each entry point at its call site with `toast.promise(..., { loading, success, error })`. Standardize the copy ("Rendering PDF…", "Newsletter queued", "Layout proposal failed — retry?").
+### 3. Client — shared component
 
-### 4. Discoverable keyboard-shortcuts affordance  ·  **S**
-- **Area:** Panel/toolbar ergonomics
-- **Files:** `src/components/ShortcutsHelp.tsx`, `src/routes/__root.tsx` (only mount), `src/components/editor/EditorStatusBar.tsx`.
-- **Why:** `ShortcutsHelp` is mounted but no button/hint tells users it exists — only power users who guess `?` find it.
-- **Recommendation:** add a tiny `?` icon in `EditorStatusBar` right of `AutosaveIndicator`, tooltip "Shortcuts (?)", opens the same dialog.
+`src/components/GeneratorStudio.tsx` — the actual generator UI, used by both the panel and the standalone page.
 
-### 5. Normalize side-panel widths, headers, and close behavior  ·  **M**
-- **Area:** Panel ergonomics
-- **Files:** `BrandKitPanel.tsx`, `AttachmentsPanel.tsx`, `AssistantPanel.tsx` (420px), `LayoutProposalPanel.tsx` (460px), `StaffPanel.tsx` (560px, uses z-40 vs others z-50).
-- **Why:** Three width tokens, two z-layers, and inconsistent header treatments make the editor feel patchwork. Some panels have no visible close on mobile (full-width, no ×).
-- **Recommendation:** introduce `--panel-w-sm: 420px` / `--panel-w-lg: 560px` design tokens, one `<EditorPanelShell>` component with unified header (title, close ×, esc-to-close, focus trap, consistent border/shadow), migrate all five panels to it.
+Fields:
+- **Creative type** chip row: Model shot · Full ad · Product · Article hero.
+- Per-type input scaffolds (e.g. Model shot → subject description, styling, setting, mood; Ad → brand, headline, product; etc.).
+- **Aspect** (portrait / square / landscape).
+- **Brand-aware** toggle (default off) — when on, injects the issue's palette + font style + tone descriptor from `brandKitContext` into the crafted prompt.
+- **Enhance prompt** button → calls `craftGenerationPrompt`, shows the refined prompt (editable).
+- **Generate** → streams via `streamImage` helper (reused pattern from `ai-image-generation` knowledge), with the mandatory `flushSync` parser and blur-on-partial CSS.
+- Result actions: **Use on this page** (only shown in editor context — writes to current page's `imageUrl`), **Save to library**, **Download**, **Regenerate**.
 
-### 6. Skeletons + progress for image upload and cloud-sync migration  ·  **S**
-- **Area:** Loading & feedback
-- **Files:** `src/lib/imageUpload.ts`, `src/components/CustomBlocksLayer.tsx`, `src/components/PageBackgroundUploader.tsx`, base64 migration in `src/routes/_authenticated/index.lazy.tsx`.
-- **Why:** Multi-MB image uploads (compressed then pushed to Storage) show no progress; the base64→Storage migration on open can take seconds with no visible state, contributing to the earlier "changes lost" perception.
-- **Recommendation:** dashed placeholder + spinner overlay per image slot during upload; on doc load with legacy images, show a top banner "Modernizing images…" that resolves to "Done" and self-dismisses.
+Uses `streamImage` implementation from the knowledge (eventsource-parser + flushSync).
 
-### 7. Real empty states on board, calendar, versions, comments, staff  ·  **S**
-- **Area:** Empty states
-- **Files:** `board.tsx:113`, `calendar.tsx` (no empty branch found), `VersionHistoryPanel.tsx:114`, `CommentsPanel.tsx:109`, `StaffPanel.tsx:500`, `IssueTemplatesPanel.tsx:184`.
-- **Why:** All are terse single-line greys ("No X yet."). No icon, no CTA, no illustration — cold and off-brand for an editorial product.
-- **Recommendation:** shared `<EmptyState icon title body action />` component; typeset with `font-display`, ruby-tinted icon, one primary action per state (e.g. "Create template from current issue", "Invite a collaborator", "Open the checklist").
+### 4. Surface A — in-editor sidebar panel
 
-### 8. Editor mobile/tablet guard  ·  **S (guard) / L (real responsive)**
-- **Area:** Responsive
-- **Files:** `src/routes/_authenticated/index.lazy.tsx` (4047 LOC, fixed-position rails + side panels stacking at 320px), `src/components/editor/EditorRail.tsx`.
-- **Why:** Below ~1024px the fixed rails collide with panels and the toolbar clips. Editing a magazine on mobile isn't a real use case.
-- **Recommendation:** on `< md`, render a full-screen editorial "Best experienced on desktop — open on a larger screen to edit" card with a read-only page preview and a link back to the dashboard. Keep dashboard/board/calendar responsive properly.
+- New rail button (`Wand2` icon) in `src/routes/_authenticated/index.lazy.tsx` next to Attachments.
+- Popover renders `<GeneratorStudio context="editor" onUseImage={(url) => setImageOnCurrentPage(url)} />`.
+- The "Use on this page" button routes the image into whatever the currently selected page's image slot is (cover imageUrl, article imageUrl, photo imageUrl, ad image, article hero, or a new Custom Block if the page has no obvious slot).
 
-### 9. Dashboard/board/calendar responsive grid pass  ·  **M**
-- **Area:** Responsive
-- **Files:** `board.tsx` (uses `min-h-screen` only, no `sm:`/`md:` classes), `calendar.tsx` (same), `admin.*.tsx`.
-- **Why:** Ripgrep shows zero responsive breakpoint utilities in these files. Columns don't reflow; tables overflow horizontally on tablet.
-- **Recommendation:** apply the `grid-cols-[minmax(0,1fr)_auto]` header pattern from the responsive-layout guidance, wrap tables in `overflow-x-auto`, promote grids at `md:`.
+### 5. Surface B — standalone page
 
-### 10. Toolbar overflow & hit-target audit in the editor  ·  **M**
-- **Area:** Panel/toolbar ergonomics
-- **Files:** `src/components/editor/EditorRail.tsx`, `EditorStatusBar.tsx`, `AutosaveIndicator.tsx` (uppercase tracked `text-[10px]` buttons ~20px tall — under WCAG 24px target).
-- **Why:** Autosave/cloud-sync/queue chips are three side-by-side buttons at 10px text; on narrower editor widths the status bar can overflow. No overflow-menu pattern exists.
-- **Recommendation:** raise interactive chips to a 28×h tap target; group into a single popover ("Sync status") that opens the detailed view; add an overflow `⋯` for rail actions that don't fit.
+- Route `src/routes/_authenticated/generate.tsx` — full-page layout with `<GeneratorStudio context="standalone" />` plus a "Library" sidebar listing prior `generated_assets` rows for the user (thumbnail grid, click to preview / copy URL / download).
+- Reachable from the editor rail's overflow menu and from the top nav.
+- Has its own head() metadata (title/desc/og).
 
----
+### 6. Brand-awareness (optional toggle)
 
-## Suggested sequencing
+When enabled, the prompt-craft function receives:
+- Active issue's palette (existing `data.palette`),
+- Fonts (`master.fonts.display` / `serif` label),
+- Publication name + tagline,
+- A short style descriptor derived from the brand kit.
 
-1. **Day 1 quick wins:** #1 (delete dead dark), #3 (toasts), #4 (shortcut hint), #6 (upload spinners), #7 (empty-state component), #8 (mobile guard).
-2. **Week 1:** #2 (onboarding), #5 (panel shell), #9 (responsive dashboards), #10 (toolbar).
-3. **Later / optional:** ship a real dark theme (#1 long path) once brand direction is confirmed.
+These are woven into the refined prompt (e.g. *"...palette dominated by deep burgundy #6b1320 and cream #f5f0e6, editorial serif type feel, quiet luxury tone..."*). Palette is a soft steer, not a hard constraint.
 
-Ready for you to pick which items to implement — say the numbers and I'll switch to build mode with a focused plan.
+### 7. Technical notes
+
+- **`flushSync` is mandatory** on the SSE parser — without it React batches partial frames and progressive preview disappears.
+- **CSS blur** on partial frames (`filter: blur(16px)` → `blur(0)` on completion) so intermediate images don't flicker.
+- Never call the image endpoint from client code with `LOVABLE_API_KEY` — always through the server route.
+- Content-policy errors from the model (real people, IP characters) surface as user-visible errors with a suggestion to rephrase or switch model.
+- No new secrets; `LOVABLE_API_KEY` is already provisioned.
+
+### 8. Deferrals
+
+Not in this pass (call out for future rounds):
+- Multi-image reference conditioning (upload a photo → "generate more like this"). Nano Banana 2 supports it, but adds UI/upload complexity.
+- Video generation.
+- Full ad layout as compiled InDesign-ready art (this pass generates the *image*; assembly into the Ad page template can be a follow-up).
+
+Ship the plan?
