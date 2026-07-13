@@ -120,7 +120,6 @@ export const craftAdCopy = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(key);
     const model = gateway("google/gemini-2.5-flash");
 
-    const { generateText, Output } = await import("ai");
 
     const brandBits = data.brand
       ? [
