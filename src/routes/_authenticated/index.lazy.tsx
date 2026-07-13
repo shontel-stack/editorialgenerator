@@ -17,6 +17,7 @@ import { useSnapSettings, mergeSnapSettings, type SnapSettings } from "@/lib/sna
 import { LayoutEditProvider } from "@/components/LayoutEdit";
 import { SortableList } from "@/components/SortableItem";
 import { AssistantPanel } from "@/components/AssistantPanel";
+import { GeneratorStudio, type GeneratorBrandContext } from "@/components/GeneratorStudio";
 import { AttachmentControl } from "@/components/AttachmentControl";
 import { PageReferencesEditor } from "@/components/PageReferencesEditor";
 import { PageBackgroundUploader, type BackgroundAssignment } from "@/components/PageBackgroundUploader";
