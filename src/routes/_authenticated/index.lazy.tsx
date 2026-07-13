@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -156,6 +156,7 @@ import {
   type CustomContentsData,
   type ContentsData,
   type CoverData,
+  type CoverTocEntry,
   type FontOption,
   type IssueDoc,
   type IssueFonts,
@@ -1980,6 +1981,7 @@ function Index() {
                 <CoverEditor
                   data={selected.data as CoverData}
                   set={(p) => updateData<typeof selected>(selected.id, p)}
+                  pages={issue.pages}
                 />
               )}
               {selected.pageType === "article" && (
@@ -3453,9 +3455,11 @@ function labelForNode(p: IssuePageNode): string {
 function CoverEditor({
   data,
   set,
+  pages,
 }: {
   data: CoverData;
   set: (p: Partial<CoverData>) => void;
+  pages: IssuePageNode[];
 }) {
   return (
     <>
@@ -3513,6 +3517,11 @@ function CoverEditor({
         <Field label="Feature line"><Input value={data.feature} onChange={(v) => set({ feature: v })} /></Field>
         <Field label="Image credit"><Input value={data.credit} onChange={(v) => set({ credit: v })} /></Field>
       </Section>
+      <CoverTocEditor
+        entries={data.tocEntries ?? []}
+        pages={pages}
+        onChange={(entries) => set({ tocEntries: entries })}
+      />
       <Section title="QR Code">
         <Field label="URL (leave empty to hide)"><Input value={data.qrUrl} onChange={(v) => set({ qrUrl: v })} /></Field>
         <Field label="Caption"><Input value={data.qrCaption} onChange={(v) => set({ qrCaption: v })} /></Field>
@@ -3541,6 +3550,137 @@ function CoverEditor({
     </>
   );
 }
+
+function CoverTocEditor({
+  entries,
+  pages,
+  onChange,
+}: {
+  entries: CoverTocEntry[];
+  pages: IssuePageNode[];
+  onChange: (entries: CoverTocEntry[]) => void;
+}) {
+  const linkable = pages.filter((p) => p.pageType !== "cover" && p.pageType !== "back");
+  const update = (i: number, patch: Partial<CoverTocEntry>) => {
+    const next = entries.map((e, idx) => (idx === i ? { ...e, ...patch } : e));
+    onChange(next);
+  };
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= entries.length) return;
+    const next = entries.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  const remove = (i: number) => onChange(entries.filter((_, idx) => idx !== i));
+  const add = () => {
+    if (entries.length >= 6) return;
+    onChange([...entries, { label: "NEW", page: "1", targetPageId: null }]);
+  };
+
+  return (
+    <Section title="Featuring / TOC row">
+      <p className="text-[11px] leading-relaxed text-muted-foreground -mt-1 mb-2">
+        The aligned "pg." row at the bottom of the cover. Two to six entries; page numbers link to the article page you pick.
+      </p>
+      <div className="space-y-3">
+        {entries.length === 0 && (
+          <div className="text-[11px] text-muted-foreground italic">
+            No entries yet. Add one below to show a linked page-number row on the cover.
+          </div>
+        )}
+        {entries.map((entry, i) => {
+          const targetIdx = entry.targetPageId
+            ? pages.findIndex((p) => p.id === entry.targetPageId)
+            : -1;
+          return (
+            <div key={i} className="border border-border/70 p-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] tracking-[0.25em] uppercase text-muted-foreground">
+                  Entry {i + 1}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    aria-label="Move up"
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                    className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Move down"
+                    disabled={i === entries.length - 1}
+                    onClick={() => move(i, 1)}
+                    className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Remove entry"
+                    onClick={() => remove(i)}
+                    className="p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+              <Field label="Label">
+                <Input value={entry.label} onChange={(v) => update(i, { label: v })} />
+              </Field>
+              <Field label="Page number caption">
+                <Input value={entry.page} onChange={(v) => update(i, { page: v })} />
+              </Field>
+              <Field label="Links to page">
+                <select
+                  value={entry.targetPageId ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value || null;
+                    const patch: Partial<CoverTocEntry> = { targetPageId: id };
+                    if (id) {
+                      const idx = pages.findIndex((p) => p.id === id);
+                      if (idx >= 0) patch.page = String(idx + 1);
+                    }
+                    update(i, patch);
+                  }}
+                  className="w-full border border-border bg-background px-2 py-1.5 text-sm"
+                >
+                  <option value="">— No link —</option>
+                  {linkable.map((p) => {
+                    const idx = pages.findIndex((x) => x.id === p.id);
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {`Pg. ${idx + 1} · ${labelForNode(p) ?? p.pageType}`}
+                      </option>
+                    );
+                  })}
+                </select>
+                {targetIdx >= 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Currently linked to page {targetIdx + 1}.
+                  </p>
+                )}
+              </Field>
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={add}
+          disabled={entries.length >= 6}
+          className="w-full border border-dashed border-border py-2 text-[11px] tracking-[0.25em] uppercase text-muted-foreground hover:text-foreground hover:border-foreground/40 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {entries.length >= 6 ? "Max 6 entries" : "+ Add entry"}
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+
 
 function ArticleEditor({
   data,
