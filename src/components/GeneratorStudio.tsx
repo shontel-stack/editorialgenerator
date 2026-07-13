@@ -394,6 +394,17 @@ export function GeneratorStudio({
               </div>
             )}
           </div>
+
+          {/* Ad copy overlay — only for full ads */}
+          {creativeType === "ad" && isFinal && (
+            <AdCopyPanel
+              adCopy={adCopy}
+              onChange={setAdCopy}
+              onGenerate={handleGenerateCopy}
+              loading={copyLoading}
+              accentSwatches={brand?.paletteHex ?? []}
+            />
+          )}
           <div className="flex flex-wrap gap-1.5">
             {context === "editor" && onUseImage && (
               <button
