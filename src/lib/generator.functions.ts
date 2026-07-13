@@ -101,6 +101,78 @@ export const craftGenerationPrompt = createServerFn({ method: "POST" })
     return { refined };
   });
 
+const AdCopyInput = z.object({
+  brief: z.string().min(2).max(2000),
+  refinedPrompt: z.string().max(4000).optional(),
+  brand: BrandContextSchema,
+});
+
+/**
+ * Generate ad copy — headline, optional subhead, short body, CTA — plus a
+ * suggested placement zone and text-color polarity for overlaying on the
+ * generated ad image. Uses structured output via the `Output` API.
+ */
+export const craftAdCopy = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => AdCopyInput.parse(input))
+  .handler(async ({ data }) => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+    const gateway = createLovableAiGatewayProvider(key);
+    const model = gateway("google/gemini-2.5-flash");
+
+    const { generateText, Output } = await import("ai");
+
+    const brandBits = data.brand
+      ? [
+          data.brand.publication ? `Publication/brand: ${data.brand.publication}.` : "",
+          data.brand.tagline ? `Tagline: ${data.brand.tagline}.` : "",
+          data.brand.tone ? `Tone: ${data.brand.tone}.` : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "";
+
+    const system = [
+      "You write short, elegant editorial ad copy for a print/digital magazine ad.",
+      "Return concise fields only. Headline under 8 words. Subhead under 12 words. Body under 24 words. CTA 2-4 words.",
+      "Placement is where the text sits on the image; pick a zone with negative space.",
+      "textPolarity is 'light' when overlaying on a dark image area, 'dark' when overlaying on a light area.",
+    ].join(" ");
+
+    const prompt = [
+      `Brief: ${data.brief}`,
+      data.refinedPrompt ? `Image prompt for reference: ${data.refinedPrompt}` : "",
+      brandBits,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const { experimental_output: output } = await generateText({
+      model,
+      system,
+      prompt,
+      experimental_output: Output.object({
+        schema: z.object({
+          headline: z.string(),
+          subhead: z.string().optional().default(""),
+          body: z.string(),
+          cta: z.string(),
+          placement: z.enum([
+            "top-left",
+            "top-center",
+            "top-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
+          ]),
+          textPolarity: z.enum(["light", "dark"]),
+        }),
+      }),
+    });
+
+    return output;
+  });
+
 const SaveInput = z.object({
   creativeType: z.enum(CREATIVE_TYPES),
   prompt: z.string().min(1).max(4000),
