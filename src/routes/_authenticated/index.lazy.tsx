@@ -3511,6 +3511,11 @@ function CoverEditor({
           </div>
         </Field>
       </Section>
+      <CoverTocEditor
+        entries={data.tocEntries ?? []}
+        pages={pages}
+        onChange={(entries) => set({ tocEntries: entries })}
+      />
       <Section title="Cover Story">
         <Field label="Headline"><Input value={data.headline} onChange={(v) => set({ headline: v })} /></Field>
         <Field label="Dek"><Textarea value={data.dek} onChange={(v) => set({ dek: v })} rows={3} /></Field>
