@@ -450,3 +450,185 @@ export function GeneratorStudio({
     </div>
   );
 }
+
+const PLACEMENTS: Array<{ id: AdPlacement; label: string }> = [
+  { id: "top-left", label: "↖" },
+  { id: "top-center", label: "↑" },
+  { id: "top-right", label: "↗" },
+  { id: "bottom-left", label: "↙" },
+  { id: "bottom-center", label: "↓" },
+  { id: "bottom-right", label: "↘" },
+];
+
+function AdCopyPanel({
+  adCopy,
+  onChange,
+  onGenerate,
+  loading,
+  accentSwatches,
+}: {
+  adCopy: AdCopy | null;
+  onChange: (next: AdCopy | null) => void;
+  onGenerate: () => void;
+  loading: boolean;
+  accentSwatches: string[];
+}) {
+  const set = <K extends keyof AdCopy>(k: K, v: AdCopy[K]) => {
+    if (!adCopy) return;
+    onChange({ ...adCopy, [k]: v });
+  };
+  return (
+    <div className="border border-border p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground inline-flex items-center gap-1.5">
+          <Type className="h-3 w-3" /> Ad copy overlay
+        </div>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.2em] uppercase border border-border px-2.5 py-1 hover:border-foreground/40 disabled:opacity-40"
+        >
+          <Sparkles className="h-3 w-3" />
+          {loading ? "Writing…" : adCopy ? "Rewrite" : "Generate copy"}
+        </button>
+      </div>
+
+      {adCopy ? (
+        <div className="space-y-2">
+          <input
+            value={adCopy.headline}
+            onChange={(e) => set("headline", e.target.value)}
+            placeholder="Headline"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-sm font-serif"
+          />
+          <input
+            value={adCopy.subhead ?? ""}
+            onChange={(e) => set("subhead", e.target.value)}
+            placeholder="Subhead (optional)"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-xs italic"
+          />
+          <textarea
+            value={adCopy.body ?? ""}
+            onChange={(e) => set("body", e.target.value)}
+            rows={2}
+            placeholder="Body"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-xs resize-y"
+          />
+          <input
+            value={adCopy.cta ?? ""}
+            onChange={(e) => set("cta", e.target.value)}
+            placeholder="CTA"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-xs tracking-wider uppercase"
+          />
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div>
+              <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mb-1">
+                Placement
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {PLACEMENTS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => set("placement", p.id)}
+                    className={
+                      "h-7 border text-xs " +
+                      (adCopy.placement === p.id
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground/40")
+                    }
+                    title={p.id}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mb-1">
+                Text tone
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {(["light", "dark"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => set("textPolarity", t)}
+                    className={
+                      "h-7 border text-[10px] tracking-[0.2em] uppercase " +
+                      (adCopy.textPolarity === t
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground/40")
+                    }
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mt-2 mb-1">
+                Font
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {(["serif", "sans"] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => set("fontFamily", f)}
+                    className={
+                      "h-7 border text-[10px] tracking-[0.2em] uppercase " +
+                      ((adCopy.fontFamily ?? "serif") === f
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground/40")
+                    }
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mb-1">
+              CTA accent
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[undefined, ...(accentSwatches || []), "#000000", "#ffffff"].map((c, i) => (
+                <button
+                  key={`${c ?? "auto"}-${i}`}
+                  type="button"
+                  onClick={() => set("accent", c)}
+                  className={
+                    "h-6 w-6 border " +
+                    ((adCopy.accent ?? undefined) === c
+                      ? "ring-2 ring-foreground border-foreground"
+                      : "border-border")
+                  }
+                  style={{ background: c ?? "transparent" }}
+                  title={c ?? "auto"}
+                >
+                  {c === undefined && <span className="text-[9px]">A</span>}
+                </button>
+              ))}
+              <input
+                type="color"
+                value={adCopy.accent ?? "#111111"}
+                onChange={(e) => set("accent", e.target.value)}
+                className="h-6 w-8 border border-border bg-background p-0"
+                title="Custom color"
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-[11px] text-muted-foreground">
+          Generate ad copy to overlay headline, body, and CTA on this image — then edit any field
+          and save the composited ad.
+        </div>
+      )}
+    </div>
+  );
+}
+
