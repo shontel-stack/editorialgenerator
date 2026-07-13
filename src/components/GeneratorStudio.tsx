@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Wand2, Sparkles, Download, Save, RotateCw, Check } from "lucide-react";
+import { Wand2, Sparkles, Download, Save, RotateCw, Check, Type } from "lucide-react";
 import { streamImage } from "@/lib/streamImage";
 import {
   craftGenerationPrompt,
+  craftAdCopy,
   saveGeneratedAssetRecord,
   type CreativeType,
 } from "@/lib/generator.functions";
 import { dataUrlToBlob, uploadEditorImage } from "@/lib/imageUpload";
+import { renderAdComposite, type AdCopy, type AdPlacement } from "@/lib/adOverlay";
+
 
 export type GeneratorBrandContext = {
   publication?: string;
