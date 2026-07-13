@@ -58,9 +58,13 @@ export function GeneratorStudio({
   const [crafting, setCrafting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [adCopy, setAdCopy] = useState<AdCopy | null>(null);
+  const [composited, setComposited] = useState<string | null>(null);
+  const [copyLoading, setCopyLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const craft = useServerFn(craftGenerationPrompt);
+  const craftCopy = useServerFn(craftAdCopy);
   const saveRow = useServerFn(saveGeneratedAssetRecord);
 
   useEffect(() => {
