@@ -3455,9 +3455,11 @@ function labelForNode(p: IssuePageNode): string {
 function CoverEditor({
   data,
   set,
+  pages,
 }: {
   data: CoverData;
   set: (p: Partial<CoverData>) => void;
+  pages: IssuePageNode[];
 }) {
   return (
     <>
