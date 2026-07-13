@@ -232,6 +232,70 @@ export function GeneratorStudio({
     }
   }
 
+  async function handleGenerateVariants() {
+    const prompt = refined.trim() || brief.trim();
+    if (!prompt) {
+      toast.error("Add a brief or enhance a prompt first.");
+      return;
+    }
+    // Cancel any in-flight single or variant runs first.
+    abortRef.current?.abort();
+    variantAbortsRef.current.forEach((c) => c.abort());
+    variantAbortsRef.current = [];
+
+    const n = variantCount;
+    setImage(null);
+    setIsFinal(false);
+    setSaved(false);
+    setAdCopy(null);
+    setComposited(null);
+    setVariants(Array.from({ length: n }, () => ({ url: null, final: false })));
+    setVariantsRunning(true);
+
+    const ctrls: AbortController[] = [];
+    const runs = Array.from({ length: n }, (_, i) => {
+      const ctrl = new AbortController();
+      ctrls.push(ctrl);
+      return streamImage(
+        "/api/generate-image",
+        prompt,
+        (url, final) => {
+          setVariants((prev) => {
+            const next = prev.slice();
+            next[i] = { url, final: final || next[i]?.final || false };
+            return next;
+          });
+        },
+        ctrl.signal,
+      ).catch((err) => {
+        if ((err as Error).name === "AbortError") return;
+        setVariants((prev) => {
+          const next = prev.slice();
+          next[i] = { url: next[i]?.url ?? null, final: false, error: (err as Error).message };
+          return next;
+        });
+      });
+    });
+    variantAbortsRef.current = ctrls;
+    try {
+      await Promise.all(runs);
+    } finally {
+      setVariantsRunning(false);
+    }
+  }
+
+  function handleSelectVariant(idx: number) {
+    const v = variants[idx];
+    if (!v?.url || !v.final) return;
+    // Promote the selected variant into the main preview so Save / Use /
+    // Download / ad-copy overlay all keep working unchanged.
+    setImage(v.url);
+    setIsFinal(true);
+    setSaved(false);
+    setAdCopy(null);
+    setComposited(null);
+  }
+
   // Re-composite whenever the image or ad copy changes.
   useEffect(() => {
     if (!image || !isFinal || !adCopy) {
