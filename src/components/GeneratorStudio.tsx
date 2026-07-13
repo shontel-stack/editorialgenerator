@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Wand2, Sparkles, Download, Save, RotateCw, Check } from "lucide-react";
+import { Wand2, Sparkles, Download, Save, RotateCw, Check, Type } from "lucide-react";
 import { streamImage } from "@/lib/streamImage";
 import {
   craftGenerationPrompt,
+  craftAdCopy,
   saveGeneratedAssetRecord,
   type CreativeType,
 } from "@/lib/generator.functions";
 import { dataUrlToBlob, uploadEditorImage } from "@/lib/imageUpload";
+import { renderAdComposite, type AdCopy, type AdPlacement } from "@/lib/adOverlay";
+
 
 export type GeneratorBrandContext = {
   publication?: string;
@@ -55,9 +58,13 @@ export function GeneratorStudio({
   const [crafting, setCrafting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [adCopy, setAdCopy] = useState<AdCopy | null>(null);
+  const [composited, setComposited] = useState<string | null>(null);
+  const [copyLoading, setCopyLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const craft = useServerFn(craftGenerationPrompt);
+  const craftCopy = useServerFn(craftAdCopy);
   const saveRow = useServerFn(saveGeneratedAssetRecord);
 
   useEffect(() => {
@@ -107,6 +114,8 @@ export function GeneratorStudio({
     setImage(null);
     setIsFinal(false);
     setSaved(false);
+    setAdCopy(null);
+    setComposited(null);
     try {
       await streamImage(
         "/api/generate-image",
@@ -126,10 +135,12 @@ export function GeneratorStudio({
     }
   }
 
+  const exportSrc = composited || image;
+
   async function handleSave() {
-    if (!image || !isFinal) return;
+    if (!exportSrc || !isFinal) return;
     try {
-      const blob = dataUrlToBlob(image);
+      const blob = dataUrlToBlob(exportSrc);
       const up = await uploadEditorImage({
         issueId: "generated",
         input: blob,
@@ -155,19 +166,17 @@ export function GeneratorStudio({
   }
 
   function handleDownload() {
-    if (!image || !isFinal) return;
+    if (!exportSrc || !isFinal) return;
     const a = document.createElement("a");
-    a.href = image;
+    a.href = exportSrc;
     a.download = `${creativeType}-${Date.now()}.png`;
     a.click();
   }
 
   async function handleUse() {
-    if (!image || !isFinal || !onUseImage) return;
+    if (!exportSrc || !isFinal || !onUseImage) return;
     try {
-      // Upload before placing so the issue doc stores a persistent URL, not
-      // a fat data: URL that breaks autosave/localStorage.
-      const blob = dataUrlToBlob(image);
+      const blob = dataUrlToBlob(exportSrc);
       const up = await uploadEditorImage({
         issueId: "generated",
         input: blob,
@@ -181,8 +190,62 @@ export function GeneratorStudio({
     }
   }
 
+  async function handleGenerateCopy() {
+    if (!brief.trim() && !refined.trim()) {
+      toast.error("Add a brief first.");
+      return;
+    }
+    setCopyLoading(true);
+    try {
+      const res = await craftCopy({
+        data: {
+          brief: brief.trim() || refined.trim(),
+          refinedPrompt: refined.trim() || undefined,
+          brand: brandForPrompt(),
+        },
+      });
+      setAdCopy({
+        headline: res.headline,
+        subhead: res.subhead || "",
+        body: res.body,
+        cta: res.cta,
+        placement: res.placement as AdPlacement,
+        textPolarity: res.textPolarity,
+        fontFamily: "serif",
+        accent: brand?.paletteHex?.[0],
+      });
+      toast.success("Ad copy generated");
+    } catch (err) {
+      toast.error((err as Error).message ?? "Copy generation failed");
+    } finally {
+      setCopyLoading(false);
+    }
+  }
+
+  // Re-composite whenever the image or ad copy changes.
+  useEffect(() => {
+    if (!image || !isFinal || !adCopy) {
+      setComposited(null);
+      return;
+    }
+    let cancelled = false;
+    renderAdComposite(image, adCopy)
+      .then((url) => {
+        if (!cancelled) setComposited(url);
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error((err as Error).message ?? "Overlay render failed");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [image, isFinal, adCopy]);
+
+  const displaySrc = composited || image;
+
   const previewAspectClass =
     aspect === "portrait" ? "aspect-[3/4]" : aspect === "landscape" ? "aspect-[16/9]" : "aspect-square";
+
 
   return (
     <div className="space-y-4">
@@ -318,7 +381,7 @@ export function GeneratorStudio({
             }
           >
             <img
-              src={image}
+              src={displaySrc || ""}
               alt=""
               className={
                 "w-full h-full object-cover transition-[filter] duration-500 " +
@@ -331,6 +394,17 @@ export function GeneratorStudio({
               </div>
             )}
           </div>
+
+          {/* Ad copy overlay — only for full ads */}
+          {creativeType === "ad" && isFinal && (
+            <AdCopyPanel
+              adCopy={adCopy}
+              onChange={setAdCopy}
+              onGenerate={handleGenerateCopy}
+              loading={copyLoading}
+              accentSwatches={brand?.paletteHex ?? []}
+            />
+          )}
           <div className="flex flex-wrap gap-1.5">
             {context === "editor" && onUseImage && (
               <button
@@ -376,3 +450,185 @@ export function GeneratorStudio({
     </div>
   );
 }
+
+const PLACEMENTS: Array<{ id: AdPlacement; label: string }> = [
+  { id: "top-left", label: "↖" },
+  { id: "top-center", label: "↑" },
+  { id: "top-right", label: "↗" },
+  { id: "bottom-left", label: "↙" },
+  { id: "bottom-center", label: "↓" },
+  { id: "bottom-right", label: "↘" },
+];
+
+function AdCopyPanel({
+  adCopy,
+  onChange,
+  onGenerate,
+  loading,
+  accentSwatches,
+}: {
+  adCopy: AdCopy | null;
+  onChange: (next: AdCopy | null) => void;
+  onGenerate: () => void;
+  loading: boolean;
+  accentSwatches: string[];
+}) {
+  const set = <K extends keyof AdCopy>(k: K, v: AdCopy[K]) => {
+    if (!adCopy) return;
+    onChange({ ...adCopy, [k]: v });
+  };
+  return (
+    <div className="border border-border p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground inline-flex items-center gap-1.5">
+          <Type className="h-3 w-3" /> Ad copy overlay
+        </div>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.2em] uppercase border border-border px-2.5 py-1 hover:border-foreground/40 disabled:opacity-40"
+        >
+          <Sparkles className="h-3 w-3" />
+          {loading ? "Writing…" : adCopy ? "Rewrite" : "Generate copy"}
+        </button>
+      </div>
+
+      {adCopy ? (
+        <div className="space-y-2">
+          <input
+            value={adCopy.headline}
+            onChange={(e) => set("headline", e.target.value)}
+            placeholder="Headline"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-sm font-serif"
+          />
+          <input
+            value={adCopy.subhead ?? ""}
+            onChange={(e) => set("subhead", e.target.value)}
+            placeholder="Subhead (optional)"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-xs italic"
+          />
+          <textarea
+            value={adCopy.body ?? ""}
+            onChange={(e) => set("body", e.target.value)}
+            rows={2}
+            placeholder="Body"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-xs resize-y"
+          />
+          <input
+            value={adCopy.cta ?? ""}
+            onChange={(e) => set("cta", e.target.value)}
+            placeholder="CTA"
+            className="w-full border border-border bg-background px-2.5 py-1.5 text-xs tracking-wider uppercase"
+          />
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div>
+              <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mb-1">
+                Placement
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {PLACEMENTS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => set("placement", p.id)}
+                    className={
+                      "h-7 border text-xs " +
+                      (adCopy.placement === p.id
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground/40")
+                    }
+                    title={p.id}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mb-1">
+                Text tone
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {(["light", "dark"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => set("textPolarity", t)}
+                    className={
+                      "h-7 border text-[10px] tracking-[0.2em] uppercase " +
+                      (adCopy.textPolarity === t
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground/40")
+                    }
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mt-2 mb-1">
+                Font
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {(["serif", "sans"] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => set("fontFamily", f)}
+                    className={
+                      "h-7 border text-[10px] tracking-[0.2em] uppercase " +
+                      ((adCopy.fontFamily ?? "serif") === f
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground/40")
+                    }
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground mb-1">
+              CTA accent
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[undefined, ...(accentSwatches || []), "#000000", "#ffffff"].map((c, i) => (
+                <button
+                  key={`${c ?? "auto"}-${i}`}
+                  type="button"
+                  onClick={() => set("accent", c)}
+                  className={
+                    "h-6 w-6 border " +
+                    ((adCopy.accent ?? undefined) === c
+                      ? "ring-2 ring-foreground border-foreground"
+                      : "border-border")
+                  }
+                  style={{ background: c ?? "transparent" }}
+                  title={c ?? "auto"}
+                >
+                  {c === undefined && <span className="text-[9px]">A</span>}
+                </button>
+              ))}
+              <input
+                type="color"
+                value={adCopy.accent ?? "#111111"}
+                onChange={(e) => set("accent", e.target.value)}
+                className="h-6 w-8 border border-border bg-background p-0"
+                title="Custom color"
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-[11px] text-muted-foreground">
+          Generate ad copy to overlay headline, body, and CTA on this image — then edit any field
+          and save the composited ad.
+        </div>
+      )}
+    </div>
+  );
+}
+
