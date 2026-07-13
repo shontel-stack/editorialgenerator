@@ -156,6 +156,7 @@ import {
   type CustomContentsData,
   type ContentsData,
   type CoverData,
+  type CoverTocEntry,
   type FontOption,
   type IssueDoc,
   type IssueFonts,
