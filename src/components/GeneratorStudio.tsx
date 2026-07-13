@@ -114,6 +114,8 @@ export function GeneratorStudio({
     setImage(null);
     setIsFinal(false);
     setSaved(false);
+    setAdCopy(null);
+    setComposited(null);
     try {
       await streamImage(
         "/api/generate-image",
