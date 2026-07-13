@@ -381,7 +381,7 @@ export function GeneratorStudio({
             }
           >
             <img
-              src={image}
+              src={displaySrc || ""}
               alt=""
               className={
                 "w-full h-full object-cover transition-[filter] duration-500 " +
