@@ -1,0 +1,378 @@
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { Wand2, Sparkles, Download, Save, RotateCw, Check } from "lucide-react";
+import { streamImage } from "@/lib/streamImage";
+import {
+  craftGenerationPrompt,
+  saveGeneratedAssetRecord,
+  type CreativeType,
+} from "@/lib/generator.functions";
+import { dataUrlToBlob, uploadEditorImage } from "@/lib/imageUpload";
+
+export type GeneratorBrandContext = {
+  publication?: string;
+  tagline?: string;
+  paletteHex?: string[];
+  fontLabel?: string;
+  tone?: string;
+};
+
+const TYPES: Array<{ id: CreativeType; label: string; hint: string }> = [
+  { id: "model", label: "Model shot", hint: "Editorial fashion / lifestyle portrait, styling, mood." },
+  { id: "ad", label: "Full ad", hint: "Polished ad image; text is overlaid separately by the layout system." },
+  { id: "product", label: "Product / still-life", hint: "Studio still-life or product hero." },
+  { id: "hero", label: "Article hero", hint: "Cinematic story-hero art matching a headline." },
+];
+
+const ASPECTS: Array<{ id: "portrait" | "square" | "landscape"; label: string }> = [
+  { id: "portrait", label: "Portrait 3:4" },
+  { id: "square", label: "Square 1:1" },
+  { id: "landscape", label: "Landscape 16:9" },
+];
+
+/**
+ * Shared generator UI used by both the in-editor sidebar panel and the
+ * standalone /generate page. Streams partial preview frames from the
+ * server route at /api/generate-image and offers save / download / place.
+ */
+export function GeneratorStudio({
+  brand,
+  onUseImage,
+  context,
+}: {
+  brand?: GeneratorBrandContext | null;
+  onUseImage?: (url: string) => void;
+  context: "editor" | "standalone";
+}) {
+  const [creativeType, setCreativeType] = useState<CreativeType>("model");
+  const [aspect, setAspect] = useState<"portrait" | "square" | "landscape">("portrait");
+  const [brief, setBrief] = useState("");
+  const [refined, setRefined] = useState("");
+  const [useBrand, setUseBrand] = useState(false);
+  const [image, setImage] = useState<string | null>(null);
+  const [isFinal, setIsFinal] = useState(false);
+  const [crafting, setCrafting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const craft = useServerFn(craftGenerationPrompt);
+  const saveRow = useServerFn(saveGeneratedAssetRecord);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
+  const brandForPrompt = () =>
+    useBrand && brand
+      ? {
+          publication: brand.publication,
+          tagline: brand.tagline,
+          paletteHex: brand.paletteHex,
+          fontLabel: brand.fontLabel,
+          tone: brand.tone,
+        }
+      : null;
+
+  async function handleEnhance() {
+    if (!brief.trim()) {
+      toast.error("Add a short brief first.");
+      return;
+    }
+    setCrafting(true);
+    try {
+      const res = await craft({
+        data: { creativeType, brief: brief.trim(), aspect, brand: brandForPrompt() },
+      });
+      setRefined(res.refined);
+      toast.success("Prompt enhanced");
+    } catch (err) {
+      toast.error((err as Error).message ?? "Failed to enhance prompt");
+    } finally {
+      setCrafting(false);
+    }
+  }
+
+  async function handleGenerate() {
+    const prompt = refined.trim() || brief.trim();
+    if (!prompt) {
+      toast.error("Add a brief or enhance a prompt first.");
+      return;
+    }
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    setGenerating(true);
+    setImage(null);
+    setIsFinal(false);
+    setSaved(false);
+    try {
+      await streamImage(
+        "/api/generate-image",
+        prompt,
+        (url, final) => {
+          setImage(url);
+          if (final) setIsFinal(true);
+        },
+        ctrl.signal,
+      );
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        toast.error((err as Error).message ?? "Generation failed");
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!image || !isFinal) return;
+    try {
+      const blob = dataUrlToBlob(image);
+      const up = await uploadEditorImage({
+        issueId: "generated",
+        input: blob,
+        fileName: `${creativeType}-${Date.now()}.png`,
+        folder: "generated",
+      });
+      await saveRow({
+        data: {
+          creativeType,
+          prompt: brief.trim() || refined.trim(),
+          refinedPrompt: refined.trim() || undefined,
+          storagePath: up.path,
+          publicUrl: up.url,
+          brandApplied: useBrand,
+          aspect,
+        },
+      });
+      setSaved(true);
+      toast.success("Saved to library");
+    } catch (err) {
+      toast.error((err as Error).message ?? "Save failed");
+    }
+  }
+
+  function handleDownload() {
+    if (!image || !isFinal) return;
+    const a = document.createElement("a");
+    a.href = image;
+    a.download = `${creativeType}-${Date.now()}.png`;
+    a.click();
+  }
+
+  async function handleUse() {
+    if (!image || !isFinal || !onUseImage) return;
+    try {
+      // Upload before placing so the issue doc stores a persistent URL, not
+      // a fat data: URL that breaks autosave/localStorage.
+      const blob = dataUrlToBlob(image);
+      const up = await uploadEditorImage({
+        issueId: "generated",
+        input: blob,
+        fileName: `${creativeType}-${Date.now()}.png`,
+        folder: "generated",
+      });
+      onUseImage(up.url);
+      toast.success("Placed on page");
+    } catch (err) {
+      toast.error((err as Error).message ?? "Couldn't place image");
+    }
+  }
+
+  const previewAspectClass =
+    aspect === "portrait" ? "aspect-[3/4]" : aspect === "landscape" ? "aspect-[16/9]" : "aspect-square";
+
+  return (
+    <div className="space-y-4">
+      {/* Creative type picker */}
+      <div>
+        <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-2">
+          Creative type
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {TYPES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setCreativeType(t.id)}
+              className={
+                "text-left px-3 py-2 border text-[11px] leading-tight transition-colors " +
+                (creativeType === t.id
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border hover:border-foreground/40 bg-background")
+              }
+            >
+              <div className="font-medium tracking-wide">{t.label}</div>
+              <div
+                className={
+                  "text-[10px] mt-0.5 " +
+                  (creativeType === t.id ? "text-background/70" : "text-muted-foreground")
+                }
+              >
+                {t.hint}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Brief */}
+      <div>
+        <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground mb-2">
+          Brief
+        </div>
+        <textarea
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+          rows={3}
+          placeholder={
+            creativeType === "model"
+              ? "A model in oversized cream wool coat, backlit on a rain-slick Paris street, early evening"
+              : creativeType === "ad"
+                ? "Amber perfume bottle on marble, warm lamp light, negative space top-right for headline"
+                : creativeType === "product"
+                  ? "A single ceramic espresso cup on linen, morning window light, soft shadows"
+                  : "Cinematic hero for a story about slow travel through the Dolomites in autumn"
+          }
+          className="w-full border border-border bg-background px-3 py-2 text-sm resize-y"
+        />
+      </div>
+
+      {/* Aspect + brand toggle */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-1.5">
+          {ASPECTS.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => setAspect(a.id)}
+              className={
+                "px-2.5 py-1 border text-[10px] tracking-[0.2em] uppercase " +
+                (aspect === a.id
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border hover:border-foreground/40")
+              }
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+        {brand && (
+          <label className="flex items-center gap-2 text-[11px] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={useBrand}
+              onChange={(e) => setUseBrand(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            <span className="tracking-wide">Brand-aware</span>
+          </label>
+        )}
+      </div>
+
+      {/* Enhance + refined prompt */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+            Refined prompt {refined ? "(editable)" : "(optional)"}
+          </div>
+          <button
+            type="button"
+            onClick={handleEnhance}
+            disabled={crafting || !brief.trim()}
+            className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.2em] uppercase border border-border px-2.5 py-1 hover:border-foreground/40 disabled:opacity-40"
+          >
+            <Sparkles className="h-3 w-3" />
+            {crafting ? "Enhancing…" : "Enhance"}
+          </button>
+        </div>
+        <textarea
+          value={refined}
+          onChange={(e) => setRefined(e.target.value)}
+          rows={3}
+          placeholder="Click Enhance to expand your brief into a detailed image prompt, or type your own."
+          className="w-full border border-border bg-background px-3 py-2 text-xs resize-y"
+        />
+      </div>
+
+      {/* Generate */}
+      <button
+        type="button"
+        onClick={handleGenerate}
+        disabled={generating || (!brief.trim() && !refined.trim())}
+        className="w-full inline-flex items-center justify-center gap-2 border border-foreground bg-foreground text-background px-4 py-2.5 text-[11px] tracking-[0.3em] uppercase hover:bg-foreground/90 disabled:opacity-40"
+      >
+        <Wand2 className="h-3.5 w-3.5" />
+        {generating ? "Generating…" : image ? "Regenerate" : "Generate"}
+      </button>
+
+      {/* Preview */}
+      {image && (
+        <div className="space-y-2">
+          <div
+            className={
+              "relative w-full overflow-hidden border border-border bg-secondary " +
+              previewAspectClass
+            }
+          >
+            <img
+              src={image}
+              alt=""
+              className={
+                "w-full h-full object-cover transition-[filter] duration-500 " +
+                (isFinal ? "blur-0" : "blur-2xl scale-105")
+              }
+            />
+            {!isFinal && (
+              <div className="absolute inset-x-0 bottom-0 bg-background/70 backdrop-blur-sm text-[10px] tracking-[0.3em] uppercase px-3 py-1.5 text-center">
+                Rendering…
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {context === "editor" && onUseImage && (
+              <button
+                type="button"
+                onClick={handleUse}
+                disabled={!isFinal}
+                className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 border border-foreground bg-foreground text-background px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase disabled:opacity-40"
+              >
+                <Check className="h-3 w-3" />
+                Use on this page
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!isFinal || saved}
+              className="inline-flex items-center justify-center gap-1.5 border border-border px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase hover:border-foreground/40 disabled:opacity-40"
+            >
+              <Save className="h-3 w-3" />
+              {saved ? "Saved" : "Save to library"}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={!isFinal}
+              className="inline-flex items-center justify-center gap-1.5 border border-border px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase hover:border-foreground/40 disabled:opacity-40"
+            >
+              <Download className="h-3 w-3" />
+              PNG
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating}
+              className="inline-flex items-center justify-center gap-1.5 border border-border px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase hover:border-foreground/40 disabled:opacity-40"
+            >
+              <RotateCw className="h-3 w-3" />
+              Again
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
