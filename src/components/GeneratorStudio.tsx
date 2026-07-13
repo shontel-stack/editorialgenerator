@@ -72,7 +72,10 @@ export function GeneratorStudio({
   const saveRow = useServerFn(saveGeneratedAssetRecord);
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+      variantAbortsRef.current.forEach((c) => c.abort());
+    };
   }, []);
 
   const brandForPrompt = () =>
