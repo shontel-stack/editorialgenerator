@@ -1981,6 +1981,7 @@ function Index() {
                 <CoverEditor
                   data={selected.data as CoverData}
                   set={(p) => updateData<typeof selected>(selected.id, p)}
+                  pages={issue.pages}
                 />
               )}
               {selected.pageType === "article" && (
