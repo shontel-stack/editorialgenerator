@@ -1617,6 +1617,74 @@ function useDockPosition(storageKey: string): {
   return { dock, setDock };
 }
 
+/**
+ * Shared fixed container that sits directly under the sticky editor header
+ * (the black ribbon) and stacks every top-docked toolbar. Because it is
+ * `position: fixed` and portaled to <body>, the bars stay put while the
+ * canvas scrolls. Its measured height is published as `--top-dock-h` so the
+ * work area pads down by exactly the right amount.
+ */
+function useTopDockHost(): HTMLElement | null {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    let el = document.getElementById("pageluxe-top-dock");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "pageluxe-top-dock";
+      el.setAttribute("data-export-ignore", "true");
+      Object.assign(el.style, {
+        position: "fixed",
+        top: "var(--rail-top, 64px)",
+        left: "var(--rail-width, 56px)",
+        right: "0",
+        zIndex: "300",
+        display: "flex",
+        flexDirection: "column",
+        background: "#0a0a0a",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
+        fontFamily: "system-ui, sans-serif",
+      } as Partial<CSSStyleDeclaration>);
+      document.body.appendChild(el);
+    }
+    setHost(el);
+    const node = el;
+    const root = document.documentElement;
+    const apply = () => {
+      const h = node.childElementCount === 0 ? 0 : Math.round(node.getBoundingClientRect().height);
+      root.style.setProperty("--top-dock-h", `${h}px`);
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(node);
+    const mo = new MutationObserver(apply);
+    mo.observe(node, { childList: true });
+    window.addEventListener("resize", apply);
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+      window.removeEventListener("resize", apply);
+      requestAnimationFrame(() => {
+        const h = node.childElementCount === 0 ? 0 : Math.round(node.getBoundingClientRect().height);
+        root.style.setProperty("--top-dock-h", `${h}px`);
+      });
+    };
+  }, []);
+  return host;
+}
+
+/** Row wrapper used by every bar docked into the shared top dock. */
+const TOP_DOCK_ROW_STYLE: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: 6,
+  padding: "6px 10px",
+  borderTop: "1px solid rgba(255,255,255,0.14)",
+  color: "rgba(255,255,255,0.85)",
+  fontFamily: "system-ui, sans-serif",
+};
+
 function TopDockBar({
   defaultsOpen,
   setDefaultsOpen,
@@ -1632,79 +1700,42 @@ function TopDockBar({
   dock: DockSide;
   setDock: (v: DockSide) => void;
 }) {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const host = useTopDockHost();
+  if (!host) return null;
 
-  // Expose this bar's measured height as a CSS var so the page work area
-  // can pad-top by it (no scroll overlap) and the left rail can shift down.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const root = document.documentElement;
-    const apply = () => {
-      const h = Math.round(el.getBoundingClientRect().height);
-      root.style.setProperty("--top-dock-h", `${h}px`);
-    };
-    apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
-    window.addEventListener("resize", apply);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", apply);
-      root.style.removeProperty("--top-dock-h");
-    };
-  }, []);
-
-  const content = (
+  return (
     <>
-      <div
-        ref={ref}
-        data-export-ignore="true"
-        data-add-palette-dock="top"
-        onPointerDown={(e) => e.stopPropagation()}
-        style={{
-          position: "fixed",
-          top: "var(--rail-top, 64px)",
-          left: "var(--rail-width, 56px)",
-          right: 0,
-          background: "white",
-          borderBottom: "1px solid #ddd",
-          borderTop: "1px solid #ddd",
-          padding: "6px 10px",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 6,
-          alignItems: "center",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-          zIndex: 300,
-          fontFamily: "system-ui, sans-serif",
-        }}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#444", marginRight: 6 }}>
-          <Plus size={12} /> Add
-        </span>
-        <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
-        <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
-        <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
-        <PaletteBtn label="Rectangle" icon={<Square size={14} />} onClick={() => onAdd("shape", { shape: "rect" })} />
-        <PaletteBtn label="Ellipse" icon={<Circle size={14} />} onClick={() => onAdd("shape", { shape: "ellipse" })} />
-        <PaletteBtn label="Line" icon={<Minus size={14} />} onClick={() => onAdd("shape", { shape: "line" })} />
-        <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
-        <div style={{ width: 1, height: 20, background: "#ddd", margin: "0 4px" }} />
-        <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
-        <PaletteBtn label="Defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
-        <div style={{ marginLeft: "auto" }}>
-          <DockToggle dock={dock} onChange={setDock} />
-        </div>
-      </div>
+      {createPortal(
+        <div
+          data-export-ignore="true"
+          data-add-palette-dock="top"
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ ...TOP_DOCK_ROW_STYLE, order: 1 }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.75)", marginRight: 6, letterSpacing: 1, textTransform: "uppercase" }}>
+            <Plus size={12} /> Add
+          </span>
+          <PaletteBtn label="Text" icon={<TypeIcon size={14} />} onClick={() => onAdd("text")} />
+          <PaletteBtn label="Image" icon={<ImageIcon size={14} />} onClick={() => onAdd("image")} />
+          <PaletteBtn label="Video" icon={<Film size={14} />} onClick={() => onAdd("video")} />
+          <PaletteBtn label="Rectangle" icon={<Square size={14} />} onClick={() => onAdd("shape", { shape: "rect" })} />
+          <PaletteBtn label="Ellipse" icon={<Circle size={14} />} onClick={() => onAdd("shape", { shape: "ellipse" })} />
+          <PaletteBtn label="Line" icon={<Minus size={14} />} onClick={() => onAdd("shape", { shape: "line" })} />
+          <PaletteBtn label="QR" icon={<QrCode size={14} />} onClick={() => onAdd("embed")} />
+          <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)", margin: "0 4px" }} />
+          <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
+          <PaletteBtn label="Defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
+          <div style={{ marginLeft: "auto" }}>
+            <DockToggle dock={dock} onChange={setDock} />
+          </div>
+        </div>,
+        host,
+      )}
       {defaultsOpen && <BlockDefaultsPanel dock={dock} onClose={() => setDefaultsOpen(() => false)} />}
     </>
   );
-  // Portal to body so position:fixed isn't containerized by an ancestor
-  // with a `transform` (the scaled page wrapper).
-  if (typeof document === "undefined") return null;
-  return createPortal(content, document.body);
 }
+
 
 
 function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
