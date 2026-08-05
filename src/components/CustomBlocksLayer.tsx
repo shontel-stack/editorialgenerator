@@ -2358,7 +2358,7 @@ function BlockToolbar({
       data-export-ignore="true"
       data-block-toolbar-dock={dock}
       onPointerDown={(e) => e.stopPropagation()}
-      style={isTop ? topStyle : floatStyle}
+      style={isTop && host ? topStyle : floatStyle}
     >
       {isTop ? (
         <span style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", cursor: "default" }}>{block.kind}</span>
