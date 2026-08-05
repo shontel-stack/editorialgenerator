@@ -9,6 +9,7 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import { Link2, Move, RotateCcw, Type } from "lucide-react";
+import { beginCanvasDrag, endCanvasDrag, resetCanvasDrag } from "@/lib/canvasDrag";
 import type { CustomBlock, TokenContext, ContentsSlot } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
 
@@ -235,6 +236,18 @@ export function Draggable({
   } | null>(null);
   const [showSize, setShowSize] = useState(false);
 
+  // Safety net: if this block unmounts mid-drag, clear the global drag flag so
+  // the docked toolbars regain pointer events.
+  useEffect(
+    () => () => {
+      if (drag.current) {
+        drag.current = null;
+        resetCanvasDrag();
+      }
+    },
+    [],
+  );
+
   // Preview position wins over saved/local while a pending proposal exists.
   const dx = preview?.dx ?? local?.dx ?? saved?.dx ?? 0;
   const dy = preview?.dy ?? local?.dy ?? saved?.dy ?? 0;
@@ -296,6 +309,7 @@ export function Draggable({
       pageH: root ? root.getBoundingClientRect().height / s : 0,
     };
     el.setPointerCapture(e.pointerId);
+    beginCanvasDrag();
     setLocal({ dx, dy });
   };
   const onPointerMove = (e: RPointerEvent<HTMLDivElement>) => {
@@ -308,6 +322,7 @@ export function Draggable({
   };
   const onPointerUp = (e: RPointerEvent<HTMLDivElement>) => {
     if (!drag.current || !ctx) return;
+    endCanvasDrag();
     const s = ctx.scale || 1;
     const rawDx = drag.current.dx + (e.clientX - drag.current.x) / s;
     const rawDy = drag.current.dy + (e.clientY - drag.current.y) / s;

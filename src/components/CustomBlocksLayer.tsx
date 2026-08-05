@@ -16,6 +16,7 @@ import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
 import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
+import { beginCanvasDrag, endCanvasDrag } from "@/lib/canvasDrag";
 import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
 import {
   getImageBlockDefaults,
@@ -790,6 +791,7 @@ function CustomBlockView({
       box,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    beginCanvasDrag();
     onSelect(e.shiftKey);
   };
 
@@ -806,6 +808,7 @@ function CustomBlockView({
     const curRotate = (block as { rotate?: number }).rotate ?? 0;
     rotRef.current = { cx, cy, startAngle, startRotate: curRotate };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    beginCanvasDrag();
     onSelect(e.shiftKey);
   };
   const onRotateMove = (e: RPointerEvent<HTMLDivElement>) => {
@@ -821,6 +824,7 @@ function CustomBlockView({
   const onRotateUp = (e: RPointerEvent<HTMLDivElement>) => {
     if (!rotRef.current) return;
     rotRef.current = null;
+    endCanvasDrag();
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
 
@@ -927,6 +931,7 @@ function CustomBlockView({
   };
   const onUp = (e: RPointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
+    endCanvasDrag();
     const s = pageScale || 1;
     const dx = (e.clientX - dragRef.current.x) / s;
     const dy = (e.clientY - dragRef.current.y) / s;
@@ -1641,6 +1646,7 @@ function useTopDockHost(): HTMLElement | null {
         zIndex: "300",
         display: "flex",
         flexDirection: "column",
+        pointerEvents: "none",
         background: "#0a0a0a",
         boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
         fontFamily: "system-ui, sans-serif",
@@ -1675,6 +1681,7 @@ function useTopDockHost(): HTMLElement | null {
 
 /** Row wrapper used by every bar docked into the shared top dock. */
 const TOP_DOCK_ROW_STYLE: CSSProperties = {
+  pointerEvents: "auto",
   display: "flex",
   flexWrap: "wrap",
   alignItems: "center",
