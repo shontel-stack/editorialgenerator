@@ -8,7 +8,7 @@ import {
   type ReactNode,
   type PointerEvent as RPointerEvent,
 } from "react";
-import { Link2, Move, Type } from "lucide-react";
+import { Link2, Move, RotateCcw, Type } from "lucide-react";
 import type { CustomBlock, TokenContext, ContentsSlot } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
 
@@ -479,6 +479,26 @@ export function Draggable({
             <Move size={12} />
             <span>Selected</span>
           </span>
+          {saved && (
+            <button
+              type="button"
+              title="Reset position to template default"
+              onClick={() => ctx.setOverride(blockKey, null)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "2px 4px",
+                border: "1px solid #ddd",
+                borderRadius: 3,
+                background: "white",
+                cursor: "pointer",
+              }}
+            >
+              <RotateCcw size={12} />
+              <span>Reset</span>
+            </button>
+          )}
           <button
             type="button"
             title="Resize text"
