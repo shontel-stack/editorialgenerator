@@ -297,6 +297,7 @@ export function Draggable({
       pageH: root ? root.getBoundingClientRect().height / s : 0,
     };
     el.setPointerCapture(e.pointerId);
+    beginCanvasDrag();
     setLocal({ dx, dy });
   };
   const onPointerMove = (e: RPointerEvent<HTMLDivElement>) => {
