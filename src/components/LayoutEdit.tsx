@@ -236,6 +236,18 @@ export function Draggable({
   } | null>(null);
   const [showSize, setShowSize] = useState(false);
 
+  // Safety net: if this block unmounts mid-drag, clear the global drag flag so
+  // the docked toolbars regain pointer events.
+  useEffect(
+    () => () => {
+      if (drag.current) {
+        drag.current = null;
+        resetCanvasDrag();
+      }
+    },
+    [],
+  );
+
   // Preview position wins over saved/local while a pending proposal exists.
   const dx = preview?.dx ?? local?.dx ?? saved?.dx ?? 0;
   const dy = preview?.dy ?? local?.dy ?? saved?.dy ?? 0;
