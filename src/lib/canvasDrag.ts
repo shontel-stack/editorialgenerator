@@ -17,7 +17,21 @@ function root(): HTMLElement | null {
 export function beginCanvasDrag(): void {
   depth += 1;
   root()?.setAttribute(ATTR, "true");
+  // Safety net: if a handler never calls endCanvasDrag (pointer lost, block
+  // unmounted mid-drag), the dock would stay non-interactive forever.
+  if (typeof window !== "undefined") {
+    const clear = () => {
+      resetCanvasDrag();
+      window.removeEventListener("pointerup", clear);
+      window.removeEventListener("pointercancel", clear);
+      window.removeEventListener("blur", clear);
+    };
+    window.addEventListener("pointerup", clear);
+    window.addEventListener("pointercancel", clear);
+    window.addEventListener("blur", clear);
+  }
 }
+
 
 export function endCanvasDrag(): void {
   depth = Math.max(0, depth - 1);
