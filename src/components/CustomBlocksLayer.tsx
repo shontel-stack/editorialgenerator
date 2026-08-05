@@ -2255,34 +2255,60 @@ function BlockToolbar({
   const snapCfg = ctx?.snapSettings ?? global;
   const inv = 1 / (ctx?.scale ?? 1);
   const rotate = (block as { rotate?: number }).rotate ?? 0;
-  const { offset, dragHandleProps } = useDragOffset(inv, "pageluxe:blockToolbar:offset");
-  return (
+  const { dock, setDock } = useDockPosition("pageluxe:blockToolbar:dock");
+  const isTop = dock === "top";
+  const host = useTopDockHost();
+  const { offset, dragHandleProps } = useDragOffset(inv, isTop ? undefined : "pageluxe:blockToolbar:offset");
+
+  const floatStyle: CSSProperties = {
+    position: "absolute",
+    bottom: 24,
+    left: 24,
+    maxWidth: "calc(100% - 48px)",
+    transform: `translate(${offset.x}px, ${offset.y}px) scale(${inv})`,
+    transformOrigin: "bottom left",
+    background: "white",
+    border: "2px solid #2563eb",
+    borderRadius: 6,
+    padding: 10,
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+    boxShadow: "0 6px 24px rgba(0,0,0,0.15)",
+    zIndex: 300,
+    fontFamily: "system-ui, sans-serif",
+    fontSize: 12,
+    color: "#0a0a0a",
+  };
+  // Docked into the shared top bar: sits under the Add row so type / colour /
+  // alignment controls stay on screen while the canvas scrolls.
+  const topStyle: CSSProperties = {
+    ...TOP_DOCK_ROW_STYLE,
+    order: 2,
+    gap: 10,
+    background: "white",
+    color: "#0a0a0a",
+    fontSize: 12,
+    borderTop: "2px solid #2563eb",
+    maxHeight: "35vh",
+    overflowY: "auto",
+  };
+
+  const body = (
     <div
       data-export-ignore="true"
+      data-block-toolbar-dock={dock}
       onPointerDown={(e) => e.stopPropagation()}
-      style={{
-        position: "absolute",
-        bottom: 24,
-        left: 24,
-        maxWidth: "calc(100% - 48px)",
-        transform: `translate(${offset.x}px, ${offset.y}px) scale(${inv})`,
-        transformOrigin: "bottom left",
-        background: "white",
-        border: "2px solid #2563eb",
-        borderRadius: 6,
-        padding: 10,
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 10,
-        boxShadow: "0 6px 24px rgba(0,0,0,0.15)",
-        zIndex: 300,
-        fontFamily: "system-ui, sans-serif",
-        fontSize: 12,
-        color: "#0a0a0a",
-      }}
+      style={isTop ? topStyle : floatStyle}
     >
-      <span {...dragHandleProps} title="Drag to move toolbar" style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", ...dragHandleProps.style }}>⋮⋮ {block.kind}</span>
+      {isTop ? (
+        <span style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", cursor: "default" }}>{block.kind}</span>
+      ) : (
+        <span {...dragHandleProps} title="Drag to move toolbar" style={{ ...DRAG_GRIP_STYLE, color: "#2563eb", ...dragHandleProps.style }}>⋮⋮ {block.kind}</span>
+      )}
+      <DockToggle dock={dock} onChange={setDock} />
+
 
       {ctx?.contentsSlots && (block.kind === "text" || block.kind === "image") && (
         <SlotBindingControl block={block} onChange={onChange} slots={ctx.contentsSlots} />
