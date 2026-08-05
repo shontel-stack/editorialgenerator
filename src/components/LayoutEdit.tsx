@@ -9,6 +9,7 @@ import {
   type PointerEvent as RPointerEvent,
 } from "react";
 import { Link2, Move, RotateCcw, Type } from "lucide-react";
+import { beginCanvasDrag, endCanvasDrag, resetCanvasDrag } from "@/lib/canvasDrag";
 import type { CustomBlock, TokenContext, ContentsSlot } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
 
