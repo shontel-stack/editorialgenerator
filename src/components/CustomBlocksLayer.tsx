@@ -2375,7 +2375,10 @@ function BlockToolbar({
       </button>
     </div>
   );
+
+  return isTop && host ? createPortal(body, host) : body;
 }
+
 
 
 function TextControls({
