@@ -46,7 +46,7 @@ export function SignOutButton() {
         // ignore
       }
       toast.success("Signed out.");
-      await navigate({ to: "/auth", replace: true });
+      await navigate({ to: "/auth", replace: true, search: { next: undefined } });
     } finally {
       setBusy(false);
       setOpen(false);

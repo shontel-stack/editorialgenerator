@@ -229,6 +229,9 @@ export function Draggable({
     originTop: number;
     width: number;
     height: number;
+    /** Page (trim) size in page-px, used to clamp the block on-page. */
+    pageW: number;
+    pageH: number;
   } | null>(null);
   const [showSize, setShowSize] = useState(false);
 
@@ -237,14 +240,35 @@ export function Draggable({
   const dy = preview?.dy ?? local?.dy ?? saved?.dy ?? 0;
   const effectiveScale = previewScale ?? textScale;
 
+  /** Keep the block fully inside the page trim so it can't be dragged off-page
+   *  (which used to silently export outside the trim). */
+  const clampToPage = (ndx: number, ndy: number): { dx: number; dy: number } => {
+    const d = drag.current;
+    if (!d || !d.pageW || !d.pageH) return { dx: ndx, dy: ndy };
+    const maxLeft = Math.max(0, d.pageW - d.width);
+    const maxTop = Math.max(0, d.pageH - d.height);
+    const left = Math.min(maxLeft, Math.max(0, d.originLeft + ndx));
+    const top = Math.min(maxTop, Math.max(0, d.originTop + ndy));
+    return { dx: left - d.originLeft, dy: top - d.originTop };
+  };
+
   /** Apply guide snapping on top of a raw dx/dy delta. */
   const applySnap = (ndx: number, ndy: number): { dx: number; dy: number; snappedX: boolean; snappedY: boolean } => {
     const d = drag.current;
-    if (!d || !ctx?.guides) return { dx: ndx, dy: ndy, snappedX: false, snappedY: false };
+    if (!d || !ctx?.guides) {
+      const c = clampToPage(ndx, ndy);
+      return { dx: c.dx, dy: c.dy, snappedX: false, snappedY: false };
+    }
     const left = d.originLeft + ndx;
     const top = d.originTop + ndy;
     const { ax, ay } = snapToGuides(left, top, d.width, d.height, ctx.guides);
-    return { dx: ndx + ax, dy: ndy + ay, snappedX: ax !== 0, snappedY: ay !== 0 };
+    const c = clampToPage(ndx + ax, ndy + ay);
+    return {
+      dx: c.dx,
+      dy: c.dy,
+      snappedX: ax !== 0 && c.dx === ndx + ax,
+      snappedY: ay !== 0 && c.dy === ndy + ay,
+    };
   };
 
   const onPointerDown = (e: RPointerEvent<HTMLDivElement>) => {
@@ -268,6 +292,8 @@ export function Draggable({
       originTop: curTop - dy,
       width: elRect.width / s,
       height: elRect.height / s,
+      pageW: root ? root.getBoundingClientRect().width / s : 0,
+      pageH: root ? root.getBoundingClientRect().height / s : 0,
     };
     el.setPointerCapture(e.pointerId);
     setLocal({ dx, dy });
@@ -288,8 +314,12 @@ export function Draggable({
     const snapped = applySnap(rawDx, rawDy);
     // If a guide engaged on an axis, keep the exact snapped value; otherwise
     // fall back to the 40-px coarse grid so legacy snapping still applies.
-    const finalDx = snapped.snappedX ? Math.round(snapped.dx) : snap(snapped.dx);
-    const finalDy = snapped.snappedY ? Math.round(snapped.dy) : snap(snapped.dy);
+    let finalDx = snapped.snappedX ? Math.round(snapped.dx) : snap(snapped.dx);
+    let finalDy = snapped.snappedY ? Math.round(snapped.dy) : snap(snapped.dy);
+    // Coarse grid rounding can push the block back off-page — re-clamp.
+    const clamped = clampToPage(finalDx, finalDy);
+    finalDx = Math.round(clamped.dx);
+    finalDy = Math.round(clamped.dy);
     drag.current = null;
     setLocal(null);
     if (finalDx === 0 && finalDy === 0) ctx.setOverride(blockKey, null);

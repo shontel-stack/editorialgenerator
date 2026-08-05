@@ -240,15 +240,19 @@ export function ReferencePinsOverlay({ references, dim, scale, onAssign, editing
     return set;
   })();
 
+  // With no pins there is nothing to marquee-select, so the overlay must not
+  // swallow clicks on page content (e.g. the cover TOC page links).
+  const interactive = !editing && references.length > 0;
+
   return (
     <div
       ref={hostRef}
       className="absolute inset-0"
-      style={{ zIndex: 5, pointerEvents: editing ? "none" : undefined }}
+      style={{ zIndex: 5, pointerEvents: interactive ? undefined : "none" }}
     >
       {/* Marquee capture layer — sits behind pins, catches drags on empty canvas.
           Disabled in layout-edit mode so block dragging receives pointer events. */}
-      {!editing && (
+      {interactive && (
         <div
           className="absolute inset-0"
           style={{ cursor: marquee ? "crosshair" : "default" }}

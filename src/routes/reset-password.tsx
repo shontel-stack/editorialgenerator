@@ -96,7 +96,7 @@ function ResetPasswordPage() {
         </form>
         <button
           type="button"
-          onClick={() => navigate({ to: "/auth" })}
+          onClick={() => navigate({ to: "/auth", search: { next: undefined } })}
           className="mt-4 text-sm text-muted-foreground hover:text-foreground w-full text-center"
         >
           Back to sign in
