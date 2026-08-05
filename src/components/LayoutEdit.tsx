@@ -229,6 +229,9 @@ export function Draggable({
     originTop: number;
     width: number;
     height: number;
+    /** Page (trim) size in page-px, used to clamp the block on-page. */
+    pageW: number;
+    pageH: number;
   } | null>(null);
   const [showSize, setShowSize] = useState(false);
 
