@@ -310,6 +310,7 @@ export function Draggable({
   };
   const onPointerUp = (e: RPointerEvent<HTMLDivElement>) => {
     if (!drag.current || !ctx) return;
+    endCanvasDrag();
     const s = ctx.scale || 1;
     const rawDx = drag.current.dx + (e.clientX - drag.current.x) / s;
     const rawDy = drag.current.dy + (e.clientY - drag.current.y) / s;
