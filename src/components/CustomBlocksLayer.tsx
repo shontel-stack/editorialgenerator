@@ -1639,11 +1639,20 @@ function useDockPosition(storageKey: string): {
   const [dock, setDockState] = useState<DockSide>(() => {
     if (typeof window === "undefined") return "top";
     try {
+      // One-time migration: older sessions may have a stale floating/side dock
+      // saved. Snap those to the sticky top dock once, then respect the choice.
+      const migrated = window.localStorage.getItem(`${storageKey}:topMigrated`);
+      if (!migrated) {
+        window.localStorage.setItem(`${storageKey}:topMigrated`, "1");
+        window.localStorage.setItem(storageKey, "top");
+        return "top";
+      }
       const raw = window.localStorage.getItem(storageKey);
       if (raw === "right" || raw === "left" || raw === "float" || raw === "top") return raw;
     } catch { /* noop */ }
     return "top";
   });
+
   const setDock = (v: DockSide) => {
     setDockState(v);
     if (typeof window !== "undefined") {
