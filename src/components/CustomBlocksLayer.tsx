@@ -1669,32 +1669,41 @@ function useDockPosition(storageKey: string): {
  * canvas scrolls. Its measured height is published as `--top-dock-h` so the
  * work area pads down by exactly the right amount.
  */
+function ensureTopDockHost(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  let el = document.getElementById("pageluxe-top-dock");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "pageluxe-top-dock";
+    el.setAttribute("data-export-ignore", "true");
+    document.body.appendChild(el);
+  }
+  Object.assign(el.style, {
+    position: "fixed",
+    top: "var(--rail-top, 64px)",
+    left: "var(--rail-width, 56px)",
+    right: "0",
+    zIndex: "300",
+    display: "flex",
+    flexDirection: "column",
+    pointerEvents: "none",
+    background: "#0a0a0a",
+    boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
+    fontFamily: "system-ui, sans-serif",
+    maxHeight: "calc(100vh - var(--rail-top, 64px) - 40px)",
+    overflowY: "auto",
+  } as Partial<CSSStyleDeclaration>);
+  return el;
+}
+
 function useTopDockHost(): HTMLElement | null {
-  const [host, setHost] = useState<HTMLElement | null>(null);
+  // Created synchronously so portaled bars render on the very first paint
+  // instead of flashing in the canvas (or not showing at all).
+  const [host, setHost] = useState<HTMLElement | null>(() => ensureTopDockHost());
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    let el = document.getElementById("pageluxe-top-dock");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "pageluxe-top-dock";
-      el.setAttribute("data-export-ignore", "true");
-      Object.assign(el.style, {
-        position: "fixed",
-        top: "var(--rail-top, 64px)",
-        left: "var(--rail-width, 56px)",
-        right: "0",
-        zIndex: "300",
-        display: "flex",
-        flexDirection: "column",
-        pointerEvents: "none",
-        background: "#0a0a0a",
-        boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
-        fontFamily: "system-ui, sans-serif",
-      } as Partial<CSSStyleDeclaration>);
-      document.body.appendChild(el);
-    }
-    setHost(el);
-    const node = el;
+    const node = ensureTopDockHost();
+    if (!node) return;
+    if (node !== host) setHost(node);
     const root = document.documentElement;
     const apply = () => {
       const h = node.childElementCount === 0 ? 0 : Math.round(node.getBoundingClientRect().height);
@@ -1704,7 +1713,7 @@ function useTopDockHost(): HTMLElement | null {
     const ro = new ResizeObserver(apply);
     ro.observe(node);
     const mo = new MutationObserver(apply);
-    mo.observe(node, { childList: true });
+    mo.observe(node, { childList: true, subtree: true });
     window.addEventListener("resize", apply);
     return () => {
       ro.disconnect();
@@ -1715,9 +1724,11 @@ function useTopDockHost(): HTMLElement | null {
         root.style.setProperty("--top-dock-h", `${h}px`);
       });
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return host;
 }
+
 
 /** Row wrapper used by every bar docked into the shared top dock. */
 const TOP_DOCK_ROW_STYLE: CSSProperties = {
