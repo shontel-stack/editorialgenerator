@@ -340,15 +340,46 @@ export function CustomBlocksLayer() {
     }));
   }, [blocks, setBlocks, effectiveSelectedIds]);
   const requestEdit = ctx?.onRequestEdit;
+  /**
+   * Drop new blocks into the part of the page the user is currently looking at
+   * instead of always at the template default (near the top). Falls back to the
+   * default position when the page isn't measurable or isn't on screen.
+   */
+  const placeInView = useCallback(
+    <T extends CustomBlock>(b: T): T => {
+      if (typeof window === "undefined") return b;
+      const el = probeRef.current?.parentElement;
+      if (!el || !pageSize || !pageSize.h) return b;
+      const rect = el.getBoundingClientRect();
+      const scale = rect.width / pageSize.w;
+      if (!scale || !Number.isFinite(scale)) return b;
+      const cs = getComputedStyle(document.documentElement);
+      const num = (v: string, fb: number) => {
+        const n = parseFloat(v);
+        return Number.isFinite(n) ? n : fb;
+      };
+      // Chrome that floats over the top of the canvas (header ribbon + docked toolbars).
+      const inset =
+        num(cs.getPropertyValue("--rail-top"), 64) + num(cs.getPropertyValue("--top-dock-h"), 0);
+      const visTop = Math.max(rect.top, inset);
+      const visBottom = Math.min(rect.bottom, window.innerHeight);
+      if (visBottom - visTop < 40) return b; // page barely visible — keep default
+      const centerY = (visTop + visBottom) / 2;
+      const rawY = (centerY - rect.top) / scale - b.h / 2;
+      const maxY = Math.max(0, pageSize.h - b.h);
+      return { ...b, y: Math.round(Math.min(maxY, Math.max(0, rawY))) };
+    },
+    [pageSize],
+  );
   const add = useCallback(
     (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => {
       if (!setBlocks) return;
       if (!editing) requestEdit?.();
-      const b = defaultBlock(kind, opts);
+      const b = placeInView(defaultBlock(kind, opts));
       setBlocks([...blocks, b]);
       setSelectedId(b.id);
     },
-    [blocks, setBlocks, editing, requestEdit],
+    [blocks, setBlocks, editing, requestEdit, placeInView],
   );
   const insertTemplate = useCallback(
     (tpl: LayoutTemplate) => {
