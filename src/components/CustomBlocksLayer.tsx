@@ -1584,11 +1584,18 @@ function useDragOffset(inv: number, storageKey?: string) {
       const raw = window.localStorage.getItem(storageKey);
       if (!raw) return { x: 0, y: 0 };
       const parsed = JSON.parse(raw) as { x?: number; y?: number };
-      return { x: Number(parsed.x) || 0, y: Number(parsed.y) || 0 };
+      // Clamp stale offsets so a toolbar dragged far off-screen in an earlier
+      // session can never come back invisible.
+      const lim = (v: number, max: number) => Math.max(-max, Math.min(max, Number(v) || 0));
+      return {
+        x: lim(parsed.x ?? 0, Math.max(200, window.innerWidth - 120)),
+        y: lim(parsed.y ?? 0, Math.max(200, window.innerHeight - 120)),
+      };
     } catch {
       return { x: 0, y: 0 };
     }
   });
+
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const persist = (next: { x: number; y: number }) => {
     setOffset(next);
