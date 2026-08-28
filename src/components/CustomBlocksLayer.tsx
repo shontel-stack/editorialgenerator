@@ -1248,6 +1248,35 @@ function CustomBlockView({
           >
             <Trash2 size={12} /> Delete
           </button>
+          {/* Live size / position readout */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              transform: `scale(${inv}) translate(0, 120%)`,
+              transformOrigin: "bottom left",
+              background: "#2563eb",
+              color: "white",
+              borderRadius: 4,
+              padding: "3px 7px",
+              fontSize: 11,
+              fontFamily: "system-ui, sans-serif",
+              fontVariantNumeric: "tabular-nums",
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+              zIndex: 200,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+            }}
+          >
+            {formatMeasure(block.w, unit)} × {formatMeasure(block.h, unit)} {UNIT_LABELS[unit]}
+            <span style={{ opacity: 0.75 }}>
+              {"  ·  X "}
+              {formatMeasure(block.x, unit)}
+              {"  Y "}
+              {formatMeasure(block.y, unit)}
+            </span>
+          </div>
         </>
       )}
 
