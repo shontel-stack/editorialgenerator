@@ -197,6 +197,47 @@ export function SnapSettingsPanel({
               />
               <span>Snap to other objects (smart guides)</span>
             </label>
+
+            {/* --- Baseline grid --- */}
+            <div className="pt-2 border-t border-border space-y-2">
+              <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+                Baseline grid
+              </span>
+              <ToleranceSlider
+                label={
+                  global.baselineGridPx > 0
+                    ? `Leading · ${global.baselineGridPx}px (${inchEquiv(global.baselineGridPx)}″)`
+                    : "Baseline grid · off"
+                }
+                value={global.baselineGridPx}
+                min={0}
+                max={300}
+                onChange={(v) => commitGlobal({ baselineGridPx: v })}
+              />
+              <ToleranceSlider
+                label={`First baseline · ${global.baselineOffsetPx}px (${inchEquiv(global.baselineOffsetPx)}″)`}
+                value={global.baselineOffsetPx}
+                min={0}
+                max={900}
+                onChange={(v) => commitGlobal({ baselineOffsetPx: v })}
+              />
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={global.showBaseline}
+                  onChange={(e) => commitGlobal({ showBaseline: e.target.checked })}
+                />
+                <span>Show baselines on the canvas</span>
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={global.snapToBaseline}
+                  onChange={(e) => commitGlobal({ snapToBaseline: e.target.checked })}
+                />
+                <span>Snap blocks to the baseline grid</span>
+              </label>
+            </div>
             <button
               type="button"
               onClick={reset}
