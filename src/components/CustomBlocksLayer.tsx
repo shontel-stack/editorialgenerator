@@ -574,28 +574,25 @@ export function CustomBlocksLayer() {
         return;
       }
 
-      // Copy
+      // Copy — the whole effective selection (groups included)
       if (meta && (e.key === "c" || e.key === "C")) {
-        if (!sel) return;
+        const ids = Array.from(effectiveSelectedIds);
+        const picked = ids.length ? blocks.filter((b) => ids.includes(b.id)) : sel ? [sel] : [];
+        if (picked.length === 0) return;
         e.preventDefault();
-        try {
-          localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(sel));
-        } catch {/* ignore */}
+        copyBlocks(picked);
+        if (picked.length === 1) copyGeometry(picked[0]);
         return;
       }
 
-      // Paste
+      // Paste — ⌘V offsets by 20px, ⇧⌘V pastes in place (same x/y/size),
+      // which is how you mirror an element onto another page exactly.
       if (meta && (e.key === "v" || e.key === "V")) {
         if (!setBlocks) return;
-        try {
-          const raw = localStorage.getItem(CLIPBOARD_KEY);
-          if (!raw) return;
-          const data = JSON.parse(raw) as CustomBlock;
-          e.preventDefault();
-          const clone = { ...data, id: newId(), x: (data.x ?? 0) + 20, y: (data.y ?? 0) + 20 } as CustomBlock;
-          setBlocks([...blocks, clone]);
-          setSelectedId(clone.id);
-        } catch {/* ignore */}
+        const data = readBlocks();
+        if (data.length === 0) return;
+        e.preventDefault();
+        pasteBlocks(data, e.shiftKey);
         return;
       }
 
