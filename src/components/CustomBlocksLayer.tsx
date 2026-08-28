@@ -448,6 +448,41 @@ export function CustomBlocksLayer() {
     },
     [blocks, setBlocks, editing, requestEdit, placeInView],
   );
+  /** Paste clipboard blocks onto this page. `inPlace` keeps the exact stored
+   *  x/y/size so an element lands identically on another page; otherwise the
+   *  copies are offset slightly so they don't hide the original. */
+  const pasteBlocks = useCallback(
+    (data: CustomBlock[], inPlace: boolean) => {
+      if (!setBlocks || data.length === 0) return;
+      if (!editing) requestEdit?.();
+      const off = inPlace ? 0 : 20;
+      // Preserve grouping between pasted mates with a fresh group id.
+      const gmap = new Map<string, string>();
+      const fresh = data.map((b) => {
+        const copy = { ...b, id: newId(), x: (b.x ?? 0) + off, y: (b.y ?? 0) + off } as CustomBlock & {
+          groupId?: string;
+          spanSpread?: boolean;
+          spanSourceId?: string;
+          spanTotalW?: number;
+          spanOffsetX?: number;
+        };
+        if (b.groupId) {
+          if (!gmap.has(b.groupId)) gmap.set(b.groupId, `g_${Math.random().toString(36).slice(2, 10)}`);
+          copy.groupId = gmap.get(b.groupId);
+        }
+        // Spread halves don't survive a paste onto a different page.
+        delete copy.spanSpread;
+        delete copy.spanSourceId;
+        delete copy.spanTotalW;
+        delete copy.spanOffsetX;
+        return copy as CustomBlock;
+      });
+      setBlocks([...blocks, ...fresh]);
+      setSelectedId(fresh[0]?.id ?? null);
+      setExtraSelectedIds(fresh.slice(1).map((b) => b.id));
+    },
+    [blocks, setBlocks, editing, requestEdit],
+  );
   const insertTemplate = useCallback(
     (tpl: LayoutTemplate) => {
       if (!setBlocks) return;
