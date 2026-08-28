@@ -84,6 +84,10 @@ export function SnapSettingsPanel({
     gridSizePx: override?.gridSizePx ?? global.gridSizePx,
     alignToObjects:
       typeof override?.alignToObjects === "boolean" ? override.alignToObjects : global.alignToObjects,
+    baselineGridPx: global.baselineGridPx,
+    baselineOffsetPx: global.baselineOffsetPx,
+    showBaseline: global.showBaseline,
+    snapToBaseline: global.snapToBaseline,
   };
 
   const [pageAnglesText, setPageAnglesText] = useState<string>(effective.rotationAngles.join(", "));
