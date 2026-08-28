@@ -847,6 +847,7 @@ function CustomBlockView({
   onRemove,
   siblingAxesFor,
   gridSize,
+  baselines,
   onActiveLines,
   onCaretParagraphChange,
 }: {
