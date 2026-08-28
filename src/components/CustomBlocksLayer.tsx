@@ -2555,6 +2555,9 @@ function BlockToolbar({
       )}
 
       <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <GeometryControls block={block} onChange={onChange} />
+
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
       <label style={labelStyle}>
         Rotate
         <input
