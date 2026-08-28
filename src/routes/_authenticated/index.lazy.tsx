@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
-import { Aperture, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays, ShieldCheck } from "lucide-react";
+import { Aperture, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays, ShieldCheck, Pencil } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -281,6 +281,8 @@ function Index() {
   const [layoutAiOpen, setLayoutAiOpen] = useState(false);
   const [proposalOps, setProposalOps] = useState<LayoutPlanOp[]>([]);
   const [pagesQuery, setPagesQuery] = useState("");
+  const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const { userId, active: activePublication } = useActivePublication();
 
   // ----- Getting-started hint: dismissible card for users who have a
@@ -1887,13 +1889,55 @@ function Index() {
                           {PAGE_LABELS[p.pageType]}
                           {p.includeInContents && !locked && <span> · TOC</span>}
                         </div>
-                        <div
-                          className="text-sm truncate"
-                          style={{ fontFamily: "var(--font-serif)" }}
-                        >
-                          {labelForNode(p)}
-                        </div>
+                        {renamingPageId === p.id ? (
+                          <input
+                            autoFocus
+                            value={renameDraft}
+                            onChange={(e) => setRenameDraft(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onBlur={() => {
+                              updateNode(p.id, { title: renameDraft.trim() ? renameDraft : undefined });
+                              setRenamingPageId(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                updateNode(p.id, { title: renameDraft.trim() ? renameDraft : undefined });
+                                setRenamingPageId(null);
+                              } else if (e.key === "Escape") {
+                                setRenamingPageId(null);
+                              }
+                            }}
+                            placeholder="Page name…"
+                            className="w-full bg-background text-foreground border border-border rounded-sm px-1.5 py-0.5 text-sm outline-none focus:border-[color:var(--ruby)]"
+                            style={{ fontFamily: "var(--font-serif)" }}
+                          />
+                        ) : (
+                          <div
+                            className="text-sm truncate"
+                            style={{ fontFamily: "var(--font-serif)" }}
+                            title="Double-click to rename"
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setRenameDraft(p.title ?? "");
+                              setRenamingPageId(p.id);
+                            }}
+                          >
+                            {labelForNode(p)}
+                          </div>
+                        )}
                       </div>
+                      <button
+                        title="Rename page"
+                        aria-label="Rename page"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRenameDraft(p.title ?? "");
+                          setRenamingPageId(p.id);
+                        }}
+                        className="text-[10px] px-1 opacity-60 hover:opacity-100"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
                       {!locked && p.pageType !== "contents" && (
                         <>
                           {spreadView && (
@@ -2079,6 +2123,15 @@ function Index() {
                   issue={issue}
                 />
               )}
+
+              <Section title="Page name">
+                <Field label="Custom title (shown in the page list)">
+                  <Input
+                    value={selected.title ?? ""}
+                    onChange={(v) => updateNode(selected.id, { title: v.trim() ? v : undefined })}
+                  />
+                </Field>
+              </Section>
 
               {selected.pageType !== "cover" &&
                 selected.pageType !== "back" &&
@@ -3543,6 +3596,7 @@ function Index() {
 }
 
 function labelForNode(p: IssuePageNode): string {
+  if (p.title && p.title.trim()) return p.title.trim();
   switch (p.pageType) {
     case "cover":
       return p.data.headline || "Cover";
