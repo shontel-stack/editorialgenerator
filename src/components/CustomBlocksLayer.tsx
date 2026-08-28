@@ -10,7 +10,7 @@ import {
 import { createPortal } from "react-dom";
 
 import QRCode from "qrcode";
-import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Layers, Eye, EyeOff, Undo2, Redo2, Pin, PanelLeft, PanelRight, PanelTop, Loader2 } from "lucide-react";
+import { Plus, Type as TypeIcon, Image as ImageIcon, Square, Circle, Minus, Link2, Trash2, QrCode, LayoutGrid, Film, X, Settings2, RotateCw, ChevronsUp, ChevronsDown, ChevronUp, ChevronDown, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Layers, Copy, ClipboardPaste, Eye, EyeOff, Undo2, Redo2, Pin, PanelLeft, PanelRight, PanelTop, Loader2 } from "lucide-react";
 import type { CustomBlock, ContentsSlot, ContentsSlotField } from "@/lib/coverDefaults";
 import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
@@ -31,6 +31,13 @@ import {
 import { useBrandKit } from "@/lib/brandKitContext";
 import { SwatchPicker } from "@/components/SwatchPicker";
 import { uploadEditorImage } from "@/lib/imageUpload";
+import {
+  copyBlocks,
+  copyGeometry,
+  readBlocks,
+  readGeometry,
+  useBlockClipboard,
+} from "@/lib/blockClipboard";
 import { toast } from "sonner";
 
 const SNAP = 20;
@@ -448,6 +455,41 @@ export function CustomBlocksLayer() {
     },
     [blocks, setBlocks, editing, requestEdit, placeInView],
   );
+  /** Paste clipboard blocks onto this page. `inPlace` keeps the exact stored
+   *  x/y/size so an element lands identically on another page; otherwise the
+   *  copies are offset slightly so they don't hide the original. */
+  const pasteBlocks = useCallback(
+    (data: CustomBlock[], inPlace: boolean) => {
+      if (!setBlocks || data.length === 0) return;
+      if (!editing) requestEdit?.();
+      const off = inPlace ? 0 : 20;
+      // Preserve grouping between pasted mates with a fresh group id.
+      const gmap = new Map<string, string>();
+      const fresh = data.map((b) => {
+        const copy = { ...b, id: newId(), x: (b.x ?? 0) + off, y: (b.y ?? 0) + off } as CustomBlock & {
+          groupId?: string;
+          spanSpread?: boolean;
+          spanSourceId?: string;
+          spanTotalW?: number;
+          spanOffsetX?: number;
+        };
+        if (b.groupId) {
+          if (!gmap.has(b.groupId)) gmap.set(b.groupId, `g_${Math.random().toString(36).slice(2, 10)}`);
+          copy.groupId = gmap.get(b.groupId);
+        }
+        // Spread halves don't survive a paste onto a different page.
+        delete copy.spanSpread;
+        delete copy.spanSourceId;
+        delete copy.spanTotalW;
+        delete copy.spanOffsetX;
+        return copy as CustomBlock;
+      });
+      setBlocks([...blocks, ...fresh]);
+      setSelectedId(fresh[0]?.id ?? null);
+      setExtraSelectedIds(fresh.slice(1).map((b) => b.id));
+    },
+    [blocks, setBlocks, editing, requestEdit],
+  );
   const insertTemplate = useCallback(
     (tpl: LayoutTemplate) => {
       if (!setBlocks) return;
@@ -542,7 +584,7 @@ export function CustomBlocksLayer() {
   // Keyboard shortcuts: undo/redo, duplicate, copy/paste, nudge, delete, z-order.
   useEffect(() => {
     if (!editing) return;
-    const CLIPBOARD_KEY = "pageluxe.blockClipboard.v1";
+    
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const tag = (target?.tagName ?? "").toUpperCase();
@@ -574,28 +616,25 @@ export function CustomBlocksLayer() {
         return;
       }
 
-      // Copy
+      // Copy — the whole effective selection (groups included)
       if (meta && (e.key === "c" || e.key === "C")) {
-        if (!sel) return;
+        const ids = Array.from(effectiveSelectedIds);
+        const picked = ids.length ? blocks.filter((b) => ids.includes(b.id)) : sel ? [sel] : [];
+        if (picked.length === 0) return;
         e.preventDefault();
-        try {
-          localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(sel));
-        } catch {/* ignore */}
+        copyBlocks(picked);
+        if (picked.length === 1) copyGeometry(picked[0]);
         return;
       }
 
-      // Paste
+      // Paste — ⌘V offsets by 20px, ⇧⌘V pastes in place (same x/y/size),
+      // which is how you mirror an element onto another page exactly.
       if (meta && (e.key === "v" || e.key === "V")) {
         if (!setBlocks) return;
-        try {
-          const raw = localStorage.getItem(CLIPBOARD_KEY);
-          if (!raw) return;
-          const data = JSON.parse(raw) as CustomBlock;
-          e.preventDefault();
-          const clone = { ...data, id: newId(), x: (data.x ?? 0) + 20, y: (data.y ?? 0) + 20 } as CustomBlock;
-          setBlocks([...blocks, clone]);
-          setSelectedId(clone.id);
-        } catch {/* ignore */}
+        const data = readBlocks();
+        if (data.length === 0) return;
+        e.preventDefault();
+        pasteBlocks(data, e.shiftKey);
         return;
       }
 
@@ -665,7 +704,7 @@ export function CustomBlocksLayer() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [editing, undo, redo, blocks, setBlocks, selectedId, extraSelectedIds, effectiveSelectedIds, group, ungroup]);
+  }, [editing, undo, redo, blocks, setBlocks, selectedId, extraSelectedIds, effectiveSelectedIds, group, ungroup, pasteBlocks]);
 
   void historyTick;
 
@@ -775,7 +814,7 @@ export function CustomBlocksLayer() {
         </div>
       )}
 
-      {editing && setBlocks && <AddElementPalette onAdd={add} onOpenTemplates={() => { if (!editing) requestEdit?.(); setPickerOpen(true); }} />}
+      {editing && setBlocks && <AddElementPalette onAdd={add} onPaste={(inPlace) => pasteBlocks(readBlocks(), inPlace)} onOpenTemplates={() => { if (!editing) requestEdit?.(); setPickerOpen(true); }} />}
       {editing && selected && setBlocks && (
         <BlockToolbar
           block={selected}
@@ -790,6 +829,11 @@ export function CustomBlocksLayer() {
           canSpan={Boolean(facing && (selected.kind === "image" || selected.kind === "shape") && !(selected as { spanSourceId?: string }).spanSourceId)}
           spanning={Boolean((selected as { spanSpread?: boolean }).spanSpread)}
           onToggleSpan={() => toggleSpan(selected.id)}
+          onCopy={() => {
+            copyBlocks(blocks.filter((b) => effectiveSelectedIds.has(b.id)));
+            copyGeometry(selected);
+          }}
+          onPaste={(inPlace) => pasteBlocks(readBlocks(), inPlace)}
 
         />
       )}
@@ -1918,6 +1962,7 @@ function TopDockBar({
   setDefaultsOpen,
   onAdd,
   onOpenTemplates,
+  onPaste,
   dock,
   setDock,
 }: {
@@ -1925,10 +1970,12 @@ function TopDockBar({
   setDefaultsOpen: (fn: (v: boolean) => boolean) => void;
   onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void;
   onOpenTemplates: () => void;
+  onPaste: (inPlace: boolean) => void;
   dock: DockSide;
   setDock: (v: DockSide) => void;
 }) {
   const host = useTopDockHost();
+  const clip = useBlockClipboard();
   if (!host) return null;
 
   return (
@@ -1953,6 +2000,17 @@ function TopDockBar({
           <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)", margin: "0 4px" }} />
           <PaletteBtn label="Templates" icon={<LayoutGrid size={14} />} onClick={onOpenTemplates} />
           <PaletteBtn label="Defaults" icon={<Settings2 size={14} />} onClick={() => setDefaultsOpen((v) => !v)} />
+          {clip.count > 0 && (
+            <>
+              <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)", margin: "0 4px" }} />
+              <PaletteBtn
+                label={`Paste in place${clip.count > 1 ? ` (${clip.count})` : ""}`}
+                icon={<ClipboardPaste size={14} />}
+                onClick={() => onPaste(true)}
+              />
+              <PaletteBtn label="Paste offset" icon={<Copy size={14} />} onClick={() => onPaste(false)} />
+            </>
+          )}
           <div style={{ marginLeft: "auto" }}>
             <DockToggle dock={dock} onChange={setDock} />
           </div>
@@ -1966,7 +2024,7 @@ function TopDockBar({
 
 
 
-function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void }) {
+function AddElementPalette({ onAdd, onOpenTemplates, onPaste }: { onAdd: (kind: CustomBlock["kind"], opts?: { shape?: ShapeVariant }) => void; onOpenTemplates: () => void; onPaste: (inPlace: boolean) => void }) {
   const ctx = useLayoutEdit();
   const inv = 1 / (ctx?.scale ?? 1);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
@@ -1988,6 +2046,7 @@ function AddElementPalette({ onAdd, onOpenTemplates }: { onAdd: (kind: CustomBlo
         setDefaultsOpen={setDefaultsOpen}
         onAdd={onAdd}
         onOpenTemplates={onOpenTemplates}
+        onPaste={onPaste}
         dock={dock}
         setDock={setDock}
       />
@@ -2533,6 +2592,8 @@ function BlockToolbar({
   canSpan,
   spanning,
   onToggleSpan,
+  onCopy,
+  onPaste,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
@@ -2546,6 +2607,8 @@ function BlockToolbar({
   canSpan?: boolean;
   spanning?: boolean;
   onToggleSpan?: () => void;
+  onCopy: () => void;
+  onPaste: (inPlace: boolean) => void;
 }) {
 
   const ctx = useLayoutEdit();
@@ -2553,6 +2616,7 @@ function BlockToolbar({
   const snapCfg = ctx?.snapSettings ?? global;
   const inv = 1 / (ctx?.scale ?? 1);
   const rotate = (block as { rotate?: number }).rotate ?? 0;
+  const clip = useBlockClipboard();
   const { dock, setDock } = useDockPosition("pageluxe:blockToolbar:dock");
   const isTop = dock === "top";
   const host = useTopDockHost();
@@ -2701,6 +2765,33 @@ function BlockToolbar({
       <button type="button" title="Center vertically" onClick={() => onChange({ y: Math.round((4267 - block.h) / 2) } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignCenterHorizontal size={12} /></button>
       <button type="button" title="Align bottom" onClick={() => onChange({ y: 4267 - block.h } as Partial<CustomBlock>)} style={btnStyle("normal")}><AlignEndHorizontal size={12} /></button>
       <LinkControl link={(block as { link?: string }).link} onChange={(v) => onChange({ link: v } as Partial<CustomBlock>)} />
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Clipboard</span>
+      <button type="button" title="Copy element + its size/position (\u2318/Ctrl+C)" onClick={onCopy} style={btnStyle("normal")}>
+        <Copy size={12} /> Copy
+      </button>
+      <button
+        type="button"
+        title="Paste the copied element onto this page at the exact same size and position (\u21e7\u2318/Ctrl+V)"
+        onClick={() => onPaste(true)}
+        disabled={clip.count === 0}
+        style={{ ...btnStyle("normal"), opacity: clip.count ? 1 : 0.5, cursor: clip.count ? "pointer" : "not-allowed" }}
+      >
+        <ClipboardPaste size={12} /> Paste in place
+      </button>
+      <button
+        type="button"
+        title="Apply only the copied size + position to this element"
+        onClick={() => {
+          const g = readGeometry();
+          if (!g) return;
+          onChange({ x: g.x, y: g.y, w: g.w, h: g.h, rotate: g.rotate ?? 0 } as Partial<CustomBlock>);
+        }}
+        disabled={!clip.geometry}
+        style={{ ...btnStyle("normal"), opacity: clip.geometry ? 1 : 0.5, cursor: clip.geometry ? "pointer" : "not-allowed" }}
+      >
+        Match size &amp; position
+      </button>
       <button type="button" onClick={onRemove} style={btnStyle("danger")}>
         <Trash2 size={12} /> Delete
       </button>
