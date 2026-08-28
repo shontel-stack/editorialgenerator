@@ -843,6 +843,7 @@ function CustomBlockView({
 }) {
   const ctx = useLayoutEdit();
   const pageScale = ctx?.scale ?? 1;
+  const [unit] = useMeasureUnit();
   const global = useSnapSettings();
   const snapCfg = ctx?.snapSettings ?? global;
   type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
