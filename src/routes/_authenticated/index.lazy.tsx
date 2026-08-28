@@ -3056,9 +3056,10 @@ function Index() {
                   columnRatios={pageStatus.columnWidthsOf(spread.left.id)}
                   gutterIn={pageStatus.gutterOf(spread.left.id)}
                 />
-              )}
-              <ReferencePinsOverlay
-                references={attachments.referencesByPage.get(spread.left.id) ?? []}
+               )}
+               {showRulers && <RulersOverlay dim={dimPx} unit={measureUnit} />}
+               <ReferencePinsOverlay
+                 references={attachments.referencesByPage.get(spread.left.id) ?? []}
                 dim={dimPx}
                 scale={scale}
                 onAssign={(id, patch, opts) => applyPlacement(id, patch, opts)}
