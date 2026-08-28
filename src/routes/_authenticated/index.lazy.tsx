@@ -10,6 +10,8 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { usePanelRef } from "react-resizable-panels";
 import { PagePreview } from "@/components/PagePreview";
 import { GuidesOverlay } from "@/components/GuidesOverlay";
+import { RulersOverlay } from "@/components/RulersOverlay";
+import { useMeasureUnit, type MeasureUnit } from "@/lib/measure";
 import { ReferencePinsOverlay } from "@/components/ReferencePinsOverlay";
 import { ColumnTuningControls } from "@/components/ColumnTuningControls";
 import { SnapSettingsPanel } from "@/components/SnapSettingsPanel";
