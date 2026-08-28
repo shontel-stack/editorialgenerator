@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RAIL_BUTTON_CLASS } from "@/components/editor/EditorRail";
 import { EditorStatusBar } from "@/components/editor/EditorStatusBar";
-import { Aperture, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays } from "lucide-react";
+import { Aperture, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, Plus, Sparkles, Download, Save, Upload, Trash2, FileText, Image as ImageIcon, Megaphone, ListOrdered, Layers, Paperclip, Users, ClipboardList, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Undo2, Redo2, Mail, Type, Settings2, BookOpen, SquarePen, Search, X, Wand2, KanbanSquare, CalendarDays, ShieldCheck } from "lucide-react";
 import { NewsletterDialog } from "@/components/NewsletterDialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { usePanelRef } from "react-resizable-panels";
@@ -34,6 +34,7 @@ import { StaffPanel } from "@/components/StaffPanel";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { SignOutButton } from "@/components/SignOutButton";
 import { ProductionChecklist } from "@/components/ProductionChecklist";
+import { PreflightPanel } from "@/components/PreflightPanel";
 import { IssueTemplatesPanel } from "@/components/IssueTemplatesPanel";
 import { MagazineTemplatePicker } from "@/components/MagazineTemplatePicker";
 import { LayoutProposalPanel } from "@/components/LayoutProposalPanel";
@@ -275,6 +276,7 @@ function Index() {
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
   const [brandKitOpen, setBrandKitOpen] = useState(false);
   const [layoutAiOpen, setLayoutAiOpen] = useState(false);
   const [proposalOps, setProposalOps] = useState<LayoutPlanOp[]>([]);
@@ -1793,6 +1795,9 @@ function Index() {
             />
           </PopoverContent>
         </Popover>
+        <button title="Preflight (pre-export checks)" aria-label="Preflight" aria-pressed={preflightOpen} onClick={() => setPreflightOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${preflightOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
+          <ShieldCheck className="h-[18px] w-[18px]" />
+        </button>
         <button title="Production" aria-label="Production" aria-pressed={checklistOpen} onClick={() => setChecklistOpen((v) => !v)} className={`relative h-10 w-10 flex items-center justify-center rounded-md transition ${checklistOpen ? "bg-foreground text-background" : "text-foreground/70 hover:bg-secondary hover:text-foreground"}`}>
           <ClipboardList className="h-[18px] w-[18px]" />
         </button>
@@ -3414,6 +3419,16 @@ function Index() {
       />
 
 
+
+      <PreflightPanel
+        open={preflightOpen}
+        onClose={() => setPreflightOpen(false)}
+        pages={issue.pages}
+        dim={dimPx}
+        inches={dimInches}
+        margins={pageMargins}
+        onSelectPage={(pid) => setSelectedId(pid)}
+      />
 
       <ProductionChecklist
         open={checklistOpen}

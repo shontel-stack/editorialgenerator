@@ -328,6 +328,14 @@ export type CustomBlock =
       link?: string;
       columns?: number;
       columnGap?: number;
+      /** Unitless line-height multiple applied to the whole block. */
+      lineHeight?: number;
+      /** Tracking in page-px @ 300 DPI. */
+      letterSpacing?: number;
+      /** Case transform applied at render time. */
+      textTransform?: "none" | "uppercase";
+      /** Named text style (see src/lib/textStyles.ts) this block follows. */
+      styleId?: string;
       /** Custom-contents page only — pull text from a slot field. */
       slotBinding?: SlotBinding;
     }
