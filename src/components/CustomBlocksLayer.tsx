@@ -15,7 +15,8 @@ import type { CustomBlock, ContentsSlot, ContentsSlotField } from "@/lib/coverDe
 import { resolveTextTokens } from "@/lib/coverDefaults";
 import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/lib/layoutTemplates";
 import { useLayoutEdit } from "./LayoutEdit";
-import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
+import { snapRotationWith, useSnapSettings, baselinesFor } from "@/lib/snapSettings";
+import { useTextStyles, styleToBlockPatch, blockToStyle, type TextStyle } from "@/lib/textStyles";
 import { beginCanvasDrag, endCanvasDrag } from "@/lib/canvasDrag";
 import { UNIT_LABELS, formatMeasure, fromPx, toPx, unitPrecision, unitStep, useMeasureUnit } from "@/lib/measure";
 import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
@@ -696,6 +697,23 @@ export function CustomBlocksLayer() {
         />
       )}
 
+      {/* Baseline grid overlay (non-printing). */}
+      {editing && pageSize && snapCfg.showBaseline && snapCfg.baselineGridPx > 0 && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 1,
+            backgroundImage:
+              `repeating-linear-gradient(to bottom, rgba(14,165,164,0.28) 0px, rgba(14,165,164,0.28) 1px, transparent 1px, transparent ${snapCfg.baselineGridPx}px)`,
+            backgroundPosition: `0 ${snapCfg.baselineOffsetPx}px`,
+            mixBlendMode: "multiply",
+          }}
+        />
+      )}
+
       {blocks.map((b) => {
         // Hidden blocks: skip entirely outside edit mode (so they don't print).
         // While editing, keep them visible at reduced opacity so the user can find them via the Layers panel.
@@ -872,7 +890,11 @@ function CustomBlockView({
   };
   const snapY = (v: number) => {
     const g = combinedAxes();
-    const ay = snapEdgeWithMatch(v, g.ys, g.threshold);
+    const baseYs =
+      snapCfg.snapToBaseline && snapCfg.baselineGridPx > 0 && ctx?.pageSize
+        ? baselinesFor(snapCfg, ctx.pageSize.h)
+        : [];
+    const ay = snapEdgeWithMatch(v, [...g.ys, ...baseYs], g.threshold);
     const gr = snapGrid(v, gridSize ?? 0, g.threshold);
     if (Math.abs(ay.delta) > 0 && Math.abs(ay.delta) <= Math.abs(gr.delta || g.threshold + 1)) return ay;
     return gr.delta !== 0 ? gr : ay;
@@ -1337,7 +1359,9 @@ function BlockContent({
       textAlign: blockAlign,
       color: block.color ?? "#0a0a0a",
       background: block.bg ?? "transparent",
-      lineHeight: 1.25,
+      lineHeight: block.lineHeight ?? 1.25,
+      letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
+      textTransform: block.textTransform === "uppercase" ? "uppercase" : undefined,
       overflow: "hidden",
       whiteSpace: "pre-wrap",
       wordBreak: "break-word",
@@ -2583,6 +2607,7 @@ function BlockToolbar({
       {ctx?.contentsSlots && (block.kind === "text" || block.kind === "image") && (
         <SlotBindingControl block={block} onChange={onChange} slots={ctx.contentsSlots} />
       )}
+      {block.kind === "text" && <TextStyleControls block={block} onChange={onChange} />}
       {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
@@ -3547,5 +3572,67 @@ function LayersPanel({
         </div>
       )}
     </div>
+  );
+}
+
+/** Named paragraph/character styles — apply, redefine, or create from the
+ *  currently selected text block. */
+function TextStyleControls({
+  block,
+  onChange,
+}: {
+  block: Extract<CustomBlock, { kind: "text" }>;
+  onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  const [styles, saveStyles] = useTextStyles();
+  const current: TextStyle | undefined = styles.find((s) => s.id === block.styleId);
+  return (
+    <>
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Style</span>
+      <select
+        value={block.styleId ?? ""}
+        onChange={(e) => {
+          const st = styles.find((s) => s.id === e.target.value);
+          if (!st) {
+            onChange({ styleId: undefined } as Partial<CustomBlock>);
+            return;
+          }
+          onChange(styleToBlockPatch(st));
+        }}
+        style={{ ...inputStyle, minWidth: 130 }}
+        title="Apply a named text style"
+      >
+        <option value="">No style</option>
+        {styles.map((s) => (
+          <option key={s.id} value={s.id}>{s.name}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        title={current ? `Redefine “${current.name}” from this block` : "Pick a style first"}
+        disabled={!current}
+        onClick={() => {
+          if (!current) return;
+          saveStyles(styles.map((s) => (s.id === current.id ? blockToStyle(block, current.name, current.id) : s)));
+        }}
+        style={{ ...btnStyle("normal"), opacity: current ? 1 : 0.5 }}
+      >
+        Redefine
+      </button>
+      <button
+        type="button"
+        title="Save this block's formatting as a new named style"
+        onClick={() => {
+          const name = window.prompt("Name this text style", "New style");
+          if (!name) return;
+          const st = blockToStyle(block, name.trim() || "New style");
+          saveStyles([...styles, st]);
+          onChange({ styleId: st.id } as Partial<CustomBlock>);
+        }}
+        style={btnStyle("normal")}
+      >
+        New style
+      </button>
+    </>
   );
 }
