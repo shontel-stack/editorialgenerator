@@ -730,6 +730,11 @@ export function CustomBlocksLayer() {
             onRemove={() => remove(b.id)}
             siblingAxesFor={siblingAxesFor}
             gridSize={snapCfg.gridSizePx}
+            baselines={
+              editing && snapCfg.snapToBaseline && snapCfg.baselineGridPx > 0 && pageSize
+                ? baselinesFor(snapCfg, pageSize.h)
+                : undefined
+            }
             onActiveLines={setActiveLines}
             onCaretParagraphChange={selectedId === b.id ? setCaretParagraph : undefined}
           />
@@ -856,6 +861,7 @@ function CustomBlockView({
   onRemove: () => void;
   siblingAxesFor?: (dragId: string) => { xs: number[]; ys: number[] };
   gridSize?: number;
+  baselines?: number[];
   onActiveLines?: (lines: { xs: number[]; ys: number[] }) => void;
   onCaretParagraphChange?: (n: number | null) => void;
 }) {
@@ -890,10 +896,7 @@ function CustomBlockView({
   };
   const snapY = (v: number) => {
     const g = combinedAxes();
-    const baseYs =
-      snapCfg.snapToBaseline && snapCfg.baselineGridPx > 0 && ctx?.pageSize
-        ? baselinesFor(snapCfg, ctx.pageSize.h)
-        : [];
+    const baseYs = baselines ?? [];
     const ay = snapEdgeWithMatch(v, [...g.ys, ...baseYs], g.threshold);
     const gr = snapGrid(v, gridSize ?? 0, g.threshold);
     if (Math.abs(ay.delta) > 0 && Math.abs(ay.delta) <= Math.abs(gr.delta || g.threshold + 1)) return ay;
