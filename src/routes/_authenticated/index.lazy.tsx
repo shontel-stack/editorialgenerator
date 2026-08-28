@@ -3025,6 +3025,16 @@ function Index() {
                 previewScales={pendingByPage[spread.left.id]?.scales}
                 customBlocks={spread.left.customBlocks ?? []}
                 setCustomBlocks={(next) => setCustomBlocks(spread.left.id, next)}
+                facingPage={
+                  spreadView && spread.right
+                    ? {
+                        side: "left" as const,
+                        blocks: spread.right.customBlocks ?? [],
+                        setBlocks: (next) => setCustomBlocks(spread.right!.id, next),
+                      }
+                    : undefined
+                }
+
                 guides={showGuides ? guidesFor(spread.left) : undefined}
                 snapSettings={effectiveSnapFor(spread.left)}
                 onRequestEdit={() => { setSelectedId(spread.left.id); setEditLayout(true); }}
@@ -3078,6 +3088,12 @@ function Index() {
                   previewScales={pendingByPage[spread.right.id]?.scales}
                   customBlocks={spread.right.customBlocks ?? []}
                   setCustomBlocks={(next) => setCustomBlocks(spread.right!.id, next)}
+                  facingPage={{
+                    side: "right" as const,
+                    blocks: spread.left.customBlocks ?? [],
+                    setBlocks: (next) => setCustomBlocks(spread.left.id, next),
+                  }}
+
                   guides={showGuides ? guidesFor(spread.right) : undefined}
                   snapSettings={effectiveSnapFor(spread.right)}
                   onRequestEdit={() => { setSelectedId(spread.right!.id); setEditLayout(true); }}

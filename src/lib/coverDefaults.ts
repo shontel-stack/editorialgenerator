@@ -355,6 +355,15 @@ export type CustomBlock =
       polygonSides?: number;
       /** SVG path-data string for frameShape === "path" (in a 0..100 viewBox). */
       clipPath?: string;
+      /** Spread spanning: this block is one half of an element that continues
+       *  onto the facing page. `spanTotalW` is the full width across the
+       *  spread, `spanOffsetX` how much of it sits before this half. */
+      spanSpread?: boolean;
+      spanTotalW?: number;
+      spanOffsetX?: number;
+      /** Set on the generated facing-page half; points at the source block. */
+      spanSourceId?: string;
+
     }
   | {
       id: string;
@@ -368,6 +377,12 @@ export type CustomBlock =
       opacity?: number;
       rotate?: number;
       link?: string;
+      /** Spread spanning — see the image block for field semantics. */
+      spanSpread?: boolean;
+      spanTotalW?: number;
+      spanOffsetX?: number;
+      spanSourceId?: string;
+
     }
   | {
       id: string;

@@ -282,11 +282,50 @@ export function CustomBlocksLayer() {
     [blocks, snapCfg.alignToObjects],
   );
 
+  /** Facing page in spread view — enables spread-spanning blocks. */
+  const facing = ctx?.facingPage;
+
+  /** Build the facing-page half of a spread-spanning block. */
+  const partnerFor = useCallback((src: CustomBlock): CustomBlock | null => {
+    const total = (src as { spanTotalW?: number }).spanTotalW ?? src.w;
+    const rightW = Math.round(total - src.w);
+    if (rightW < 4) return null;
+    return {
+      ...src,
+      id: `${src.id}__span`,
+      x: 0,
+      w: rightW,
+      groupId: undefined,
+      link: undefined,
+      spanSpread: true,
+      spanTotalW: total,
+      spanOffsetX: src.w,
+      spanSourceId: src.id,
+    } as CustomBlock;
+  }, []);
+
+  /** Write (or clear) the facing-page half for a source block. */
+  const syncPartner = useCallback(
+    (sourceId: string, src: CustomBlock | null) => {
+      if (!facing) return;
+      const rest = facing.blocks.filter(
+        (b) => (b as { spanSourceId?: string }).spanSourceId !== sourceId,
+      );
+      const partner = src && (src as { spanSpread?: boolean }).spanSpread ? partnerFor(src) : null;
+      facing.setBlocks(partner ? [...rest, partner] : rest);
+    },
+    [facing, partnerFor],
+  );
+
   const update = useCallback(
     (id: string, patch: Partial<CustomBlock>) => {
       if (!setBlocks) return;
       const cur = blocks.find((b) => b.id === id);
       if (!cur) return;
+      const nextSelf = { ...cur, ...patch } as CustomBlock;
+      if ((cur as { spanSpread?: boolean }).spanSpread && !(cur as { spanSourceId?: string }).spanSourceId) {
+        syncPartner(id, nextSelf);
+      }
       // Group-aware move: if only x/y change and the block is in a group,
       // shift every group member by the same delta to preserve relative
       // positions. Resize / rotation / other patches act on the block alone.
@@ -303,21 +342,47 @@ export function CustomBlocksLayer() {
         }));
         return;
       }
-      setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as CustomBlock) : b)));
+      setBlocks(blocks.map((b) => (b.id === id ? nextSelf : b)));
     },
-    [blocks, setBlocks],
+    [blocks, setBlocks, syncPartner],
   );
+
+  /** Toggle "span spread" on an image / shape block: the block stretches to the
+   *  right edge of its page and a matching half is written onto the facing page. */
+  const toggleSpan = useCallback(
+    (id: string) => {
+      const cur = blocks.find((b) => b.id === id);
+      if (!cur || !facing || !pageSize) return;
+      const on = Boolean((cur as { spanSpread?: boolean }).spanSpread);
+      if (on) {
+        syncPartner(id, null);
+        update(id, { spanSpread: false, spanTotalW: undefined, spanOffsetX: undefined } as Partial<CustomBlock>);
+        return;
+      }
+      const PW = pageSize.w;
+      const leftW = Math.max(40, Math.round(PW - cur.x));
+      const total = Math.max(cur.w, leftW + Math.round(PW * 0.5));
+      const next = { ...cur, w: leftW, spanSpread: true, spanTotalW: total, spanOffsetX: 0 } as CustomBlock;
+      syncPartner(id, next);
+      update(id, { w: leftW, spanSpread: true, spanTotalW: total, spanOffsetX: 0 } as Partial<CustomBlock>);
+    },
+    [blocks, facing, pageSize, syncPartner, update],
+  );
+
   const remove = useCallback(
     (id: string) => {
       if (!setBlocks) return;
       // Removing a grouped block removes the whole group so survivors aren't orphaned mid-layout.
       const cur = blocks.find((b) => b.id === id);
       const gid = cur?.groupId;
+      // Drop the facing-page half too when a spanning block is deleted.
+      if (cur && (cur as { spanSpread?: boolean }).spanSpread) syncPartner(id, null);
       setBlocks(blocks.filter((b) => (gid ? b.groupId !== gid : b.id !== id)));
       setSelectedId(null);
       setExtraSelectedIds([]);
     },
-    [blocks, setBlocks],
+    [blocks, setBlocks, syncPartner],
+
   );
   /** Assign a fresh groupId to every effectively-selected block (requires 2+). */
   const group = useCallback(() => {
@@ -698,6 +763,10 @@ export function CustomBlocksLayer() {
           inGroup={Boolean(selected.groupId)}
           onGroup={group}
           onUngroup={ungroup}
+          canSpan={Boolean(facing && (selected.kind === "image" || selected.kind === "shape") && !(selected as { spanSourceId?: string }).spanSourceId)}
+          spanning={Boolean((selected as { spanSpread?: boolean }).spanSpread)}
+          onToggleSpan={() => toggleSpan(selected.id)}
+
         />
       )}
       {editing && pickerOpen && setBlocks && (
@@ -1025,14 +1094,25 @@ function CustomBlockView({
     />
   );
 
+  // While editing, videos / embeds must not swallow the pointer — otherwise a
+  // click starts playback (or lands in the iframe) instead of selecting the
+  // block, so no selection outline or toolbar ever appears.
+  const inertWhileEditing = editing && (block.kind === "video" || block.kind === "embed");
+  const shielded = inertWhileEditing ? (
+    <div style={{ width: "100%", height: "100%", pointerEvents: "none" }}>{inner}</div>
+  ) : (
+    inner
+  );
+
   const wrapped =
     block.link && !editing ? (
       <a href={block.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none", display: "block", width: "100%", height: "100%" }}>
-        {inner}
+        {shielded}
       </a>
     ) : (
-      inner
+      shielded
     );
+
 
   const inv = 1 / (pageScale || 1);
 
@@ -1397,11 +1477,26 @@ function BlockContent({
         </label>
       );
     }
+    // When the block is one half of a spread-spanning element, render the
+    // artwork at its full spread width and shift it by the amount that lives
+    // on the facing page, so the two halves line up across the gutter.
+    const spanTotal = block.spanSpread ? block.spanTotalW : undefined;
+    const spanOff = block.spanOffsetX ?? 0;
     return (
-      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", clipPath, ...borderStyle, ...radiusStyle }}>
-        <img src={effectiveUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }} />
+      <div style={{ width: "100%", height: "100%", boxSizing: "border-box", overflow: "hidden", clipPath, ...borderStyle, ...radiusStyle }}>
+        <img
+          src={effectiveUrl}
+          alt=""
+          crossOrigin="anonymous"
+          style={
+            spanTotal
+              ? { width: spanTotal, maxWidth: "none", height: "100%", marginLeft: -spanOff, objectFit: block.imageFit ?? "cover", display: "block" }
+              : { width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", display: "block" }
+          }
+        />
       </div>
     );
+
   }
   if (block.kind === "shape") {
     const opacity = block.opacity ?? 1;
@@ -1423,11 +1518,14 @@ function BlockContent({
         : block.cornerRadius
           ? `${block.cornerRadius}px`
           : undefined;
-    return (
+    const spanTotal = block.spanSpread ? block.spanTotalW : undefined;
+    const spanOff = block.spanOffsetX ?? 0;
+    const shape = (
       <div
         style={{
-          width: "100%",
+          width: spanTotal ? spanTotal : "100%",
           height: "100%",
+          marginLeft: spanTotal ? -spanOff : undefined,
           background: block.fill ?? "transparent",
           border: block.strokeWidth ? `${block.strokeWidth}px solid ${block.stroke ?? "#0a0a0a"}` : "none",
           borderRadius: radius,
@@ -1436,6 +1534,12 @@ function BlockContent({
         }}
       />
     );
+    return spanTotal ? (
+      <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>{shape}</div>
+    ) : (
+      shape
+    );
+
   }
   if (block.kind === "video") {
     return <VideoPreview block={block} />;
@@ -2304,6 +2408,9 @@ function BlockToolbar({
   inGroup,
   onGroup,
   onUngroup,
+  canSpan,
+  spanning,
+  onToggleSpan,
 }: {
   block: CustomBlock;
   onChange: (p: Partial<CustomBlock>) => void;
@@ -2314,7 +2421,11 @@ function BlockToolbar({
   inGroup: boolean;
   onGroup: () => void;
   onUngroup: () => void;
+  canSpan?: boolean;
+  spanning?: boolean;
+  onToggleSpan?: () => void;
 }) {
+
   const ctx = useLayoutEdit();
   const global = useSnapSettings();
   const snapCfg = ctx?.snapSettings ?? global;
@@ -2383,6 +2494,35 @@ function BlockToolbar({
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
       {block.kind === "video" && <VideoControls block={block} onChange={onChange} />}
+      {canSpan && onToggleSpan && (
+        <>
+          <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+          <button
+            type="button"
+            title="Continue this element across the gutter onto the facing page"
+            onClick={onToggleSpan}
+            style={btnStyle(spanning ? "active" : "normal")}
+          >
+            Span spread
+          </button>
+          {spanning && (
+            <label style={labelStyle}>
+              Total W
+              <input
+                type="number"
+                min={block.w}
+                step={10}
+                value={Math.round((block as { spanTotalW?: number }).spanTotalW ?? block.w)}
+                onChange={(e) =>
+                  onChange({ spanTotalW: Math.max(block.w, Number(e.target.value)) } as Partial<CustomBlock>)
+                }
+                style={{ ...inputStyle, width: 76 }}
+              />
+            </label>
+          )}
+        </>
+      )}
+
       <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
       <label style={labelStyle}>
         Rotate
