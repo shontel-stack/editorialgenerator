@@ -430,6 +430,8 @@ export type CustomBlock =
 export type IssuePageNode = AnyPageData & {
   id: string;
   includeInContents: boolean;
+  /** Optional custom page name shown in the page list, search and contents. */
+  title?: string;
   /** Per-block pixel offsets (intrinsic 3200x4267 space). Set by drag-to-reposition. */
   positionOverrides?: Record<string, { dx: number; dy: number }>;
   /** Per-block CSS transform scale applied to the block's contents (1 = default). */
