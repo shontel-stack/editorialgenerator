@@ -17,6 +17,7 @@ import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/li
 import { useLayoutEdit } from "./LayoutEdit";
 import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
 import { beginCanvasDrag, endCanvasDrag } from "@/lib/canvasDrag";
+import { UNIT_LABELS, formatMeasure, fromPx, toPx, unitPrecision, unitStep, useMeasureUnit } from "@/lib/measure";
 import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
 import {
   getImageBlockDefaults,
@@ -842,6 +843,7 @@ function CustomBlockView({
 }) {
   const ctx = useLayoutEdit();
   const pageScale = ctx?.scale ?? 1;
+  const [unit] = useMeasureUnit();
   const global = useSnapSettings();
   const snapCfg = ctx?.snapSettings ?? global;
   type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
@@ -1248,6 +1250,35 @@ function CustomBlockView({
           >
             <Trash2 size={12} /> Delete
           </button>
+          {/* Live size / position readout */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              transform: `scale(${inv}) translate(0, 120%)`,
+              transformOrigin: "bottom left",
+              background: "#2563eb",
+              color: "white",
+              borderRadius: 4,
+              padding: "3px 7px",
+              fontSize: 11,
+              fontFamily: "system-ui, sans-serif",
+              fontVariantNumeric: "tabular-nums",
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+              zIndex: 200,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+            }}
+          >
+            {formatMeasure(block.w, unit)} × {formatMeasure(block.h, unit)} {UNIT_LABELS[unit]}
+            <span style={{ opacity: 0.75 }}>
+              {"  ·  X "}
+              {formatMeasure(block.x, unit)}
+              {"  Y "}
+              {formatMeasure(block.y, unit)}
+            </span>
+          </div>
         </>
       )}
 
@@ -2398,6 +2429,69 @@ function PaletteBtn({ label, icon, onClick, compact }: { label: string; icon: Re
   );
 }
 
+/** Exact X / Y / W / H entry in the user's measurement unit, with an
+ *  optional aspect-ratio lock while resizing. */
+function GeometryControls({
+  block,
+  onChange,
+}: {
+  block: CustomBlock;
+  onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  const [unit] = useMeasureUnit();
+  const [lock, setLock] = useState(false);
+  const step = unitStep(unit);
+  const dp = unitPrecision(unit);
+
+  const field = (
+    label: string,
+    key: "x" | "y" | "w" | "h",
+  ) => (
+    <label key={key} style={labelStyle}>
+      {label}
+      <input
+        type="number"
+        step={step}
+        value={Number(fromPx(block[key], unit).toFixed(dp))}
+        onChange={(e) => {
+          const raw = Number(e.target.value);
+          if (!Number.isFinite(raw)) return;
+          const px = Math.round(toPx(raw, unit));
+          if ((key === "w" || key === "h") && lock) {
+            const ratio = block.w / Math.max(1, block.h);
+            if (key === "w") onChange({ w: Math.max(20, px), h: Math.max(20, Math.round(px / ratio)) });
+            else onChange({ h: Math.max(20, px), w: Math.max(20, Math.round(px * ratio)) });
+            return;
+          }
+          if (key === "w" || key === "h") onChange({ [key]: Math.max(20, px) } as Partial<CustomBlock>);
+          else onChange({ [key]: px } as Partial<CustomBlock>);
+        }}
+        style={{ ...inputStyle, width: 72 }}
+      />
+    </label>
+  );
+
+  return (
+    <>
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>
+        Size ({UNIT_LABELS[unit]})
+      </span>
+      {field("X", "x")}
+      {field("Y", "y")}
+      {field("W", "w")}
+      {field("H", "h")}
+      <button
+        type="button"
+        title={lock ? "Aspect ratio locked" : "Lock aspect ratio while typing W/H"}
+        onClick={() => setLock((v) => !v)}
+        style={btnStyle(lock ? "active" : "normal")}
+      >
+        {lock ? "Locked" : "Lock ratio"}
+      </button>
+    </>
+  );
+}
+
 function BlockToolbar({
   block,
   onChange,
@@ -2522,6 +2616,9 @@ function BlockToolbar({
           )}
         </>
       )}
+
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <GeometryControls block={block} onChange={onChange} />
 
       <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
       <label style={labelStyle}>
