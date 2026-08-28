@@ -17,6 +17,7 @@ import { LAYOUT_TEMPLATES, TEMPLATE_CATEGORIES, type LayoutTemplate } from "@/li
 import { useLayoutEdit } from "./LayoutEdit";
 import { snapRotationWith, useSnapSettings } from "@/lib/snapSettings";
 import { beginCanvasDrag, endCanvasDrag } from "@/lib/canvasDrag";
+import { UNIT_LABELS, formatMeasure, fromPx, toPx, unitPrecision, unitStep, useMeasureUnit } from "@/lib/measure";
 import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
 import {
   getImageBlockDefaults,
