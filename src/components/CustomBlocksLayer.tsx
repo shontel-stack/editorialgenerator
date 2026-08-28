@@ -2429,6 +2429,69 @@ function PaletteBtn({ label, icon, onClick, compact }: { label: string; icon: Re
   );
 }
 
+/** Exact X / Y / W / H entry in the user's measurement unit, with an
+ *  optional aspect-ratio lock while resizing. */
+function GeometryControls({
+  block,
+  onChange,
+}: {
+  block: CustomBlock;
+  onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  const [unit] = useMeasureUnit();
+  const [lock, setLock] = useState(false);
+  const step = unitStep(unit);
+  const dp = unitPrecision(unit);
+
+  const field = (
+    label: string,
+    key: "x" | "y" | "w" | "h",
+  ) => (
+    <label key={key} style={labelStyle}>
+      {label}
+      <input
+        type="number"
+        step={step}
+        value={Number(fromPx(block[key], unit).toFixed(dp))}
+        onChange={(e) => {
+          const raw = Number(e.target.value);
+          if (!Number.isFinite(raw)) return;
+          const px = Math.round(toPx(raw, unit));
+          if ((key === "w" || key === "h") && lock) {
+            const ratio = block.w / Math.max(1, block.h);
+            if (key === "w") onChange({ w: Math.max(20, px), h: Math.max(20, Math.round(px / ratio)) });
+            else onChange({ h: Math.max(20, px), w: Math.max(20, Math.round(px * ratio)) });
+            return;
+          }
+          if (key === "w" || key === "h") onChange({ [key]: Math.max(20, px) } as Partial<CustomBlock>);
+          else onChange({ [key]: px } as Partial<CustomBlock>);
+        }}
+        style={{ ...inputStyle, width: 72 }}
+      />
+    </label>
+  );
+
+  return (
+    <>
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>
+        Size ({UNIT_LABELS[unit]})
+      </span>
+      {field("X", "x")}
+      {field("Y", "y")}
+      {field("W", "w")}
+      {field("H", "h")}
+      <button
+        type="button"
+        title={lock ? "Aspect ratio locked" : "Lock aspect ratio while typing W/H"}
+        onClick={() => setLock((v) => !v)}
+        style={btnStyle(lock ? "active" : "normal")}
+      >
+        {lock ? "Locked" : "Lock ratio"}
+      </button>
+    </>
+  );
+}
+
 function BlockToolbar({
   block,
   onChange,
