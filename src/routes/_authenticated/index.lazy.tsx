@@ -267,6 +267,8 @@ function Index() {
   const [spreadView, setSpreadView] = useState(false);
   const [editLayout, setEditLayout] = useState(false);
   const [showGuides, setShowGuides] = useState(true);
+  const [showRulers, setShowRulers] = useState(false);
+  const [measureUnit, setMeasureUnitPref] = useMeasureUnit();
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
