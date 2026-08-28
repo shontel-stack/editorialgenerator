@@ -2861,6 +2861,25 @@ function Index() {
           {showGuides ? "Guides on" : "Guides off"}
         </button>
         <button
+          onClick={() => setShowRulers((v) => !v)}
+          className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-background/25 rounded-sm transition ${showRulers ? "bg-background/25 text-background" : "text-background/70 hover:bg-background/10"}`}
+          title="Toggle page rulers along the top and left edges"
+        >
+          {showRulers ? "Rulers on" : "Rulers off"}
+        </button>
+        <select
+          value={measureUnit}
+          onChange={(e) => setMeasureUnitPref(e.target.value as MeasureUnit)}
+          className="px-2 py-1 text-[10px] tracking-[0.2em] uppercase border border-background/25 rounded-sm bg-transparent text-background/80"
+          title="Measurement unit used by rulers and size readouts"
+          aria-label="Measurement unit"
+        >
+          <option className="text-foreground" value="in">in</option>
+          <option className="text-foreground" value="mm">mm</option>
+          <option className="text-foreground" value="pt">pt</option>
+          <option className="text-foreground" value="px">px</option>
+        </select>
+        <button
           onClick={() => setEditLayout((v) => !v)}
           className={`px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-background/25 rounded-sm transition ${editLayout ? "bg-background/25 text-background" : "text-background/70 hover:bg-background/10"}`}
           title="Drag blocks to reposition them on the page"
