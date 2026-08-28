@@ -43,6 +43,13 @@ type Ctx = {
   /** Custom (user-added) blocks for this page. */
   customBlocks?: CustomBlock[];
   setCustomBlocks?: (next: CustomBlock[]) => void;
+  /** The facing page in spread view, so blocks can span across the gutter. */
+  facingPage?: {
+    side: "left" | "right";
+    blocks: CustomBlock[];
+    setBlocks: (next: CustomBlock[]) => void;
+  };
+
   /** Optional snap targets (margin / bleed / trim / center). */
   guides?: SnapGuides;
   /** Effective snap settings for this page (global merged with page override). */
@@ -89,6 +96,8 @@ export function LayoutEditProvider({
   previewScales,
   customBlocks,
   setCustomBlocks,
+  facingPage,
+
   guides,
   snapSettings,
   onRequestEdit,
@@ -132,6 +141,8 @@ export function LayoutEditProvider({
         previewScales,
         customBlocks,
         setCustomBlocks,
+        facingPage,
+
         guides,
         snapSettings,
         onRequestEdit,
