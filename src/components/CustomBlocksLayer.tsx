@@ -584,7 +584,7 @@ export function CustomBlocksLayer() {
   // Keyboard shortcuts: undo/redo, duplicate, copy/paste, nudge, delete, z-order.
   useEffect(() => {
     if (!editing) return;
-    const CLIPBOARD_KEY = "pageluxe.blockClipboard.v1";
+    
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const tag = (target?.tagName ?? "").toUpperCase();
