@@ -704,7 +704,7 @@ export function CustomBlocksLayer() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [editing, undo, redo, blocks, setBlocks, selectedId, extraSelectedIds, effectiveSelectedIds, group, ungroup]);
+  }, [editing, undo, redo, blocks, setBlocks, selectedId, extraSelectedIds, effectiveSelectedIds, group, ungroup, pasteBlocks]);
 
   void historyTick;
 
