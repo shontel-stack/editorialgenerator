@@ -31,6 +31,13 @@ import {
 import { useBrandKit } from "@/lib/brandKitContext";
 import { SwatchPicker } from "@/components/SwatchPicker";
 import { uploadEditorImage } from "@/lib/imageUpload";
+import {
+  copyBlocks,
+  copyGeometry,
+  readBlocks,
+  readGeometry,
+  useBlockClipboard,
+} from "@/lib/blockClipboard";
 import { toast } from "sonner";
 
 const SNAP = 20;
