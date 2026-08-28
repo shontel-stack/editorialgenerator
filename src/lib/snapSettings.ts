@@ -21,6 +21,14 @@ export type SnapSettings = {
   gridSizePx: number;
   /** Snap to edges/centers of OTHER blocks on the same page. */
   alignToObjects: boolean;
+  /** Baseline grid pitch in page-px @ 300 DPI. 0 disables the baseline grid. */
+  baselineGridPx: number;
+  /** Distance from the top of the page to the first baseline (page-px). */
+  baselineOffsetPx: number;
+  /** Draw the baseline grid on the canvas while editing. */
+  showBaseline: boolean;
+  /** Snap block edges to baselines while dragging / resizing. */
+  snapToBaseline: boolean;
 };
 
 export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
@@ -29,6 +37,10 @@ export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   rotationAngles: [-180, -135, -90, -45, 0, 15, 30, 45, 60, 90, 120, 135, 180],
   gridSizePx: 0,
   alignToObjects: true,
+  baselineGridPx: 0,
+  baselineOffsetPx: 225, // 0.75 in top margin @ 300 DPI
+  showBaseline: true,
+  snapToBaseline: true,
 };
 
 
@@ -49,6 +61,10 @@ function safeRead(): SnapSettings {
         : DEFAULT_SNAP_SETTINGS.rotationAngles,
       gridSizePx: clampNum(parsed.gridSizePx, 0, 600, DEFAULT_SNAP_SETTINGS.gridSizePx),
       alignToObjects: typeof parsed.alignToObjects === "boolean" ? parsed.alignToObjects : DEFAULT_SNAP_SETTINGS.alignToObjects,
+      baselineGridPx: clampNum(parsed.baselineGridPx, 0, 600, DEFAULT_SNAP_SETTINGS.baselineGridPx),
+      baselineOffsetPx: clampNum(parsed.baselineOffsetPx, 0, 2000, DEFAULT_SNAP_SETTINGS.baselineOffsetPx),
+      showBaseline: typeof parsed.showBaseline === "boolean" ? parsed.showBaseline : DEFAULT_SNAP_SETTINGS.showBaseline,
+      snapToBaseline: typeof parsed.snapToBaseline === "boolean" ? parsed.snapToBaseline : DEFAULT_SNAP_SETTINGS.snapToBaseline,
     };
 
   } catch {
@@ -91,6 +107,14 @@ export function mergeSnapSettings(
       typeof override.gridSizePx === "number" ? override.gridSizePx : base.gridSizePx,
     alignToObjects:
       typeof override.alignToObjects === "boolean" ? override.alignToObjects : base.alignToObjects,
+    baselineGridPx:
+      typeof override.baselineGridPx === "number" ? override.baselineGridPx : base.baselineGridPx,
+    baselineOffsetPx:
+      typeof override.baselineOffsetPx === "number" ? override.baselineOffsetPx : base.baselineOffsetPx,
+    showBaseline:
+      typeof override.showBaseline === "boolean" ? override.showBaseline : base.showBaseline,
+    snapToBaseline:
+      typeof override.snapToBaseline === "boolean" ? override.snapToBaseline : base.snapToBaseline,
   };
 
 }
@@ -124,4 +148,12 @@ export function useSnapSettings(): SnapSettings {
     };
   }, []);
   return s;
+}
+
+/** Baseline Y positions (page-px) for a page of height `pageH`. */
+export function baselinesFor(s: SnapSettings, pageH: number): number[] {
+  if (!(s.baselineGridPx > 0) || !(pageH > 0)) return [];
+  const out: number[] = [];
+  for (let y = s.baselineOffsetPx; y <= pageH; y += s.baselineGridPx) out.push(y);
+  return out;
 }
