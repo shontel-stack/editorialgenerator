@@ -3193,21 +3193,35 @@ function Index() {
 
       <EditorStatusBar
         left={
-          <AutosaveIndicator
-            status={autosave.status}
-            lastSavedAt={autosave.lastSavedAt}
-            onSaveNow={autosave.saveNow}
-            cloudStatus={cloudSync.status}
-            cloudLastSyncedAt={cloudSync.lastSyncedAt}
-            cloudError={cloudSync.error ?? queueDrainer.lastError}
-            onSyncNow={() => {
-              cloudSync.syncNow();
-              queueDrainer.drainNow();
-            }}
-            queuePending={queueDrainer.pending}
-            queueDraining={queueDrainer.draining}
-            onRetryQueue={queueDrainer.drainNow}
-          />
+          <>
+            <AutosaveIndicator
+              status={autosave.status}
+              lastSavedAt={autosave.lastSavedAt}
+              onSaveNow={autosave.saveNow}
+              cloudStatus={cloudSync.status}
+              cloudLastSyncedAt={cloudSync.lastSyncedAt}
+              cloudError={cloudSync.error ?? queueDrainer.lastError}
+              onSyncNow={() => {
+                cloudSync.syncNow();
+                queueDrainer.drainNow();
+              }}
+              queuePending={queueDrainer.pending}
+              queueDraining={queueDrainer.draining}
+              onRetryQueue={queueDrainer.drainNow}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                autosave.saveNow();
+                cloudSync.syncNow();
+                queueDrainer.drainNow();
+              }}
+              title="Save locally and push to the cloud now"
+              className="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 text-[10px] tracking-[0.25em] uppercase text-muted-foreground hover:bg-secondary hover:text-foreground transition"
+            >
+              Sync now
+            </button>
+          </>
         }
         center={
           <span className="hidden md:inline">
