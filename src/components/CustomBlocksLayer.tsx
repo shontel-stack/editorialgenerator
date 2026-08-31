@@ -1464,7 +1464,7 @@ function BlockContent({
           }
         : null),
     };
-    if (editingText) {
+    if (editingText && !linkPrevId) {
       const reportCaret = (target: HTMLTextAreaElement) => {
         const pos = target.selectionStart ?? 0;
         const idx = target.value.slice(0, pos).split("\n").length - 1;
@@ -1491,14 +1491,15 @@ function BlockContent({
     }
     // Render each line as its own paragraph so per-paragraph alignment works.
     const slotText = resolveSlotText(block.slotBinding);
-    const baseText = slotText != null ? slotText : block.text;
-    const rawText = tokens ? resolveTextTokens(baseText, tokens) : baseText;
+    const baseText = linkPrevId ? flowInText : slotText != null ? slotText : block.text;
+    const rawText = tokens ? resolveTextTokens(flowHead ?? baseText, tokens) : (flowHead ?? baseText);
     const paragraphs = rawText.split("\n");
     const pBefore = block.paragraphSpaceBefore ?? [];
     const pAfter = block.paragraphSpaceAfter ?? [];
     const pLH = block.paragraphLineHeight ?? [];
     return (
-      <div style={style}>
+      <div ref={flowRef} style={style}>
+
         {paragraphs.map((p, i) => {
           const a = pAligns[i] ?? blockAlign;
           const mt = pBefore[i] ?? 0;
