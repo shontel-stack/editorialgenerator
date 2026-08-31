@@ -159,7 +159,7 @@ function Column({
 }) {
   return (
     <div className="w-72 shrink-0">
-      <div className="flex items-center justify-between mb-2">
+      <div className="sticky top-0 z-10 bg-background/85 backdrop-blur-sm py-1 flex items-center justify-between mb-2">
         <span className={`px-2 py-0.5 rounded-sm text-[10px] ${STATUS_TONES[status]}`}>
           {STATUS_LABELS[status]}
         </span>
@@ -183,7 +183,7 @@ function Card({
 }) {
   const assignee = row.assignee_role ? STAFF_BY_ID[row.assignee_role] : null;
   return (
-    <div className="border border-border bg-card p-3 rounded-sm space-y-2">
+    <div className="card-lift border border-border bg-card p-3 rounded-sm space-y-2">
       <div>
         <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground truncate">
           {row.issue_id}

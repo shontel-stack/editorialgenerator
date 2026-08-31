@@ -143,7 +143,7 @@ function GeneratePage() {
               </span>
             </div>
             {loading ? (
-              <div className="text-sm text-muted-foreground">Loading…</div>
+              <div className="space-y-2" aria-busy="true" aria-label="Loading"><div className="skeleton h-4 w-2/3" /><div className="skeleton h-4 w-1/2" /><div className="skeleton h-4 w-3/5" /></div>
             ) : assets.length === 0 ? (
               <div className="border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                 Nothing saved yet. Generate something and hit "Save to library".
