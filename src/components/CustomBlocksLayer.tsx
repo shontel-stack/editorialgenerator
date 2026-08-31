@@ -53,6 +53,7 @@ import {
   readGeometry,
   useBlockClipboard,
 } from "@/lib/blockClipboard";
+import { computeWrapShims, getWrapMargin, getWrapMode, type WrapMode } from "@/lib/textWrap";
 import { toast } from "sonner";
 
 const SNAP = 20;
@@ -1498,9 +1499,28 @@ function BlockContent({
     const pBefore = block.paragraphSpaceBefore ?? [];
     const pAfter = block.paragraphSpaceAfter ?? [];
     const pLH = block.paragraphLineHeight ?? [];
+    const wrapShims = editingText
+      ? []
+      : computeWrapShims(
+          { x: block.x, y: block.y, w: block.w, h: block.h },
+          8,
+          (editCtx?.customBlocks ?? []).filter((o) => o.id !== block.id && o.kind !== "text"),
+        );
     return (
       <div ref={flowRef} style={style}>
-
+        {wrapShims.map((sh) => (
+          <div
+            key={sh.key}
+            aria-hidden
+            style={{
+              float: sh.float,
+              width: sh.width,
+              height: sh.height,
+              shapeOutside: `inset(${sh.shapeTop}px 0px 0px 0px)`,
+              pointerEvents: "none",
+            }}
+          />
+        ))}
         {paragraphs.map((p, i) => {
           const a = pAligns[i] ?? blockAlign;
           const mt = pBefore[i] ?? 0;
@@ -2730,6 +2750,7 @@ function BlockToolbar({
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
       {block.kind === "video" && <VideoControls block={block} onChange={onChange} />}
+      {block.kind !== "text" && <WrapControls block={block} onChange={onChange} />}
       {canSpan && onToggleSpan && (
         <>
           <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
@@ -3875,6 +3896,72 @@ function TextStyleControls({
       >
         New style
       </button>
+    </>
+  );
+}
+
+
+/** Text-wrap controls for non-text blocks: overlapping text frames flow
+ *  around this element instead of running underneath it. */
+function WrapControls({
+  block,
+  onChange,
+}: {
+  block: CustomBlock;
+  onChange: (patch: Partial<CustomBlock>) => void;
+}) {
+  const mode = getWrapMode(block);
+  const margin = getWrapMargin(block);
+  const inputStyle: CSSProperties = {
+    border: "1px solid #ddd",
+    borderRadius: 3,
+    padding: "2px 4px",
+    fontSize: 12,
+    background: "white",
+    color: "#0a0a0a",
+  };
+  const labelStyle: CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    color: "#555",
+  };
+  return (
+    <>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <label style={labelStyle} title="How overlapping text frames flow around this element">
+        Wrap
+        <select
+          value={mode}
+          onChange={(e) => onChange({ wrapText: e.target.value as WrapMode } as Partial<CustomBlock>)}
+          style={inputStyle}
+        >
+          <option value="none">None</option>
+          <option value="auto">Around (auto)</option>
+          <option value="left">Text on right</option>
+          <option value="right">Text on left</option>
+          <option value="jump">Jump below</option>
+        </select>
+      </label>
+      {mode !== "none" && (
+        <label style={labelStyle} title="Standoff gap between the element and the copy">
+          Gap
+          <input
+            type="number"
+            min={0}
+            max={400}
+            step={4}
+            value={Math.round(margin)}
+            onChange={(e) =>
+              onChange({ wrapMargin: Math.max(0, Number(e.target.value)) } as Partial<CustomBlock>)
+            }
+            style={{ ...inputStyle, width: 62 }}
+          />
+        </label>
+      )}
     </>
   );
 }

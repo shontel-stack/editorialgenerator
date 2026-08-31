@@ -375,6 +375,10 @@ export type CustomBlock =
       spanOffsetX?: number;
       /** Set on the generated facing-page half; points at the source block. */
       spanSourceId?: string;
+      /** Text wrap: how overlapping text frames flow around this element. */
+      wrapText?: "none" | "left" | "right" | "auto" | "jump";
+      /** Standoff gap around the element when wrapping (page-px). */
+      wrapMargin?: number;
 
     }
   | {
@@ -394,6 +398,10 @@ export type CustomBlock =
       spanTotalW?: number;
       spanOffsetX?: number;
       spanSourceId?: string;
+      /** Text wrap: how overlapping text frames flow around this element. */
+      wrapText?: "none" | "left" | "right" | "auto" | "jump";
+      /** Standoff gap around the element when wrapping (page-px). */
+      wrapMargin?: number;
 
     }
   | {
@@ -407,6 +415,10 @@ export type CustomBlock =
       bg?: string;
       rotate?: number;
       link?: string;
+      /** Text wrap: how overlapping text frames flow around this element. */
+      wrapText?: "none" | "left" | "right" | "auto" | "jump";
+      /** Standoff gap around the element when wrapping (page-px). */
+      wrapMargin?: number;
     }
 
   | {
@@ -429,6 +441,10 @@ export type CustomBlock =
       playsInline?: boolean;
       /** How aggressively the browser preloads the source. */
       preload?: "none" | "metadata" | "auto";
+      /** Text wrap: how overlapping text frames flow around this element. */
+      wrapText?: "none" | "left" | "right" | "auto" | "jump";
+      /** Standoff gap around the element when wrapping (page-px). */
+      wrapMargin?: number;
     };
 
 export type IssuePageNode = AnyPageData & {
