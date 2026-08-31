@@ -5,6 +5,10 @@ type Props = {
   dim: { w: number; h: number };
   /** Display unit for the tick labels. */
   unit: MeasureUnit;
+  /** Draw the vertical ruler on the right edge instead of the left. Used for
+   *  the right page of a spread so the ruler band never overlaps the facing
+   *  page's gutter edge. */
+  verticalOnRight?: boolean;
 };
 
 /** Tick geometry for a unit: distance between labelled ticks (page-px) and
@@ -37,7 +41,8 @@ const BAND = "rgba(255,255,255,0.92)";
  * never capture it. Everything is expressed in page pixels at 300 DPI so the
  * rulers scale with the canvas zoom and stay pinned to the page edges.
  */
-export function RulersOverlay({ dim, unit }: Props) {
+export function RulersOverlay({ dim, unit, verticalOnRight }: Props) {
+  const vOnRight = !!verticalOnRight;
   const { major, subs, label } = tickSpec(unit);
   const minor = major / subs;
 
@@ -58,7 +63,7 @@ export function RulersOverlay({ dim, unit }: Props) {
       style={{
         position: "absolute",
         top: -THICK,
-        left: -THICK,
+        left: vOnRight ? 0 : -THICK,
         width: dim.w + THICK,
         height: dim.h + THICK,
         pointerEvents: "none",
@@ -71,7 +76,7 @@ export function RulersOverlay({ dim, unit }: Props) {
         style={{
           position: "absolute",
           top: 0,
-          left: 0,
+          left: vOnRight ? dim.w : 0,
           width: THICK,
           height: THICK,
           background: BAND,
@@ -95,7 +100,7 @@ export function RulersOverlay({ dim, unit }: Props) {
         style={{
           position: "absolute",
           top: 0,
-          left: THICK,
+          left: vOnRight ? 0 : THICK,
           width: dim.w,
           height: THICK,
           background: BAND,
@@ -146,7 +151,7 @@ export function RulersOverlay({ dim, unit }: Props) {
         style={{
           position: "absolute",
           top: THICK,
-          left: 0,
+          left: vOnRight ? dim.w : 0,
           width: THICK,
           height: dim.h,
           background: BAND,
@@ -167,7 +172,7 @@ export function RulersOverlay({ dim, unit }: Props) {
                 style={{
                   position: "absolute",
                   top: y,
-                  right: 0,
+                  ...(vOnRight ? { left: 0 } : { right: 0 }),
                   height: isMajor ? 3 : 1.5,
                   width: len,
                   background: INK,
@@ -178,7 +183,7 @@ export function RulersOverlay({ dim, unit }: Props) {
                   style={{
                     position: "absolute",
                     top: y + 6,
-                    left: 4,
+                    ...(vOnRight ? { right: 4 } : { left: 4 }),
                     fontSize: 26,
                     fontWeight: 600,
                     color: INK,

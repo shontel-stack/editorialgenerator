@@ -3194,7 +3194,7 @@ function Index() {
                     gutterIn={pageStatus.gutterOf(spread.right!.id)}
                   />
                  )}
-                 {showRulers && <RulersOverlay dim={dimPx} unit={measureUnit} />}
+                 {showRulers && <RulersOverlay dim={dimPx} unit={measureUnit} verticalOnRight />}
                  <ReferencePinsOverlay
                    references={attachments.referencesByPage.get(spread.right.id) ?? []}
                   dim={dimPx}
