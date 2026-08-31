@@ -29,6 +29,8 @@ import {
   type VideoBlockDefaults,
 } from "@/lib/mediaBlockDefaults";
 import { useBrandKit } from "@/lib/brandKitContext";
+import { WEB_FONT_GROUPS, ensureWebFont, webFontStack } from "@/lib/webFonts";
+
 import { SwatchPicker } from "@/components/SwatchPicker";
 import { uploadEditorImage } from "@/lib/imageUpload";
 import {
@@ -104,7 +106,8 @@ const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
 };
 
 /** Resolve a text block's `fontFamily` to a CSS `font-family` value.
- *  Supports the 3 system slots and `custom:<brand-font-id>` tokens. */
+ *  Supports the 3 system slots, `custom:<brand-font-id>` tokens (uploaded
+ *  brand fonts), and `web:<Family>` tokens (on-the-fly Google Fonts). */
 function resolveFontFamily(
   value: string | undefined,
   resolveCustom: (id: string) => string | null,
@@ -116,9 +119,11 @@ function resolveFontFamily(
     if (css) return `'${css}', var(--font-serif)`;
     return "var(--font-serif)";
   }
+  if (v.startsWith("web:")) return webFontStack(v.slice("web:".length));
   if (v === "display" || v === "serif" || v === "sans") return FONT_VARS[v];
   return "var(--font-serif)";
 }
+
 
 type ShapeVariant = "rect" | "ellipse" | "line";
 
@@ -2850,20 +2855,39 @@ function TextControls({
     <>
       <select
         value={block.fontFamily ?? "serif"}
-        onChange={(e) => onChange({ fontFamily: e.target.value })}
-        style={inputStyle}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v.startsWith("web:")) ensureWebFont(v.slice(4));
+          onChange({ fontFamily: v });
+        }}
+        onFocus={() => {
+          // Preload the catalog lazily so the menu previews real faces.
+          for (const g of WEB_FONT_GROUPS) for (const f of g.families) ensureWebFont(f);
+        }}
+        style={{ ...inputStyle, maxWidth: 150 }}
+        title="Font"
       >
-        <option value="display">Display</option>
-        <option value="serif">Serif</option>
-        <option value="sans">Sans</option>
+        <option value="display">Display (brand slot)</option>
+        <option value="serif">Serif (brand slot)</option>
+        <option value="sans">Sans (brand slot)</option>
         {brandKit.fonts.length > 0 && (
-          <optgroup label="Brand fonts">
+          <optgroup label="Uploaded brand fonts">
             {brandKit.fonts.map((f) => (
               <option key={f.id} value={`custom:${f.id}`}>{f.family_name}</option>
             ))}
           </optgroup>
         )}
+        {WEB_FONT_GROUPS.map((g) => (
+          <optgroup key={g.label} label={`Web · ${g.label}`}>
+            {g.families.map((f) => (
+              <option key={f} value={`web:${f}`} style={{ fontFamily: `'${f}', sans-serif` }}>
+                {f}
+              </option>
+            ))}
+          </optgroup>
+        ))}
       </select>
+
       <label style={labelStyle}>
         Size
         <input type="number" min={12} max={400} value={block.fontSize ?? 48} onChange={(e) => onChange({ fontSize: Number(e.target.value) })} style={{ ...inputStyle, width: 60 }} />
