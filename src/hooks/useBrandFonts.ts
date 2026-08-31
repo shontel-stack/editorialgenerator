@@ -23,9 +23,13 @@ function cssFamilyFor(font: BrandFont): string {
 async function loadFontFace(font: BrandFont, url: string): Promise<FontFace | null> {
   if (typeof FontFace === "undefined" || !document?.fonts) return null;
   try {
+    // Each upload gets its own namespaced family, so the face must answer for
+    // every requested weight/style — otherwise a block set to bold/italic
+    // silently falls back to the system stack (or gets synthesized on top of an
+    // already-bold file). A full range keeps the actual file in charge.
     const face = new FontFace(cssFamilyFor(font), `url(${url})`, {
-      weight: String(font.weight ?? 400),
-      style: font.style || "normal",
+      weight: "1 1000",
+      style: font.style === "italic" ? "oblique 0deg 20deg" : "normal",
       display: "swap",
     });
     await face.load();
