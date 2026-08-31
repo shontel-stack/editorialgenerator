@@ -3735,6 +3735,77 @@ function LayersPanel({
 
 /** Named paragraph/character styles — apply, redefine, or create from the
  *  currently selected text block. */
+/** Linked text frames: start a link on one frame, finish it on a frame on any
+ *  other page. Overflow copy from the source flows into the continuation. */
+function TextFlowControls({
+  block,
+  onChange,
+}: {
+  block: Extract<CustomBlock, { kind: "text" }>;
+  onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  useTextFlow();
+  const pending = getPendingFlowSource();
+  const targetId = getFlowTargetId(block.id);
+  const sourceId = block.linkPrevId ? getFlowSourceId(block.id) ?? block.linkPrevId : undefined;
+  const isPendingSelf = pending === block.id;
+
+  return (
+    <>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Flow</span>
+      {pending && !isPendingSelf && pending !== sourceId ? (
+        <button
+          type="button"
+          title="Make this frame the continuation of the linked frame"
+          onClick={() => {
+            linkFlow(pending, block.id);
+            onChange({ linkPrevId: pending } as Partial<CustomBlock>);
+            setPendingFlowSource(null);
+            toast.success("Text now continues into this frame");
+          }}
+          style={btnStyle("active")}
+        >
+          Continue here
+        </button>
+      ) : (
+        <button
+          type="button"
+          title={
+            targetId
+              ? "This frame already flows into another frame"
+              : "Step 1: click here, then open the page with the continuation frame and click “Continue here”"
+          }
+          onClick={() => {
+            setPendingFlowSource(isPendingSelf ? null : block.id);
+            if (!isPendingSelf) toast("Now select the continuation frame on another page");
+          }}
+          style={btnStyle(isPendingSelf ? "active" : "normal")}
+        >
+          {isPendingSelf ? "Pick target…" : targetId ? "Flows on ✓" : "Link to…"}
+        </button>
+      )}
+      {(targetId || block.linkPrevId) && (
+        <button
+          type="button"
+          title="Break this text link"
+          onClick={() => {
+            unlinkFlow(block.id);
+            if (block.linkPrevId) onChange({ linkPrevId: undefined } as Partial<CustomBlock>);
+            toast("Text link removed");
+          }}
+          style={btnStyle("normal")}
+        >
+          Unlink
+        </button>
+      )}
+      {block.linkPrevId && (
+        <span style={{ fontSize: 11, color: "#666" }}>continued copy (edit at the source frame)</span>
+      )}
+    </>
+  );
+}
+
 function TextStyleControls({
   block,
   onChange,
