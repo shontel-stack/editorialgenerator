@@ -104,7 +104,8 @@ const FONT_VARS: Record<"display" | "serif" | "sans", string> = {
 };
 
 /** Resolve a text block's `fontFamily` to a CSS `font-family` value.
- *  Supports the 3 system slots and `custom:<brand-font-id>` tokens. */
+ *  Supports the 3 system slots, `custom:<brand-font-id>` tokens (uploaded
+ *  brand fonts), and `web:<Family>` tokens (on-the-fly Google Fonts). */
 function resolveFontFamily(
   value: string | undefined,
   resolveCustom: (id: string) => string | null,
@@ -116,9 +117,11 @@ function resolveFontFamily(
     if (css) return `'${css}', var(--font-serif)`;
     return "var(--font-serif)";
   }
+  if (v.startsWith("web:")) return webFontStack(v.slice("web:".length));
   if (v === "display" || v === "serif" || v === "sans") return FONT_VARS[v];
   return "var(--font-serif)";
 }
+
 
 type ShapeVariant = "rect" | "ellipse" | "line";
 
