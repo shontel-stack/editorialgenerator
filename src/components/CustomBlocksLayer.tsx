@@ -53,6 +53,7 @@ import {
   readGeometry,
   useBlockClipboard,
 } from "@/lib/blockClipboard";
+import { computeWrapShims, getWrapMargin, getWrapMode, type WrapMode } from "@/lib/textWrap";
 import { toast } from "sonner";
 
 const SNAP = 20;

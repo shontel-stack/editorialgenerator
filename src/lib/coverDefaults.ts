@@ -441,6 +441,10 @@ export type CustomBlock =
       playsInline?: boolean;
       /** How aggressively the browser preloads the source. */
       preload?: "none" | "metadata" | "auto";
+      /** Text wrap: how overlapping text frames flow around this element. */
+      wrapText?: "none" | "left" | "right" | "auto" | "jump";
+      /** Standoff gap around the element when wrapping (page-px). */
+      wrapMargin?: number;
     };
 
 export type IssuePageNode = AnyPageData & {
