@@ -115,7 +115,8 @@ const WEIGHT_TOKENS: Array<[RegExp, number]> = [
  */
 export function inferFontMeta(fileName: string): { weight: number; style: string } {
   const base = fileName.replace(/\.[^.]+$/, "");
-  const style = /italic|oblique|(?:^|[^a-z])it(?:$|[^a-z])/i.test(base) ? "italic" : "normal";
+  const style =
+    /italic|oblique/i.test(base) || /It($|[^a-z])/.test(base) ? "italic" : "normal";
   let weight = 400;
   for (const [re, w] of WEIGHT_TOKENS) {
     if (re.test(base)) {
