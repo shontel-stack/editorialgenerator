@@ -411,6 +411,7 @@ export function Draggable({
   if (hidden) return null;
 
   const existingTransform = (style.transform as string | undefined) ?? "";
+  if (hidden) return null;
   const moveTransform =
     dx === 0 && dy === 0 ? "" : `translate(${dx}px, ${dy}px)`;
   const combined: CSSProperties = {
