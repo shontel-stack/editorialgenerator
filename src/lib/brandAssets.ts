@@ -93,6 +93,39 @@ function deriveFamilyName(fileName: string): string {
   return base.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim() || "Custom Font";
 }
 
+const WEIGHT_TOKENS: Array<[RegExp, number]> = [
+  [/extra[\s_-]?black|ultra[\s_-]?black/i, 950],
+  [/black|heavy|fat/i, 900],
+  [/extra[\s_-]?bold|ultra[\s_-]?bold|xbold/i, 800],
+  [/semi[\s_-]?bold|demi[\s_-]?bold/i, 600],
+  [/bold/i, 700],
+  [/medium/i, 500],
+  [/extra[\s_-]?light|ultra[\s_-]?light/i, 200],
+  [/light/i, 300],
+  [/thin|hairline/i, 100],
+  [/book|regular|normal|roman/i, 400],
+];
+
+/**
+ * Best-effort weight/style detection from a font file name (e.g.
+ * `SourceSansPro-SemiboldIt.otf` → 600 / italic). Without this every upload
+ * lands as 400/normal, which makes the browser synthesize bold + italic on top
+ * of faces that already carry them — the classic "my font looks the same"
+ * symptom.
+ */
+export function inferFontMeta(fileName: string): { weight: number; style: string } {
+  const base = fileName.replace(/\.[^.]+$/, "");
+  const style = /italic|oblique|(?:^|[^a-z])it(?:$|[^a-z])/i.test(base) ? "italic" : "normal";
+  let weight = 400;
+  for (const [re, w] of WEIGHT_TOKENS) {
+    if (re.test(base)) {
+      weight = w;
+      break;
+    }
+  }
+  return { weight, style };
+}
+
 export async function uploadBrandFont(opts: {
   publicationId: string;
   file: File;
