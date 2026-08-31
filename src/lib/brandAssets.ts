@@ -165,8 +165,8 @@ export async function uploadBrandFont(opts: {
       file_path: path,
       file_name: file.name,
       format: FONT_FORMAT_BY_EXT[ext],
-      weight: opts.weight ?? 400,
-      style: opts.style ?? "normal",
+      weight: opts.weight ?? inferFontMeta(file.name).weight,
+      style: opts.style ?? inferFontMeta(file.name).style,
       size_bytes: file.size,
     })
     .select("*")
