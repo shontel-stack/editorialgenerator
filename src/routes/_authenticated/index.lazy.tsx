@@ -2986,6 +2986,22 @@ function Index() {
             Reset
           </button>
         )}
+        {editLayout && (selected.hiddenBlocks?.length ?? 0) > 0 && (
+          <button
+            onClick={() =>
+              setIssue((d) => ({
+                ...d,
+                pages: d.pages.map((p) =>
+                  p.id === selected.id ? ({ ...p, hiddenBlocks: [] } as IssuePageNode) : p,
+                ),
+              }))
+            }
+            className="px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-background/25 rounded-sm text-background/70 hover:bg-background/10"
+            title="Restore deleted template blocks on this page"
+          >
+            Restore {selected.hiddenBlocks?.length}
+          </button>
+        )}
         <div className="h-5 w-px bg-background/25 mx-1" />
         <button
           onClick={() => void undoPlacement()}
