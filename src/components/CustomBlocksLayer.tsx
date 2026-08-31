@@ -1383,6 +1383,31 @@ function BlockContent({
   const tokens = editCtx?.tokenContext;
   const slotResolved = editCtx?.contentsSlotResolved;
   const [uploadingImage, setUploadingImage] = useState(false);
+  // ---- linked text frames (threading) ----
+  const flowVersion = useTextFlow();
+  const flowRef = useRef<HTMLDivElement>(null);
+  const [flowHead, setFlowHead] = useState<string | null>(null);
+  const isTextBlock = block.kind === "text";
+  const linkPrevId = isTextBlock ? block.linkPrevId : undefined;
+  const flowTargetId = isTextBlock ? getFlowTargetId(block.id) : undefined;
+  const ownText = isTextBlock ? block.text : "";
+  const flowInText = linkPrevId ? getFlowText(block.id) : "";
+  const flowFullText = linkPrevId ? flowInText : ownText;
+  const flowStyleKey = isTextBlock
+    ? JSON.stringify([block.w, block.h, block.fontSize, block.fontWeight, block.fontFamily, block.lineHeight, block.letterSpacing, block.columns, block.columnGap, block.textTransform])
+    : "";
+  useEffect(() => {
+    if (!isTextBlock) return;
+    if (!flowTargetId) {
+      setFlowHead(null);
+      return;
+    }
+    const el = flowRef.current;
+    if (!el) return;
+    const [head, tail] = splitToFit(el, flowFullText);
+    setFlowHead(head === flowFullText ? null : head);
+    setFlowText(flowTargetId, tail);
+  }, [isTextBlock, flowTargetId, flowFullText, flowStyleKey, flowVersion, editingText]);
   // Resolve slot-bound text. Returns null when no binding, '' when binding
   // exists but the slot is empty (lets us still show the placeholder text
   // typed in the block while editing).
