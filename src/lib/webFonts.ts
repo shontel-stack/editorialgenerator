@@ -78,10 +78,12 @@ export function ensureWebFont(family: string): void {
   if (typeof document === "undefined") return;
   if (!family || loaded.has(family)) return;
   loaded.add(family);
+  // No axis spec: some families ship a single weight and a request for
+  // unsupported weights returns 400 from the Google Fonts API.
   const href =
     "https://fonts.googleapis.com/css2?family=" +
     encodeURIComponent(family).replace(/%20/g, "+") +
-    ":ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,700&display=swap";
+    "&display=swap";
   if (document.querySelector(`link[data-webfont="${CSS.escape(family)}"]`)) return;
   const link = document.createElement("link");
   link.rel = "stylesheet";
