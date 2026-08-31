@@ -1518,7 +1518,11 @@ function BlockContent({
                 minHeight: p.length === 0 ? "1em" : undefined,
               }}
             >
-              {p.length === 0 ? "\u00a0" : p}
+              {p.length === 0
+                ? "\u00a0"
+                : block.autoLink === false
+                  ? p
+                  : renderAutoLinked(p, { keyPrefix: `${block.id}-${i}` })}
             </p>
           );
         })}
@@ -2994,6 +2998,14 @@ function TextControls({
           style={{ ...inputStyle, width: 56 }}
         />
       </label>
+      <button
+        type="button"
+        title="Auto-detect links (URLs, emails, phone numbers) in this text"
+        onClick={() => onChange({ autoLink: block.autoLink === false ? true : false })}
+        style={btnStyle(block.autoLink === false ? "normal" : "active")}
+      >
+        Auto-link
+      </button>
       <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
       <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>
         {pIdx != null ? `¶ ${pIdx + 1}/${totalParas}` : "¶ (click in text)"}
