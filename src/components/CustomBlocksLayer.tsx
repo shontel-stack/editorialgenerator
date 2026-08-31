@@ -2720,6 +2720,7 @@ function BlockToolbar({
       )}
       {block.kind === "text" && <TextStyleControls block={block} onChange={onChange} />}
       {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
+      {block.kind === "text" && <TextFlowControls block={block} onChange={onChange} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
