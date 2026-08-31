@@ -340,6 +340,8 @@ export type CustomBlock =
       linkPrevId?: string;
       /** Custom-contents page only — pull text from a slot field. */
       slotBinding?: SlotBinding;
+      /** Auto-detect URLs / emails / phone numbers in the copy (default on). */
+      autoLink?: boolean;
     }
   | {
       id: string;
