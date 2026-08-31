@@ -34,6 +34,18 @@ import { WEB_FONT_GROUPS, ensureWebFont, webFontStack } from "@/lib/webFonts";
 import { SwatchPicker } from "@/components/SwatchPicker";
 import { uploadEditorImage } from "@/lib/imageUpload";
 import {
+  getFlowSourceId,
+  getFlowTargetId,
+  getFlowText,
+  getPendingFlowSource,
+  linkFlow,
+  setFlowText,
+  setPendingFlowSource,
+  splitToFit,
+  unlinkFlow,
+  useTextFlow,
+} from "@/lib/textFlow";
+import {
   copyBlocks,
   copyGeometry,
   readBlocks,
