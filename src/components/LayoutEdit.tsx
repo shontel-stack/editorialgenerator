@@ -16,6 +16,7 @@ import type { SnapSettings } from "@/lib/snapSettings";
 export type Overrides = Record<string, { dx: number; dy: number }>;
 export type ScaleMap = Record<string, number>;
 export type LinkMap = Record<string, string>;
+export type SizeMap = Record<string, { w: number; h: number }>;
 
 /**
  * Snap guides for the editor — lists of page-px coordinates that block edges
@@ -36,6 +37,12 @@ type Ctx = {
   setTextScale: (key: string, value: number | null) => void;
   blockLinks: LinkMap;
   setBlockLink: (key: string, value: string | null) => void;
+  /** Explicit per-block sizes (page-px) set with the resize handle. */
+  blockSizes?: SizeMap;
+  setBlockSize?: (key: string, value: { w: number; h: number } | null) => void;
+  /** Template block keys the user deleted on this page. */
+  hiddenBlocks?: string[];
+  setBlockHidden?: (key: string, hidden: boolean) => void;
   /** Pending (un-applied) assistant move proposals for this page. */
   previewOverrides?: Overrides;
   /** Pending scale proposals. */
@@ -92,6 +99,10 @@ export function LayoutEditProvider({
   setTextScale,
   blockLinks,
   setBlockLink,
+  blockSizes,
+  setBlockSize,
+  hiddenBlocks,
+  setBlockHidden,
   previewOverrides,
   previewScales,
   customBlocks,
@@ -137,6 +148,10 @@ export function LayoutEditProvider({
         setTextScale,
         blockLinks,
         setBlockLink,
+        blockSizes,
+        setBlockSize,
+        hiddenBlocks,
+        setBlockHidden,
         previewOverrides,
         previewScales,
         customBlocks,
