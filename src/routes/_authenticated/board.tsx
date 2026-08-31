@@ -108,7 +108,21 @@ function BoardPage() {
 
       <div className="p-6 overflow-x-auto">
         {loading && rows.length === 0 ? (
-          <div className="text-center text-sm text-muted-foreground py-16">Loading board…</div>
+          <div className="flex gap-4 min-w-max" aria-busy="true" aria-label="Loading board">
+            {PAGE_STATUSES.slice(0, 5).map((s, i) => (
+              <div key={s} className="w-72 shrink-0">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="skeleton h-4 w-20" />
+                  <div className="skeleton h-3 w-4" />
+                </div>
+                <div className="space-y-2">
+                  {Array.from({ length: 3 - (i % 2) }).map((_, j) => (
+                    <div key={j} className="skeleton h-[104px] w-full" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : rows.length === 0 ? (
           <EmptyState
             icon={KanbanSquare}
@@ -145,7 +159,7 @@ function Column({
 }) {
   return (
     <div className="w-72 shrink-0">
-      <div className="flex items-center justify-between mb-2">
+      <div className="sticky top-0 z-10 bg-background/85 backdrop-blur-sm py-1 flex items-center justify-between mb-2">
         <span className={`px-2 py-0.5 rounded-sm text-[10px] ${STATUS_TONES[status]}`}>
           {STATUS_LABELS[status]}
         </span>
@@ -169,7 +183,7 @@ function Card({
 }) {
   const assignee = row.assignee_role ? STAFF_BY_ID[row.assignee_role] : null;
   return (
-    <div className="border border-border bg-card p-3 rounded-sm space-y-2">
+    <div className="card-lift border border-border bg-card p-3 rounded-sm space-y-2">
       <div>
         <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground truncate">
           {row.issue_id}
