@@ -8,7 +8,7 @@ import {
   type ReactNode,
   type PointerEvent as RPointerEvent,
 } from "react";
-import { Link2, Move, RotateCcw, Type } from "lucide-react";
+import { Link2, Move, RotateCcw, Trash2, Type } from "lucide-react";
 import { beginCanvasDrag, endCanvasDrag, resetCanvasDrag } from "@/lib/canvasDrag";
 import type { CustomBlock, TokenContext, ContentsSlot } from "@/lib/coverDefaults";
 import type { SnapSettings } from "@/lib/snapSettings";
@@ -16,6 +16,7 @@ import type { SnapSettings } from "@/lib/snapSettings";
 export type Overrides = Record<string, { dx: number; dy: number }>;
 export type ScaleMap = Record<string, number>;
 export type LinkMap = Record<string, string>;
+export type SizeMap = Record<string, { w: number; h: number }>;
 
 /**
  * Snap guides for the editor — lists of page-px coordinates that block edges
@@ -36,6 +37,12 @@ type Ctx = {
   setTextScale: (key: string, value: number | null) => void;
   blockLinks: LinkMap;
   setBlockLink: (key: string, value: string | null) => void;
+  /** Explicit per-block sizes (page-px) set with the resize handle. */
+  blockSizes?: SizeMap;
+  setBlockSize?: (key: string, value: { w: number; h: number } | null) => void;
+  /** Template block keys the user deleted on this page. */
+  hiddenBlocks?: string[];
+  setBlockHidden?: (key: string, hidden: boolean) => void;
   /** Pending (un-applied) assistant move proposals for this page. */
   previewOverrides?: Overrides;
   /** Pending scale proposals. */
@@ -92,6 +99,10 @@ export function LayoutEditProvider({
   setTextScale,
   blockLinks,
   setBlockLink,
+  blockSizes,
+  setBlockSize,
+  hiddenBlocks,
+  setBlockHidden,
   previewOverrides,
   previewScales,
   customBlocks,
@@ -137,6 +148,10 @@ export function LayoutEditProvider({
         setTextScale,
         blockLinks,
         setBlockLink,
+        blockSizes,
+        setBlockSize,
+        hiddenBlocks,
+        setBlockHidden,
         previewOverrides,
         previewScales,
         customBlocks,
@@ -224,6 +239,8 @@ export function Draggable({
   const saved = ctx?.overrides[blockKey];
   const textScale = ctx?.textScales?.[blockKey] ?? 1;
   const link = ctx?.blockLinks?.[blockKey] ?? "";
+  const savedSize = ctx?.blockSizes?.[blockKey];
+  const hidden = ctx?.hiddenBlocks?.includes(blockKey) ?? false;
   const isSelected = editing && ctx?.selectedKey === blockKey;
 
   const preview = ctx?.previewOverrides?.[blockKey];
@@ -246,6 +263,45 @@ export function Draggable({
     pageH: number;
   } | null>(null);
   const [showSize, setShowSize] = useState(false);
+  const [localSize, setLocalSize] = useState<{ w: number; h: number } | null>(null);
+  const resize = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  const size = localSize ?? savedSize ?? null;
+
+  const onResizeDown = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!ctx) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const s = ctx.scale || 1;
+    const host = (e.currentTarget.parentElement as HTMLElement | null)?.getBoundingClientRect();
+    resize.current = {
+      x: e.clientX,
+      y: e.clientY,
+      w: size?.w ?? (host ? host.width / s : 0),
+      h: size?.h ?? (host ? host.height / s : 0),
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    beginCanvasDrag();
+    setLocalSize({ w: resize.current.w, h: resize.current.h });
+  };
+  const onResizeMove = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!resize.current || !ctx) return;
+    const s = ctx.scale || 1;
+    setLocalSize({
+      w: Math.max(40, resize.current.w + (e.clientX - resize.current.x) / s),
+      h: Math.max(24, resize.current.h + (e.clientY - resize.current.y) / s),
+    });
+  };
+  const onResizeUp = (e: RPointerEvent<HTMLDivElement>) => {
+    if (!resize.current || !ctx) return;
+    const s = ctx.scale || 1;
+    const w = Math.round(Math.max(40, resize.current.w + (e.clientX - resize.current.x) / s));
+    const h = Math.round(Math.max(24, resize.current.h + (e.clientY - resize.current.y) / s));
+    resize.current = null;
+    endCanvasDrag();
+    setLocalSize(null);
+    ctx.setBlockSize?.(blockKey, { w, h });
+  };
 
   // Safety net: if this block unmounts mid-drag, clear the global drag flag so
   // the docked toolbars regain pointer events.
@@ -352,11 +408,15 @@ export function Draggable({
     else ctx.setOverride(blockKey, { dx: finalDx, dy: finalDy });
   };
 
+  if (hidden) return null;
+
   const existingTransform = (style.transform as string | undefined) ?? "";
+  if (hidden) return null;
   const moveTransform =
     dx === 0 && dy === 0 ? "" : `translate(${dx}px, ${dy}px)`;
   const combined: CSSProperties = {
     ...style,
+    ...(size ? { width: size.w, height: size.h } : {}),
     transform: [existingTransform, moveTransform].filter(Boolean).join(" ") || undefined,
     ...(hasPreview
       ? {
@@ -574,6 +634,40 @@ export function Draggable({
               </button>
             </>
           )}
+          {size && (
+            <button
+              type="button"
+              title="Reset size to template default"
+              onClick={() => ctx.setBlockSize?.(blockKey, null)}
+              style={{
+                padding: "2px 6px",
+                border: "1px solid #ddd",
+                borderRadius: 3,
+                background: "white",
+                cursor: "pointer",
+              }}
+            >
+              {Math.round(size.w)}×{Math.round(size.h)} ↺
+            </button>
+          )}
+          <button
+            type="button"
+            title="Delete this block from the page"
+            onClick={() => ctx.setBlockHidden?.(blockKey, true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "2px 4px",
+              border: "1px solid #ddd",
+              borderRadius: 3,
+              background: "white",
+              color: "#b91c1c",
+              cursor: "pointer",
+            }}
+          >
+            <Trash2 size={12} />
+          </button>
           <button
             type="button"
             title={link ? `Linked: ${link}` : "Add link"}
@@ -602,6 +696,29 @@ export function Draggable({
             {link && <span style={{ maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis" }}>{link.replace(/^https?:\/\//, "")}</span>}
           </button>
         </div>
+      )}
+      {isSelected && ctx && ctx.setBlockSize && (
+        <div
+          onPointerDown={onResizeDown}
+          onPointerMove={onResizeMove}
+          onPointerUp={onResizeUp}
+          onPointerCancel={onResizeUp}
+          title="Drag to resize"
+          style={{
+            position: "absolute",
+            right: 0,
+            bottom: 0,
+            width: 14 * inv,
+            height: 14 * inv,
+            transform: "translate(50%, 50%)",
+            background: "#2563eb",
+            border: "2px solid white",
+            borderRadius: 3,
+            cursor: "nwse-resize",
+            zIndex: 55,
+            touchAction: "none",
+          }}
+        />
       )}
       {wrapped}
     </div>

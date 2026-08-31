@@ -1209,6 +1209,30 @@ function Index() {
       }),
     }));
 
+  const setBlockSize = (id: string, key: string, value: { w: number; h: number } | null) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = { ...(p.blockSizes ?? {}) };
+        if (value === null) delete cur[key];
+        else cur[key] = value;
+        return { ...p, blockSizes: cur } as IssuePageNode;
+      }),
+    }));
+
+  const setBlockHidden = (id: string, key: string, hidden: boolean) =>
+    setIssue((d) => ({
+      ...d,
+      pages: d.pages.map((p) => {
+        if (p.id !== id) return p;
+        const cur = new Set(p.hiddenBlocks ?? []);
+        if (hidden) cur.add(key);
+        else cur.delete(key);
+        return { ...p, hiddenBlocks: [...cur] } as IssuePageNode;
+      }),
+    }));
+
   const setCustomBlocks = (id: string, next: import("@/lib/coverDefaults").CustomBlock[]) =>
     setIssue((d) => ({
       ...d,
@@ -1222,7 +1246,14 @@ function Index() {
       ...d,
       pages: d.pages.map((p) =>
         p.id === id
-          ? ({ ...p, positionOverrides: {}, textScales: {}, blockLinks: {} } as IssuePageNode)
+          ? ({
+              ...p,
+              positionOverrides: {},
+              textScales: {},
+              blockLinks: {},
+              blockSizes: {},
+              hiddenBlocks: [],
+            } as IssuePageNode)
           : p,
       ),
     }));
@@ -1606,7 +1637,9 @@ function Index() {
   const selectedHasOverrides =
     (selected.positionOverrides && Object.keys(selected.positionOverrides).length > 0) ||
     (selected.textScales && Object.keys(selected.textScales).length > 0) ||
-    (selected.blockLinks && Object.keys(selected.blockLinks).length > 0);
+    (selected.blockLinks && Object.keys(selected.blockLinks).length > 0) ||
+    (selected.blockSizes && Object.keys(selected.blockSizes).length > 0) ||
+    (selected.hiddenBlocks && selected.hiddenBlocks.length > 0);
   const selectedCustomBlockCount = selected.customBlocks?.length ?? 0;
   const selectedLayout: PageLayout =
     pageStatus.layoutOf(selected.id) ?? DEFAULT_PAGE_LAYOUT;
@@ -2953,6 +2986,22 @@ function Index() {
             Reset
           </button>
         )}
+        {editLayout && (selected.hiddenBlocks?.length ?? 0) > 0 && (
+          <button
+            onClick={() =>
+              setIssue((d) => ({
+                ...d,
+                pages: d.pages.map((p) =>
+                  p.id === selected.id ? ({ ...p, hiddenBlocks: [] } as IssuePageNode) : p,
+                ),
+              }))
+            }
+            className="px-2.5 py-1 text-[10px] tracking-[0.3em] uppercase border border-background/25 rounded-sm text-background/70 hover:bg-background/10"
+            title="Restore deleted template blocks on this page"
+          >
+            Restore {selected.hiddenBlocks?.length}
+          </button>
+        )}
         <div className="h-5 w-px bg-background/25 mx-1" />
         <button
           onClick={() => void undoPlacement()}
@@ -3102,6 +3151,10 @@ function Index() {
                 setTextScale={(k, v) => setTextScale(spread.left.id, k, v)}
                 blockLinks={spread.left.blockLinks ?? {}}
                 setBlockLink={(k, v) => setBlockLink(spread.left.id, k, v)}
+                blockSizes={spread.left.blockSizes ?? {}}
+                setBlockSize={(k, v) => setBlockSize(spread.left.id, k, v)}
+                hiddenBlocks={spread.left.hiddenBlocks ?? []}
+                setBlockHidden={(k, h) => setBlockHidden(spread.left.id, k, h)}
                 previewOverrides={pendingByPage[spread.left.id]?.overrides}
                 previewScales={pendingByPage[spread.left.id]?.scales}
                 customBlocks={spread.left.customBlocks ?? []}
@@ -3166,6 +3219,10 @@ function Index() {
                   setTextScale={(k, v) => setTextScale(spread.right!.id, k, v)}
                   blockLinks={spread.right.blockLinks ?? {}}
                   setBlockLink={(k, v) => setBlockLink(spread.right!.id, k, v)}
+                  blockSizes={spread.right.blockSizes ?? {}}
+                  setBlockSize={(k, v) => setBlockSize(spread.right!.id, k, v)}
+                  hiddenBlocks={spread.right.hiddenBlocks ?? []}
+                  setBlockHidden={(k, h) => setBlockHidden(spread.right!.id, k, h)}
                   previewOverrides={pendingByPage[spread.right.id]?.overrides}
                   previewScales={pendingByPage[spread.right.id]?.scales}
                   customBlocks={spread.right.customBlocks ?? []}
@@ -3236,6 +3293,8 @@ function Index() {
             setTextScale={() => {}}
             blockLinks={p.blockLinks ?? {}}
             setBlockLink={() => {}}
+            blockSizes={p.blockSizes ?? {}}
+            hiddenBlocks={p.hiddenBlocks ?? []}
             customBlocks={p.customBlocks ?? []}
             setCustomBlocks={() => {}}
             tokenContext={buildTokenContext(issue, p.id)}
