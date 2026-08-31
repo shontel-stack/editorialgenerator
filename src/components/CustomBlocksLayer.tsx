@@ -29,6 +29,8 @@ import {
   type VideoBlockDefaults,
 } from "@/lib/mediaBlockDefaults";
 import { useBrandKit } from "@/lib/brandKitContext";
+import { WEB_FONT_GROUPS, ensureWebFont, webFontStack } from "@/lib/webFonts";
+
 import { SwatchPicker } from "@/components/SwatchPicker";
 import { uploadEditorImage } from "@/lib/imageUpload";
 import {
