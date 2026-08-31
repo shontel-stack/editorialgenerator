@@ -20,6 +20,7 @@ import { useTextStyles, styleToBlockPatch, blockToStyle, type TextStyle } from "
 import { beginCanvasDrag, endCanvasDrag } from "@/lib/canvasDrag";
 import { UNIT_LABELS, formatMeasure, fromPx, toPx, unitPrecision, unitStep, useMeasureUnit } from "@/lib/measure";
 import { getTextBlockDefaults, useTextBlockDefaults, type TextBlockDefaults } from "@/lib/textBlockDefaults";
+import { renderAutoLinked } from "@/lib/autoLink";
 import {
   getImageBlockDefaults,
   getVideoBlockDefaults,
