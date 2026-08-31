@@ -336,6 +336,8 @@ export type CustomBlock =
       textTransform?: "none" | "uppercase";
       /** Named text style (see src/lib/textStyles.ts) this block follows. */
       styleId?: string;
+      /** This frame is a continuation of a linked text frame (see textFlow). */
+      linkPrevId?: string;
       /** Custom-contents page only — pull text from a slot field. */
       slotBinding?: SlotBinding;
     }

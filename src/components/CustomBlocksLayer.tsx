@@ -34,6 +34,18 @@ import { WEB_FONT_GROUPS, ensureWebFont, webFontStack } from "@/lib/webFonts";
 import { SwatchPicker } from "@/components/SwatchPicker";
 import { uploadEditorImage } from "@/lib/imageUpload";
 import {
+  getFlowSourceId,
+  getFlowTargetId,
+  getFlowText,
+  getPendingFlowSource,
+  linkFlow,
+  setFlowText,
+  setPendingFlowSource,
+  splitToFit,
+  unlinkFlow,
+  useTextFlow,
+} from "@/lib/textFlow";
+import {
   copyBlocks,
   copyGeometry,
   readBlocks,
@@ -1383,6 +1395,31 @@ function BlockContent({
   const tokens = editCtx?.tokenContext;
   const slotResolved = editCtx?.contentsSlotResolved;
   const [uploadingImage, setUploadingImage] = useState(false);
+  // ---- linked text frames (threading) ----
+  const flowVersion = useTextFlow();
+  const flowRef = useRef<HTMLDivElement>(null);
+  const [flowHead, setFlowHead] = useState<string | null>(null);
+  const isTextBlock = block.kind === "text";
+  const linkPrevId = isTextBlock ? block.linkPrevId : undefined;
+  const flowTargetId = isTextBlock ? getFlowTargetId(block.id) : undefined;
+  const ownText = isTextBlock ? block.text : "";
+  const flowInText = linkPrevId ? getFlowText(block.id) : "";
+  const flowFullText = linkPrevId ? flowInText : ownText;
+  const flowStyleKey = isTextBlock
+    ? JSON.stringify([block.w, block.h, block.fontSize, block.fontWeight, block.fontFamily, block.lineHeight, block.letterSpacing, block.columns, block.columnGap, block.textTransform])
+    : "";
+  useEffect(() => {
+    if (!isTextBlock) return;
+    if (!flowTargetId) {
+      setFlowHead(null);
+      return;
+    }
+    const el = flowRef.current;
+    if (!el) return;
+    const [head, tail] = splitToFit(el, flowFullText);
+    setFlowHead(head === flowFullText ? null : head);
+    setFlowText(flowTargetId, tail);
+  }, [isTextBlock, flowTargetId, flowFullText, flowStyleKey, flowVersion, editingText]);
   // Resolve slot-bound text. Returns null when no binding, '' when binding
   // exists but the slot is empty (lets us still show the placeholder text
   // typed in the block while editing).
@@ -1427,7 +1464,7 @@ function BlockContent({
           }
         : null),
     };
-    if (editingText) {
+    if (editingText && !linkPrevId) {
       const reportCaret = (target: HTMLTextAreaElement) => {
         const pos = target.selectionStart ?? 0;
         const idx = target.value.slice(0, pos).split("\n").length - 1;
@@ -1454,14 +1491,15 @@ function BlockContent({
     }
     // Render each line as its own paragraph so per-paragraph alignment works.
     const slotText = resolveSlotText(block.slotBinding);
-    const baseText = slotText != null ? slotText : block.text;
-    const rawText = tokens ? resolveTextTokens(baseText, tokens) : baseText;
+    const baseText = linkPrevId ? flowInText : slotText != null ? slotText : block.text;
+    const rawText = tokens ? resolveTextTokens(flowHead ?? baseText, tokens) : (flowHead ?? baseText);
     const paragraphs = rawText.split("\n");
     const pBefore = block.paragraphSpaceBefore ?? [];
     const pAfter = block.paragraphSpaceAfter ?? [];
     const pLH = block.paragraphLineHeight ?? [];
     return (
-      <div style={style}>
+      <div ref={flowRef} style={style}>
+
         {paragraphs.map((p, i) => {
           const a = pAligns[i] ?? blockAlign;
           const mt = pBefore[i] ?? 0;
@@ -2682,6 +2720,7 @@ function BlockToolbar({
       )}
       {block.kind === "text" && <TextStyleControls block={block} onChange={onChange} />}
       {block.kind === "text" && <TextControls block={block} onChange={onChange} caretParagraph={caretParagraph ?? null} />}
+      {block.kind === "text" && <TextFlowControls block={block} onChange={onChange} />}
       {block.kind === "image" && <ImageControls block={block} onChange={onChange} />}
       {block.kind === "shape" && <ShapeControls block={block} onChange={onChange} />}
       {block.kind === "embed" && <EmbedControls block={block} onChange={onChange} />}
@@ -3696,6 +3735,77 @@ function LayersPanel({
 
 /** Named paragraph/character styles — apply, redefine, or create from the
  *  currently selected text block. */
+/** Linked text frames: start a link on one frame, finish it on a frame on any
+ *  other page. Overflow copy from the source flows into the continuation. */
+function TextFlowControls({
+  block,
+  onChange,
+}: {
+  block: Extract<CustomBlock, { kind: "text" }>;
+  onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  useTextFlow();
+  const pending = getPendingFlowSource();
+  const targetId = getFlowTargetId(block.id);
+  const sourceId = block.linkPrevId ? getFlowSourceId(block.id) ?? block.linkPrevId : undefined;
+  const isPendingSelf = pending === block.id;
+
+  return (
+    <>
+      <div style={{ width: 1, alignSelf: "stretch", background: "#e5e5e5" }} />
+      <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: "#666" }}>Flow</span>
+      {pending && !isPendingSelf && pending !== sourceId ? (
+        <button
+          type="button"
+          title="Make this frame the continuation of the linked frame"
+          onClick={() => {
+            linkFlow(pending, block.id);
+            onChange({ linkPrevId: pending } as Partial<CustomBlock>);
+            setPendingFlowSource(null);
+            toast.success("Text now continues into this frame");
+          }}
+          style={btnStyle("active")}
+        >
+          Continue here
+        </button>
+      ) : (
+        <button
+          type="button"
+          title={
+            targetId
+              ? "This frame already flows into another frame"
+              : "Step 1: click here, then open the page with the continuation frame and click “Continue here”"
+          }
+          onClick={() => {
+            setPendingFlowSource(isPendingSelf ? null : block.id);
+            if (!isPendingSelf) toast("Now select the continuation frame on another page");
+          }}
+          style={btnStyle(isPendingSelf ? "active" : "normal")}
+        >
+          {isPendingSelf ? "Pick target…" : targetId ? "Flows on ✓" : "Link to…"}
+        </button>
+      )}
+      {(targetId || block.linkPrevId) && (
+        <button
+          type="button"
+          title="Break this text link"
+          onClick={() => {
+            unlinkFlow(block.id);
+            if (block.linkPrevId) onChange({ linkPrevId: undefined } as Partial<CustomBlock>);
+            toast("Text link removed");
+          }}
+          style={btnStyle("normal")}
+        >
+          Unlink
+        </button>
+      )}
+      {block.linkPrevId && (
+        <span style={{ fontSize: 11, color: "#666" }}>continued copy (edit at the source frame)</span>
+      )}
+    </>
+  );
+}
+
 function TextStyleControls({
   block,
   onChange,
