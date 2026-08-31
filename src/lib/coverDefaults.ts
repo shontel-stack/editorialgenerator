@@ -440,6 +440,10 @@ export type IssuePageNode = AnyPageData & {
   textScales?: Record<string, number>;
   /** Per-block link URL — block becomes an anchor in preview / export. */
   blockLinks?: Record<string, string>;
+  /** Per-block explicit size in page-px, set by dragging the resize handle. */
+  blockSizes?: Record<string, { w: number; h: number }>;
+  /** Template block keys the user deleted (hidden) on this page. */
+  hiddenBlocks?: string[];
   /** Free-form blocks added on top of the template (text/image/shape/embed). */
   customBlocks?: CustomBlock[];
   /** Per-page override for snap settings (rotation angles, tolerances). When
