@@ -23,9 +23,11 @@ export function hrefForToken(token: string): string | null {
   if (/^https?:\/\//i.test(t)) return t;
   if (/^www\./i.test(t)) return `https://${t}`;
   if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(t)) return `mailto:${t}`;
-  const digits = t.replace(/[^\d+]/g, "");
-  if (digits.replace(/\D/g, "").length >= 9 && digits.replace(/\D/g, "").length <= 15) {
-    return `tel:${digits}`;
+  // Only explicit phone formatting: +country prefix or (area) code.
+  if (/^\+/.test(t) || /^\(\d{3}\)/.test(t)) {
+    const digits = t.replace(/[^\d+]/g, "");
+    const count = digits.replace(/\D/g, "").length;
+    if (count >= 8 && count <= 15) return `tel:${digits}`;
   }
   return null;
 }
