@@ -8,8 +8,11 @@
 
 import type { ReactNode } from "react";
 
+// Phone numbers only match when explicitly written as a dialable number:
+// an international prefix (+1 555 …) or an area code in parentheses.
+// Bare digit runs (dates, figure ranges) are intentionally NOT linked.
 const PATTERN =
-  /((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?"')\]]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(?:\+?\d[\d\s().-]{7,}\d))/g;
+  /((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?"')\]]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(?:\+\d[\d\s().-]{6,}\d)|(?:\(\d{3}\)\s?\d{3}[\s.-]?\d{4}))/g;
 
 export type AutoLinkMatch = { text: string; href: string };
 
