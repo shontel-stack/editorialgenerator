@@ -8,8 +8,11 @@
 
 import type { ReactNode } from "react";
 
+// Phone numbers only match when explicitly written as a dialable number:
+// an international prefix (+1 555 …) or an area code in parentheses.
+// Bare digit runs (dates, figure ranges) are intentionally NOT linked.
 const PATTERN =
-  /((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?"')\]]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(?:\+?\d[\d\s().-]{7,}\d))/g;
+  /((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?"')\]]|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(?:\+\d[\d\s().-]{6,}\d)|(?:\(\d{3}\)\s?\d{3}[\s.-]?\d{4}))/g;
 
 export type AutoLinkMatch = { text: string; href: string };
 
@@ -20,9 +23,11 @@ export function hrefForToken(token: string): string | null {
   if (/^https?:\/\//i.test(t)) return t;
   if (/^www\./i.test(t)) return `https://${t}`;
   if (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(t)) return `mailto:${t}`;
-  const digits = t.replace(/[^\d+]/g, "");
-  if (digits.replace(/\D/g, "").length >= 9 && digits.replace(/\D/g, "").length <= 15) {
-    return `tel:${digits}`;
+  // Only explicit phone formatting: +country prefix or (area) code.
+  if (/^\+/.test(t) || /^\(\d{3}\)/.test(t)) {
+    const digits = t.replace(/[^\d+]/g, "");
+    const count = digits.replace(/\D/g, "").length;
+    if (count >= 8 && count <= 15) return `tel:${digits}`;
   }
   return null;
 }

@@ -1541,7 +1541,7 @@ function BlockContent({
             >
               {p.length === 0
                 ? "\u00a0"
-                : block.autoLink === false
+                : block.autoLink === false || editCtx?.editing
                   ? p
                   : renderAutoLinked(p, { keyPrefix: `${block.id}-${i}` })}
             </p>
