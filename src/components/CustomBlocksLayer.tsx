@@ -1132,8 +1132,17 @@ function CustomBlockView({
     if (!dragRef.current) return;
     endCanvasDrag();
     const s = pageScale || 1;
-    const dx = (e.clientX - dragRef.current.x) / s;
-    const dy = (e.clientY - dragRef.current.y) / s;
+    const rawDx = e.clientX - dragRef.current.x;
+    const rawDy = e.clientY - dragRef.current.y;
+    // Pure click (no real drag): keep the block exactly where it was.
+    if (Math.hypot(rawDx, rawDy) < DRAG_DEADZONE_PX) {
+      dragRef.current = null;
+      onActiveLines?.({ xs: [], ys: [] });
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      return;
+    }
+    const dx = rawDx / s;
+    const dy = rawDy / s;
     if (dragRef.current.mode === "move") {
       const w = dragRef.current.box.w;
       const h = dragRef.current.box.h;
