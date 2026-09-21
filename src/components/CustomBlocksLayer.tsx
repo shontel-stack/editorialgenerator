@@ -1081,12 +1081,20 @@ function CustomBlockView({
     return { x: nx, y: ny, w: nw, h: nh, east, west, north, south };
   };
 
+  /** Screen-px the pointer must travel before a drag engages. Prevents the
+   *  "jump" where a plain click (with sub-pixel pointer jitter) snapped the
+   *  block to a nearby guide/grid line before the user actually dragged. */
+  const DRAG_DEADZONE_PX = 3;
+
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
     dragRef.current.shift = e.shiftKey;
     const s = pageScale || 1;
-    const dx = (e.clientX - dragRef.current.x) / s;
-    const dy = (e.clientY - dragRef.current.y) / s;
+    const rawDx = e.clientX - dragRef.current.x;
+    const rawDy = e.clientY - dragRef.current.y;
+    if (Math.hypot(rawDx, rawDy) < DRAG_DEADZONE_PX) return;
+    const dx = rawDx / s;
+    const dy = rawDy / s;
     if (dragRef.current.mode === "move") {
       const w = dragRef.current.box.w;
       const h = dragRef.current.box.h;
