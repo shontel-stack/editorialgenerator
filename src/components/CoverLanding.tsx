@@ -111,24 +111,15 @@ export function CoverLanding({
 
   return (
     <div className="fixed inset-0 z-[95] flex flex-col bg-background" data-cover-landing>
-      {/* Masthead strip */}
-      <div className="flex shrink-0 items-baseline justify-center gap-3 px-6 pt-6 pb-2 text-center">
-        {publicationName ? (
+      {/* Masthead strip — publication only; issue/date are printed on the
+          cover itself, so repeating them here would duplicate the masthead. */}
+      {publicationName ? (
+        <div className="flex shrink-0 items-baseline justify-center px-6 pt-6 pb-2 text-center">
           <span className="font-brand text-sm uppercase tracking-[0.35em] text-foreground">
             {publicationName}
           </span>
-        ) : null}
-        {issueLabel ? (
-          <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            {issueLabel}
-          </span>
-        ) : null}
-        {issueDate ? (
-          <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            {issueDate}
-          </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {/* Cover stage */}
       <div
