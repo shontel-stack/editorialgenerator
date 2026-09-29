@@ -27,6 +27,7 @@ import { deleteBackground } from "@/lib/pageBackgrounds";
 import { uploadEditorImage, migrateBase64Images } from "@/lib/imageUpload";
 import { toast } from "sonner";
 import { EditorMobileGuard } from "@/components/EditorMobileGuard";
+import { CoverLanding, coverLandingInitiallyEnabled } from "@/components/CoverLanding";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
@@ -219,6 +220,10 @@ function Index() {
     return base;
   });
   const [migrationBanner, setMigrationBanner] = useState<"modernizing" | "done" | null>(null);
+  // ----- Cover-first landing: the live cover of the current issue is the
+  // app's front page. Dismissed for the rest of the page load once the user
+  // enters the editor; a persistent opt-out lives in localStorage.
+  const [showCoverLanding, setShowCoverLanding] = useState(coverLandingInitiallyEnabled);
   const lastSavedRef = useRef<string>(JSON.stringify(issue));
   const [newsletterOpen, setNewsletterOpen] = useState(false);
   useUnsavedGuard(
@@ -1679,6 +1684,21 @@ function Index() {
       className="min-h-screen bg-background text-foreground md:pl-14 pb-10"
       style={{ scrollPaddingTop: `calc(${stickyH}px + var(--top-dock-h, 0px))`, paddingTop: "var(--top-dock-h, 0px)", ["--rail-top" as never]: `${stickyH}px`, ["--rail-width" as never]: "56px", ["--statusbar-h" as never]: "2rem" }}
     >
+      {showCoverLanding ? (
+        <CoverLanding
+          coverData={(issue.pages.find((p) => p.pageType === "cover")?.data as CoverData | undefined) ?? null}
+          background={(() => {
+            const bg = issue.pages.find((p) => p.pageType === "cover")?.backgroundArtwork;
+            return bg ? { url: bg.url, mode: bg.mode, crop: bg.crop } : undefined;
+          })()}
+          dim={dimPx}
+          publicationName={activePublication?.name ?? null}
+          issueLabel={issue.meta?.issue ?? null}
+          issueDate={issue.meta?.date ?? null}
+          restoring={autosaveRestoring}
+          onEnter={() => setShowCoverLanding(false)}
+        />
+      ) : null}
       {migrationBanner ? (
         <div
           role="status"
