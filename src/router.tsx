@@ -11,7 +11,8 @@ function DefaultErrorComponent({ error, reset }: import("@tanstack/react-router"
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_default_error_component" });
   }, [error]);
-  const details = `${error?.name ?? "Error"}: ${error?.message ?? String(error)}\n\n${error?.stack ?? ""}`;
+  const err = error as Error | undefined;
+  const details = `${err?.name ?? "Error"}: ${err?.message ?? String(error)}\n\n${err?.stack ?? ""}`;
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
