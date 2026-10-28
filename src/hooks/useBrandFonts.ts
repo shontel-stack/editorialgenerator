@@ -171,7 +171,12 @@ export function useBrandFonts(publicationId: string | null) {
       const cssVar = `--font-${slot}-brand`;
       const font = fontId ? fonts.find((f) => f.id === fontId) : null;
       if (font) {
-        const stack = `'${cssFamilyFor(font)}', var(--font-${slot})`;
+        // Never reference var(--font-<slot>) from itself — a self-referencing
+        // custom property is invalid and the whole stack is dropped.
+        const base =
+          getComputedStyle(document.documentElement).getPropertyValue(`--font-${slot}`).trim() ||
+          (slot === "sans" ? "sans-serif" : "serif");
+        const stack = `'${cssFamilyFor(font)}', ${base}`;
         const prev = body.style.getPropertyValue(`--font-${slot}`);
         body.style.setProperty(cssVar, stack);
         body.style.setProperty(`--font-${slot}`, stack);
