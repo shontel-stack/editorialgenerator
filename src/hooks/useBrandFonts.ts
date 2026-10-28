@@ -59,6 +59,8 @@ export function useBrandFonts(publicationId: string | null) {
 
   // Track FontFace objects + the previous publication so we can clean up on switch.
   const facesRef = useRef<Map<string, FontFace>>(new Map());
+  const inflightRef = useRef<Set<string>>(new Set());
+  const [, setFacesVersion] = useState(0);
   const lastPubRef = useRef<string | null>(null);
 
   const cleanupFaces = useCallback(() => {
@@ -125,15 +127,26 @@ export function useBrandFonts(publicationId: string | null) {
           facesRef.current.delete(id);
         }
       }
-      // Add faces for new fonts.
-      for (const font of fonts) {
-        if (facesRef.current.has(font.id)) continue;
-        const url = await signFontUrl(font.file_path);
-        if (cancelled || !url) continue;
-        const face = await loadFontFace(font, url);
-        if (cancelled) return;
-        if (face) facesRef.current.set(font.id, face);
-      }
+      // Add faces for new fonts — all in parallel, and always keep a face once
+      // it's loaded (even if this effect re-ran meanwhile) so a large library
+      // doesn't get stuck half-registered.
+      await Promise.all(
+        fonts.map(async (font) => {
+          if (facesRef.current.has(font.id) || inflightRef.current.has(font.id)) return;
+          inflightRef.current.add(font.id);
+          try {
+            const url = await signFontUrl(font.file_path);
+            if (!url) return;
+            const face = await loadFontFace(font, url);
+            if (face) facesRef.current.set(font.id, face);
+          } catch (e) {
+            console.warn("[useBrandFonts] could not load", font.file_name, (e as Error).message);
+          } finally {
+            inflightRef.current.delete(font.id);
+          }
+        }),
+      );
+      if (!cancelled) setFacesVersion((v) => v + 1);
     })().catch((e) => {
       // Transient network failures (token refresh, offline) shouldn't surface
       // as unhandled promise rejections.
@@ -158,7 +171,12 @@ export function useBrandFonts(publicationId: string | null) {
       const cssVar = `--font-${slot}-brand`;
       const font = fontId ? fonts.find((f) => f.id === fontId) : null;
       if (font) {
-        const stack = `'${cssFamilyFor(font)}', var(--font-${slot})`;
+        // Never reference var(--font-<slot>) from itself — a self-referencing
+        // custom property is invalid and the whole stack is dropped.
+        const base =
+          getComputedStyle(document.documentElement).getPropertyValue(`--font-${slot}`).trim() ||
+          (slot === "sans" ? "sans-serif" : "serif");
+        const stack = `'${cssFamilyFor(font)}', ${base}`;
         const prev = body.style.getPropertyValue(`--font-${slot}`);
         body.style.setProperty(cssVar, stack);
         body.style.setProperty(`--font-${slot}`, stack);
