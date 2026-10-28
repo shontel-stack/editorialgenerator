@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { routeTree } from "./routeTree.gen";
 import { reportLovableError } from "./lib/lovable-error-reporting";
 
-function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function DefaultErrorComponent({ error, reset }: import("@tanstack/react-router").ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   const [showDetails, setShowDetails] = useState(false);
